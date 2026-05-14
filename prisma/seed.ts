@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding database...')
 
-  const adminHash = await bcrypt.hash('admin1234')
+  const adminHash = await bcrypt.hash('admin1234',12)
   const admin = await prisma.user.upsert({
     where: { email: 'admin@yorkstores.com' },
     update: {},
@@ -22,7 +22,7 @@ async function main() {
   })
   console.log('Created admin:', admin.email)
 
-  const ownerHash = await bcrypt.hash('password123')
+  const ownerHash = await bcrypt.hash('password123',12)
   const owner = await prisma.user.upsert({
     where: { email: 'gadgetvault@example.com' },
     update: {},
@@ -39,7 +39,7 @@ async function main() {
   })
   console.log('Created store owner:', owner.email)
 
-  const buyerHash = await bcrypt.hash('password123')
+  const buyerHash = await bcrypt.hash('password123', 12)
   const buyer = await prisma.user.upsert({
     where: { email: 'buyer@example.com' },
     update: {},
