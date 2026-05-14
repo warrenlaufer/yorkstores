@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { prisma } from './prisma'
-import * as argon2 from 'argon2'
+import bcrypt from 'bcryptjs'
 import { randomBytes } from 'crypto'
 
 const secret = new TextEncoder().encode(
@@ -12,11 +12,11 @@ export const SESSION_COOKIE = 'ys_session'
 export const SESSION_DURATION = 60 * 60 * 24 * 30 // 30 days
 
 export async function hashPassword(password: string) {
-  return argon2.hash(password, { type: argon2.argon2id })
+  return bcrypt.hash(password, 12)
 }
 
 export async function verifyPassword(hash: string, password: string) {
-  return argon2.verify(hash, password)
+  return bcrypt.compare(password, hash)
 }
 
 export async function createSession(userId: string) {
