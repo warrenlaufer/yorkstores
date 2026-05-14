@@ -1,12 +1,12 @@
 import { PrismaClient, Role } from '@prisma/client'
-import * as argon2 from 'argon2'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 async function main() {
   console.log('Seeding database...')
 
-  const adminHash = await argon2.hash('admin1234')
+  const adminHash = await bcrypt.hash('admin1234')
   const admin = await prisma.user.upsert({
     where: { email: 'admin@yorkstores.com' },
     update: {},
@@ -22,7 +22,7 @@ async function main() {
   })
   console.log('Created admin:', admin.email)
 
-  const ownerHash = await argon2.hash('password123')
+  const ownerHash = await bcrypt.hash('password123')
   const owner = await prisma.user.upsert({
     where: { email: 'gadgetvault@example.com' },
     update: {},
@@ -39,7 +39,7 @@ async function main() {
   })
   console.log('Created store owner:', owner.email)
 
-  const buyerHash = await argon2.hash('password123')
+  const buyerHash = await bcrypt.hash('password123')
   const buyer = await prisma.user.upsert({
     where: { email: 'buyer@example.com' },
     update: {},
