@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  STORE_OWNER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  SHIPPED
+  DELIVERED
+}
+
+enum OutcomeType {
+  DELIVERY
+  SOLD_BACK
+  AUTO_SOLD
+  AUTO_FAILED
+}
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String
+  role              Role      @default(BUYER)
+  passwordHash      String
+  company           String?
+  walletBalance     Decimal   @default(500.00) @db.Decimal(10, 2)
+  storeBalance      Decimal   @default(0.00)   @db.Decimal(10, 2)
+  stripeCustomerId  String?   @unique
+  stripeAccountId   String?   @unique
+  resetToken        String?   @unique
+  resetTokenExpiry  DateTime?
+  emailVerified     Boolean   @default(false)
+  verifyToken       String?   @unique
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  sessions          Session[]
+  drops             Drop[]
+  purchases         Purchase[]
+  orders            Order[]
+  transactions      Transaction[]
+  walletTopups      WalletTopup[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Drop {
+  id          String   @id @default(cuid())
+  name        String
+  emoji       String   @default("📦")
+  ownerId     String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User     @relation(fields: [ownerId], references: [id])
+  boxes       Box[]
+  orders      Order[]
+  transactions Transaction[]
+}
+
+model Box {
+  id        String    @id @default(cuid())
+  dropId    String
+  itemName  String
+  itemPrice Decimal   @db.Decimal(10, 2)
+  itemShippingCost Decimal @default(0) @db.Decimal(10, 2)
+  itemImageUrl String?
+  sold      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  drop      Drop      @relation(fields: [dropId], references: [id], onDelete: Cascade)
+  purchase  Purchase?
+}
+
+model Purchase {
+  id          String      @id @default(cuid())
+  buyerId     String
+  boxId       String      @unique
+  pricePaid   Decimal     @db.Decimal(10, 2)
+  outcome     OutcomeType?
+  refundAmt   Decimal     @default(0) @db.Decimal(10, 2)
+  createdAt   DateTime    @default(now())
+  resolvedAt  DateTime?
+
+  buyer       User        @relation(fields: [buyerId], references: [id])
+  box         Box         @relation(fields: [boxId], references: [id])
+  order       Order?
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  purchaseId      String      @unique
+  dropId          String
+  buyerId         String
+  status          OrderStatus @default(PENDING)
+  recipientName   String
+  recipientEmail  String
+  addressLine1    String
+  addressLine2    String?
+  city            String
+  state           String?
+  postcode        String
+  country         String      @default("United States")
+  trackingNumber  String?
+  shippedAt       DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  purchase        Purchase    @relation(fields: [purchaseId], references: [id])
+  drop            Drop        @relation(fields: [dropId], references: [id])
+  buyer           User        @relation(fields: [buyerId], references: [id])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  dropId      String?
+  type        String
+  description String
+  amount      Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+  drop        Drop?    @relation(fields: [dropId], references: [id])
+}
+
+model WalletTopup {
+  id                    String   @id @default(cuid())
+  userId                String
+  amount                Decimal  @db.Decimal(10, 2)
+  stripePaymentIntentId String   @unique
+  status                String   @default("pending")
+  createdAt             DateTime @default(now())
+
+  user                  User     @relation(fields: [userId], references: [id])
+}

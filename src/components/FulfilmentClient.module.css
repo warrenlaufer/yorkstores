@@ -1,0 +1,33 @@
+.wrap { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+.header { margin-bottom: 1.25rem; }
+.title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 0.2rem; }
+.sub { font-size: 0.78rem; color: var(--text2); }
+.tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; }
+.tab { background: #1D1D26; border: 2px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.6); font-family: var(--font); font-size: 0.72rem; font-weight: 700; padding: 0.3rem 0.85rem; border-radius: 7px; cursor: pointer; transition: all 0.15s; }
+.tab:hover { border-color: rgba(255,255,255,0.35); color: #fff; }
+.tabActive { background: #FF6B85 !important; border-color: #FF6B85 !important; color: #fff !important; }
+.empty { text-align: center; padding: 4rem 1rem; color: var(--text2); }
+.emptyIcon { font-size: 2.5rem; opacity: 0.2; margin-bottom: 0.75rem; }
+.empty p { font-size: 0.85rem; }
+.card { background: #0F0F14; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; margin-bottom: 0.7rem; }
+.cardTop { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.65rem; }
+.itemName { font-size: 0.92rem; font-weight: 800; color: #fff; margin-bottom: 0.1rem; }
+.dropName { font-size: 0.67rem; color: var(--text2); margin-bottom: 0.35rem; }
+.meta { display: flex; align-items: center; gap: 8px; }
+.statusBadge { font-size: 0.6rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+.statusPending { background: rgba(245,200,66,0.15); color: #F5C842; }
+.statusShipped { background: rgba(61,214,140,0.15); color: #5FFFA8; }
+.date { font-size: 0.65rem; color: var(--text3); }
+.cardRight { text-align: right; flex-shrink: 0; }
+.price { font-family: var(--mono); font-size: 0.85rem; color: var(--gold); font-weight: 700; }
+.shipCost { font-size: 0.65rem; color: var(--text2); font-family: var(--mono); }
+.buyerEmail { font-size: 0.63rem; color: var(--text2); margin-top: 4px; }
+.addrBlock { margin-bottom: 0.65rem; }
+.addrLabel { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.3rem; }
+.addr { font-size: 0.78rem; color: var(--text); line-height: 1.55; background: #1D1D26; border-radius: 8px; padding: 0.55rem 0.75rem; border: 1px solid rgba(255,255,255,0.08); }
+.trackRow { display: flex; gap: 0.5rem; align-items: stretch; }
+.shipBtn { background: #3DD68C; color: #001a08; border: none; border-radius: 8px; font-family: var(--font); font-size: 0.75rem; font-weight: 800; padding: 0 1rem; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; transition: background 0.15s; }
+.shipBtn:hover:not(:disabled) { background: #5FFFA8; }
+.shipBtn:disabled { background: #1D1D26; color: var(--text2); cursor: not-allowed; }
+.trackingDone { font-size: 0.78rem; color: #5FFFA8; font-family: var(--mono); padding-top: 0.25rem; }
+.errMsg { font-size: 0.72rem; color: #FF8FA3; margin-top: 0.4rem; }

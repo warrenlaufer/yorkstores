@@ -1,0 +1,16 @@
+import { getSession } from '@/lib/auth'
+import { ok, err } from '@/lib/api'
+
+export async function GET() {
+  const user = await getSession()
+  if (!user) return err('Unauthorized', 401)
+  return ok({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    company: user.company,
+    walletBalance: Number(user.walletBalance),
+    storeBalance: Number(user.storeBalance),
+  })
+}

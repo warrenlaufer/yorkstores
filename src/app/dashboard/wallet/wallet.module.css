@@ -1,0 +1,29 @@
+.wrap { max-width: 460px; margin: 3rem auto; padding: 0 1.25rem; }
+.card { background: #0F0F14; border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; padding: 2rem; }
+.title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 0.3rem; }
+.sub { font-size: 0.8rem; color: var(--text2); margin-bottom: 1.5rem; }
+.presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.4rem; margin-bottom: 0.85rem; }
+.preset { background: #1D1D26; border: 2px solid rgba(255,255,255,0.2); color: #fff; font-family: var(--mono); font-size: 0.85rem; font-weight: 700; padding: 0.55rem 0; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+.preset:hover { border-color: rgba(255,255,255,0.45); background: #23232E; }
+.presetActive { border-color: #FF6B85 !important; background: rgba(255,107,133,0.22) !important; color: #FF8FA3 !important; }
+.customRow { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
+.dollarSign { font-family: var(--mono); font-size: 1rem; font-weight: 700; color: rgba(255,255,255,0.4); }
+.customInput { background: #1D1D26; border: 1px solid rgba(255,255,255,0.15); color: #fff; font-family: var(--mono); font-size: 0.9rem; padding: 0.55rem 0.75rem; border-radius: 8px; outline: none; flex: 1; transition: border-color 0.15s; }
+.customInput:focus { border-color: #FF6B85; }
+.errBox { background: rgba(255,107,133,0.12); border: 1px solid rgba(255,107,133,0.3); color: #FF8FA3; font-size: 0.78rem; padding: 0.55rem 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+.divider { display: flex; align-items: center; gap: 0.6rem; margin: 1rem 0; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.09); }
+.divider span { font-size: 0.65rem; color: var(--text3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.applePayBtn { width: 100%; background: #fff; color: #111; border: none; border-radius: 10px; font-family: var(--font); font-weight: 800; font-size: 0.92rem; padding: 0.72rem; cursor: pointer; margin-bottom: 0.6rem; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s; }
+.applePayBtn:hover:not(:disabled) { background: #e8e8e8; }
+.applePayBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cardBtn { width: 100%; background: #FF6B85; color: #fff; border: none; border-radius: 10px; font-family: var(--font); font-weight: 800; font-size: 0.92rem; padding: 0.72rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.15s; }
+.cardBtn:hover:not(:disabled) { background: #ff4d6d; }
+.cardBtn:disabled { background: #2a2a35; color: rgba(255,255,255,0.3); cursor: not-allowed; }
+.stripe { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 0.65rem; color: rgba(255,255,255,0.25); margin-top: 0.85rem; }
+.successCard { text-align: center; padding: 3rem 1rem; }
+.successIcon { font-size: 3rem; margin-bottom: 1rem; }
+.successTitle { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 0.4rem; }
+.successSub { font-size: 0.82rem; color: var(--text2); margin-bottom: 1.5rem; }
+.doneBtn { display: inline-block; background: #FF6B85; color: #fff; border-radius: 10px; font-weight: 800; font-size: 0.9rem; padding: 0.65rem 1.5rem; transition: background 0.15s; }
+.doneBtn:hover { background: #ff4d6d; }

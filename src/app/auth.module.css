@@ -1,0 +1,134 @@
+.screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.card {
+  background: #0F0F14;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  width: min(440px, 100%);
+  padding: 2.25rem 2rem;
+}
+
+.logo { margin-bottom: 1.5rem; }
+
+.logoMark {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+.logoMark em { color: #FF6B85; font-style: normal; }
+
+.title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 0.3rem;
+}
+
+.sub {
+  font-size: 0.82rem;
+  color: #9898B0;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.errorBox {
+  background: rgba(255,107,133,0.12);
+  border: 1px solid rgba(255,107,133,0.3);
+  color: #FF8FA3;
+  font-size: 0.8rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.forgotRow {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.4rem 0 0.85rem;
+}
+
+.forgotLink {
+  font-size: 0.75rem;
+  color: #FF8FA3;
+  text-decoration: underline;
+}
+.forgotLink:hover { color: #FF6B85; }
+
+.submitBtn {
+  width: 100%;
+  background: #FF6B85;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.75rem;
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 0.25rem;
+}
+.submitBtn:hover:not(:disabled) { background: #ff4d6d; transform: translateY(-1px); }
+.submitBtn:disabled { background: #2a2a35; color: rgba(255,255,255,0.35); cursor: not-allowed; transform: none; }
+
+.footer {
+  text-align: center;
+  font-size: 0.8rem;
+  color: #9898B0;
+  margin-top: 1.25rem;
+}
+
+.footerLink {
+  color: #FF8FA3;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.footerLink:hover { color: #FF6B85; }
+
+.rolePicker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.roleCard {
+  background: #1D1D26;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 1rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.roleCard:hover { border-color: rgba(255,255,255,0.25); }
+.roleCardActive { border-color: #FF6B85 !important; background: rgba(255,107,133,0.08); }
+
+.roleIcon { font-size: 1.6rem; }
+.roleName { font-size: 0.85rem; font-weight: 700; color: #fff; }
+.roleDesc { font-size: 0.65rem; color: #9898B0; line-height: 1.4; }
+
+.successBox {
+  background: rgba(61,214,140,0.12);
+  border: 1px solid rgba(61,214,140,0.3);
+  color: #5FFFA8;
+  font-size: 0.8rem;
+  padding: 0.6rem 0.875rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}

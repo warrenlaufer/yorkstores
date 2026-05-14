@@ -1,0 +1,69 @@
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import styles from '../auth.module.css'
+
+export default function SignInPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error); return }
+      router.push('/dashboard')
+      router.refresh()
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className={styles.screen}>
+      <div className={styles.card}>
+        <div className={styles.logo}>
+          <span className={styles.logoMark}>York<em>stores</em></span>
+        </div>
+        <h1 className={styles.title}>Sign in</h1>
+        <p className={styles.sub}>Welcome back to the drop.</p>
+
+        <form onSubmit={handleSubmit}>
+          {error && <div className={styles.errorBox}>{error}</div>}
+          <div className="field">
+            <label htmlFor="email">Email</label>
+            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoComplete="email" />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required autoComplete="current-password" />
+          </div>
+          <div className={styles.forgotRow}>
+            <Link href="/forgot-password" className={styles.forgotLink}>Forgot password?</Link>
+          </div>
+          <button type="submit" className={styles.submitBtn} disabled={loading}>
+            {loading ? <span className="spin" /> : 'Sign in'}
+          </button>
+        </form>
+
+        <p className={styles.footer}>
+          Don't have an account?{' '}
+          <Link href="/signup" className={styles.footerLink}>Sign up</Link>
+        </p>
+      </div>
+    </div>
+  )
+}

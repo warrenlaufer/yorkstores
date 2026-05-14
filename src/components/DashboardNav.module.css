@@ -1,0 +1,102 @@
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.25rem;
+  height: 56px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 1rem;
+}
+
+.logo {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+.dog { height: 0.85em; width: auto; margin-right: 5px; flex-shrink: 0; }
+.em { color: #FF6B85; font-style: normal; }
+
+.tabs {
+  display: flex;
+  gap: 3px;
+  background: #16161D;
+  border-radius: 9px;
+  padding: 4px;
+  overflow-x: auto;
+}
+
+.tab {
+  background: #fff;
+  color: #111;
+  border: none;
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.32rem 0.9rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
+}
+.tab:hover { background: #f0f0f0; }
+.tabActive { background: #FF6B85 !important; color: #fff !important; }
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.walletChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #FF6B85;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.walletChip:hover { background: #ff4d6d; }
+
+.storeChip {
+  background: #1C3A28 !important;
+  color: #3DD68C !important;
+  border: 2px solid #3DD68C !important;
+}
+.storeChip:hover { background: #244d35 !important; }
+
+.chipLabel { font-size: 0.6rem; opacity: 0.85; }
+.chipValue { font-family: var(--mono); }
+.chipPlus { font-weight: 900; font-size: 0.9rem; margin-left: 2px; }
+
+.signOutBtn {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.15);
+  font-family: var(--font);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.28rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.signOutBtn:hover { background: rgba(255,255,255,0.15); color: #fff; }

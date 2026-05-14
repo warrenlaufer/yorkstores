@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { constructWebhookEvent } from '@/lib/stripe'
+import { prisma } from '@/lib/prisma'
+import Stripe from 'stripe'
+
+export async function POST(req: NextRequest) {
+  const body = await req.text()
+  const sig = req.headers.get('stripe-signature')
+
+  if (!sig) return NextResponse.json({ error: 'No signature' }, { status: 400 })
+
+  let event: Stripe.Event
+  try {
+    event = constructWebhookEvent(body, sig)
+  } catch (e) {
+    console.error('Webhook signature verification failed:', e)
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+  }
+
+  switch (event.type) {
+    case 'payment_intent.succeeded': {
+      const pi = event.data.object as Stripe.PaymentIntent
+      if (pi.metadata.purpose !== 'wallet_topup') break
+
+      const topup = await prisma.walletTopup.findUnique({
+        where: { stripePaymentIntentId: pi.id },
+      })
+      if (!topup || topup.status === 'completed') break
+
+      const amount = pi.amount / 100
+
+      await prisma.$transaction([
+        prisma.walletTopup.update({
+          where: { id: topup.id },
+          data: { status: 'completed' },
+        }),
+        prisma.user.update({
+          where: { id: topup.userId },
+          data: { walletBalance: { increment: amount } },
+        }),
+        prisma.transaction.create({
+          data: {
+            userId: topup.userId,
+            type: 'topup',
+            description: `Wallet top-up via Stripe`,
+            amount,
+          },
+        }),
+      ])
+      break
+    }
+
+    case 'payment_intent.payment_failed': {
+      const pi = event.data.object as Stripe.PaymentIntent
+      const topup = await prisma.walletTopup.findUnique({
+        where: { stripePaymentIntentId: pi.id },
+      })
+      if (topup) {
+        await prisma.walletTopup.update({ where: { id: topup.id }, data: { status: 'failed' } })
+      }
+      break
+    }
+
+    case 'account.updated': {
+      // Stripe Connect — store owner completed onboarding
+      const account = event.data.object as Stripe.Account
+      if (account.charges_enabled) {
+        await prisma.user.updateMany({
+          where: { stripeAccountId: account.id },
+          data: {},
+        })
+        console.log('Stripe Connect account enabled:', account.id)
+      }
+      break
+    }
+
+    default:
+      console.log('Unhandled webhook event:', event.type)
+  }
+
+  return NextResponse.json({ received: true })
+}
+
+// Stripe requires the raw body for webhook verification
+export const config = { api: { bodyParser: false } }
