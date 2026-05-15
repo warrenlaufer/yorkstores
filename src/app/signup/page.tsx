@@ -38,12 +38,14 @@ export default function SignUpPage() {
   const [step, setStep] = useState<'role' | 'invite' | 'form'>('role')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-
   const INVITE_CODE = 'STOREFRONT'
 
   function handleRoleContinue() {
-    if (role === 'STORE_OWNER') setStep('invite')
-    else setStep('form')
+    if (role === 'STORE_OWNER') {
+      setStep('invite')
+    } else {
+      setStep('form')
+    }
   }
 
   function checkInvite() {
@@ -66,7 +68,10 @@ export default function SignUpPage() {
         body: JSON.stringify({ name, email, password, role, company: role === 'STORE_OWNER' ? company : undefined }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
+      if (!res.ok) {
+        setError(data.error)
+        return
+      }
       router.push('/dashboard')
       router.refresh()
     } catch {
@@ -82,7 +87,7 @@ export default function SignUpPage() {
         <YorkieLogo />
 
         {step === 'role' && (
-          <>
+          <div>
             <div className={styles.rolePicker}>
               <button type="button" className={`${styles.roleCard} ${role === 'BUYER' ? styles.roleCardActive : ''}`} onClick={() => setRole('BUYER')}>
                 <span className={styles.roleIcon}>🛍️</span>
@@ -96,13 +101,77 @@ export default function SignUpPage() {
               </button>
             </div>
             <button type="button" className={styles.submitBtn} onClick={handleRoleContinue}>Continue</button>
-            <p className={styles.footer}>Already have an account?{' '}<Link href="/signin" className={styles.footerLink}>Sign in</Link></p>
-          </>
+            <p className={styles.footer}>
+              Already have an account?{' '}
+              <Link href="/signin" className={styles.footerLink}>Sign in</Link>
+            </p>
+          </div>
         )}
 
         {step === 'invite' && (
-          <>
+          <div>
             <div style={{background:'rgba(255,107,133,0.06)',border:'1px solid rgba(255,107,133,0.2)',borderRadius:12,padding:'1rem',marginBottom:'1.25rem',textAlign:'center'}}>
               <div style={{fontSize:'1.4rem',marginBottom:'0.4rem'}}>🔒</div>
               <div style={{fontSize:'0.88rem',fontWeight:800,color:'#fff',marginBottom:'0.3rem'}}>Seller invite required</div>
-              <div style={{fontSize:'0.72rem',color:'#9898B0',lineHeight:1.5}}>Seller accounts are by invitation onl
+              <div style={{fontSize:'0.72rem',color:'#9898B0',lineHeight:1.5}}>Seller accounts are by invitation only.</div>
+            </div>
+            {error && <div className={styles.errorBox}>{error}</div>}
+            <div className="field">
+              <label>Invite Code</label>
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={e => { setInviteCode(e.target.value.toUpperCase()); setError('') }}
+                onKeyDown={e => { if (e.key === 'Enter') { checkInvite() } }}
+                style={{textAlign:'center',fontFamily:'var(--mono)',fontSize:'1rem',fontWeight:700,letterSpacing:'0.1em'}}
+              />
+            </div>
+            <button type="button" className={styles.submitBtn} onClick={checkInvite}>Verify Code</button>
+            <p className={styles.footer}>
+              <button type="button" onClick={() => { setStep('role'); setError('') }} style={{background:'none',border:'none',color:'#FF8FA3',cursor:'pointer',fontFamily:'inherit',fontSize:'0.8rem',fontWeight:700,textDecoration:'underline'}}>← Back</button>
+            </p>
+          </div>
+        )}
+
+        {step === 'form' && (
+          <div>
+            {role === 'STORE_OWNER' && (
+              <div style={{display:'flex',alignItems:'center',gap:8,background:'rgba(61,214,140,0.1)',border:'1px solid rgba(61,214,140,0.25)',borderRadius:9,padding:'0.5rem 0.75rem',marginBottom:'1rem'}}>
+                <span>✅</span>
+                <span style={{fontSize:'0.72rem',color:'#5FFFA8',fontWeight:700}}>Invite code verified — seller account</span>
+              </div>
+            )}
+            <form onSubmit={handleSubmit}>
+              {error && <div className={styles.errorBox}>{error}</div>}
+              <div className="field">
+                <label htmlFor="name">Full Name</label>
+                <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} required autoComplete="name" />
+              </div>
+              {role === 'STORE_OWNER' && (
+                <div className="field">
+                  <label htmlFor="company">Company Name</label>
+                  <input id="company" type="text" value={company} onChange={e => setCompany(e.target.value)} required />
+                </div>
+              )}
+              <div className="field">
+                <label htmlFor="email">Email</label>
+                <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+              </div>
+              <div className="field">
+                <label htmlFor="password">Password</label>
+                <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
+              </div>
+              <button type="submit" className={styles.submitBtn} disabled={loading}>
+                {loading ? <span className="spin" /> : 'Create account'}
+              </button>
+            </form>
+            <p className={styles.footer}>
+              <button type="button" onClick={() => { setStep('role'); setError('') }} style={{background:'none',border:'none',color:'#FF8FA3',cursor:'pointer',fontFamily:'inherit',fontSize:'0.8rem',fontWeight:700,textDecoration:'underline'}}>← Back</button>
+            </p>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
