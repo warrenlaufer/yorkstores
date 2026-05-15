@@ -4,13 +4,13 @@
 .heroTitle { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
 .heroSub { font-size: 0.8rem; color: var(--text2); }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.75rem; align-items: stretch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.75rem; }
 
 .empty { grid-column: 1/-1; text-align: center; padding: 4rem 1rem; color: var(--text2); }
 .emptyIcon { font-size: 2.5rem; opacity: 0.2; margin-bottom: 0.75rem; }
 .empty p { font-size: 0.85rem; }
 
-.card { background: #0F0F14; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; transition: all 0.18s; display: flex; flex-direction: column;height: 100%; }
+.card { background: #0F0F14; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; transition: all 0.18s; display: flex; flex-direction: column; height: 340px; }
 .card:hover { border-color: rgba(255,255,255,0.22); transform: translateY(-2px); }
 
 .cardBanner { height: 84px; background: #1D1D26; display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; }
@@ -19,13 +19,13 @@
 .badgeOn { background: rgba(61,214,140,0.2); color: #5FFFA8; border: 1px solid rgba(61,214,140,0.4); }
 .badgeOff { background: rgba(255,255,255,0.07); color: var(--text2); border: 1px solid rgba(255,255,255,0.1); }
 
-.cardBody { padding: 0.95rem; display: flex; flex-direction: column; flex: 1; }
-.cardName { font-size: 0.95rem; font-weight: 800; color: #fff; margin-bottom: 0.1rem; }
-.cardOwner { font-size: 0.67rem; color: var(--text2); margin-bottom: 0.7rem; }
+.cardBody { padding: 0.95rem; display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.cardName { font-size: 0.95rem; font-weight: 800; color: #fff; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cardOwner { font-size: 0.67rem; color: var(--text2); margin-bottom: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-bottom: 0.7rem; }
-.stat { background: #1D1D26; border-radius: 6px; padding: 5px 6px; text-align: center; }
-.statVal { font-size: 0.68rem; font-weight: 700; font-family: var(--mono); color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.stat { background: #1D1D26; border-radius: 6px; padding: 5px 6px; text-align: center; overflow: hidden; }
+.statVal { font-size: 0.68rem; font-weight: 700; font-family: var(--mono); color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .statLbl { font-size: 0.55rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1px; }
 
 .progBar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 0.5rem; }
@@ -40,11 +40,11 @@
   font-size: 0.83rem; font-weight: 800;
   padding: 0.68rem 1rem; cursor: pointer;
   transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
 }
 .openBtn:hover:not(:disabled) { background: var(--pink-dark); transform: translateY(-1px); }
 .openBtn:disabled { background: #252535; color: rgba(255,255,255,0.3); cursor: default; border: 2px solid rgba(255,255,255,0.08); }
 
-/* Choice modal */
 .overlay {
   position: fixed; inset: 0;
   background: rgba(5,5,8,0.88);
