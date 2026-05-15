@@ -25,7 +25,7 @@
 
 .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-bottom: 0.7rem; }
 .stat { background: #1D1D26; border-radius: 6px; padding: 5px 6px; text-align: center; }
-.statVal { font-size: 0.78rem; font-weight: 700; font-family: var(--mono); color: var(--gold); }
+.statVal { font-size: 0.68rem; font-weight: 700; font-family: var(--mono); color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .statLbl { font-size: 0.55rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1px; }
 
 .progBar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 0.5rem; }
