@@ -132,3 +132,34 @@
   border-radius: 8px;
   margin-bottom: 1rem;
 }
+.logoWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+.logoDog { width: 72px; height: auto; margin-bottom: 0.6rem; }
+.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
+.logoWordmark em { color: #FF6B85; font-style: normal; }
+.logoTagline { font-size: 0.72rem; color: #9898B0; }
+.logoWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+.logoDog { width: 72px; height: auto; margin-bottom: 0.6rem; }
+.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
+.logoWordmark em { color: #FF6B85; font-style: normal; }
+.logoTagline { font-size: 0.72rem; color: #9898B0; }
+
+.logoWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+.logoDog { width: 72px; height: auto; margin-bottom: 0.6rem; }
+.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
+.logoWordmark em { color: #FF6B85; font-style: normal; }
+.logoTagline { font-size: 0.72rem; color: #9898B0; }
