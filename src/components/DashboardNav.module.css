@@ -107,16 +107,19 @@
 }
 
 .promoToggle {
-  background: #2a2a35;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 7px;
-  font-size: 0.85rem;
-  padding: 0.26rem 0.5rem;
+  background: #ffffff;
+  color: #111111;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.32rem 0.85rem;
   cursor: pointer;
   transition: all 0.15s;
-  line-height: 1;
+  white-space: nowrap;
 }
-.promoToggle:hover { background: #333345; border-color: rgba(255,255,255,0.3); }
+.promoToggle:hover { background: #f0f0f0; }
 
 .promoPopover {
   position: absolute;
