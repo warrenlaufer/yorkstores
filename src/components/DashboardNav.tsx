@@ -126,9 +126,8 @@ export default function DashboardNav({ user }: { user: User }) {
               setPromoMsg(null)
               setPromoCode('')
             }}
-            title="Enter promo code"
           >
-            🎟
+            Enter Promo Code
           </button>
           {promoOpen && (
             <div className={styles.promoPopover}>
