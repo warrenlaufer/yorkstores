@@ -19,6 +19,7 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  text-decoration: none;
 }
 .dog { height: 0.85em; width: auto; margin-right: 5px; flex-shrink: 0; }
 .em { color: #FF6B85; font-style: normal; }

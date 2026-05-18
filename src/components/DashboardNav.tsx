@@ -86,7 +86,7 @@ export default function DashboardNav({ user }: { user: User }) {
 
   return (
     <nav className={styles.nav}>
-      <div className={styles.logo}>
+      <a href="/dashboard" className={styles.logo}>
         <svg className={styles.dog} viewBox="0 0 40 44" fill="#FF6B85" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <ellipse cx="20" cy="30" rx="13" ry="9"/>
           <ellipse cx="30" cy="16" rx="8" ry="7"/>
@@ -101,7 +101,7 @@ export default function DashboardNav({ user }: { user: User }) {
           <circle cx="35" cy="15" r="1.2" fill="#0F0F14"/>
           <ellipse cx="40" cy="20" rx="1.5" ry="1" fill="#0F0F14"/>
         </svg>York<em className={styles.em}>stores</em>
-      </div>
+      </a>
 
       <div className={styles.tabs}>
         {tabs.map(t => (
