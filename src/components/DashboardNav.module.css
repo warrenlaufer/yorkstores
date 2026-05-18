@@ -100,3 +100,99 @@
   transition: all 0.15s;
 }
 .signOutBtn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* Promo code popover */
+.promoWrap {
+  position: relative;
+}
+
+.promoToggle {
+  background: #2a2a35;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 7px;
+  font-size: 0.85rem;
+  padding: 0.26rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.promoToggle:hover { background: #333345; border-color: rgba(255,255,255,0.3); }
+
+.promoPopover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #0F0F14;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 12px;
+  padding: 0.85rem;
+  width: 260px;
+  z-index: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.promoPopoverTitle {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9898B0;
+  margin-bottom: 0.6rem;
+}
+
+.promoPopoverRow {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.promoPopoverInput {
+  flex: 1;
+  background: #1D1D26 !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  color: #fff !important;
+  font-family: var(--mono) !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  padding: 0.45rem 0.65rem !important;
+  border-radius: 7px !important;
+  outline: none !important;
+  text-transform: uppercase;
+  width: auto !important;
+}
+.promoPopoverInput:focus { border-color: #FF6B85 !important; }
+
+.promoPopoverBtn {
+  background: #FF6B85;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.promoPopoverBtn:hover:not(:disabled) { background: #ff4d6d; }
+.promoPopoverBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.promoPopoverOk {
+  font-size: 0.72rem;
+  color: #5FFFA8;
+  background: rgba(61,214,140,0.1);
+  border: 1px solid rgba(61,214,140,0.25);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.promoPopoverErr {
+  font-size: 0.72rem;
+  color: #FF8FA3;
+  background: rgba(255,107,133,0.1);
+  border: 1px solid rgba(255,107,133,0.25);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}

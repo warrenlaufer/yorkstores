@@ -1,5 +1,6 @@
 'use client'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState, useRef, useEffect } from 'react'
 import styles from './DashboardNav.module.css'
 
 type User = {
@@ -17,6 +18,55 @@ export default function DashboardNav({ user }: { user: User }) {
   const router = useRouter()
   const isStore = user.role === 'STORE_OWNER' || user.role === 'ADMIN'
   const isAdmin = user.role === 'ADMIN'
+
+  const [promoOpen, setPromoOpen] = useState(false)
+  const [promoCode, setPromoCode] = useState('')
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoMsg, setPromoMsg] = useState<{ text: string; ok: boolean } | null>(null)
+  const promoRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (promoOpen) setTimeout(() => inputRef.current?.focus(), 50)
+  }, [promoOpen])
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (promoRef.current && !promoRef.current.contains(e.target as Node)) {
+        setPromoOpen(false)
+        setPromoMsg(null)
+        setPromoCode('')
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  async function applyPromo() {
+    const code = promoCode.trim().toUpperCase()
+    if (!code) return
+    setPromoLoading(true)
+    setPromoMsg(null)
+    try {
+      const res = await fetch('/api/promo/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setPromoMsg({ text: data.error || 'Invalid code.', ok: false })
+      } else {
+        setPromoMsg({ text: '🎉 ' + data.data.message, ok: true })
+        setPromoCode('')
+        router.refresh()
+      }
+    } catch {
+      setPromoMsg({ text: 'Something went wrong.', ok: false })
+    } finally {
+      setPromoLoading(false)
+    }
+  }
 
   async function signOut() {
     await fetch('/api/auth/signout', { method: 'POST' })
@@ -67,6 +117,52 @@ export default function DashboardNav({ user }: { user: User }) {
           <span className={styles.chipValue}>${user.walletBalance.toFixed(2)}</span>
           <span className={styles.chipPlus}>+</span>
         </button>
+
+        <div className={styles.promoWrap} ref={promoRef}>
+          <button
+            className={styles.promoToggle}
+            onClick={() => {
+              setPromoOpen(o => !o)
+              setPromoMsg(null)
+              setPromoCode('')
+            }}
+            title="Enter promo code"
+          >
+            🎟
+          </button>
+          {promoOpen && (
+            <div className={styles.promoPopover}>
+              <div className={styles.promoPopoverTitle}>Promo Code</div>
+              <div className={styles.promoPopoverRow}>
+                <input
+                  ref={inputRef}
+                  className={styles.promoPopoverInput}
+                  type="text"
+                  value={promoCode}
+                  onChange={e => {
+                    setPromoCode(e.target.value.toUpperCase())
+                    setPromoMsg(null)
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && applyPromo()}
+                  maxLength={32}
+                />
+                <button
+                  className={styles.promoPopoverBtn}
+                  onClick={applyPromo}
+                  disabled={promoLoading}
+                >
+                  {promoLoading ? '…' : 'Apply'}
+                </button>
+              </div>
+              {promoMsg && (
+                <div className={promoMsg.ok ? styles.promoPopoverOk : styles.promoPopoverErr}>
+                  {promoMsg.text}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {isStore && (
           <button className={`${styles.walletChip} ${styles.storeChip}`} onClick={() => router.push('/dashboard/wallet')}>
             <span className={styles.chipLabel}>Store</span>
