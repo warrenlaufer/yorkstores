@@ -7,21 +7,11 @@ import styles from './DropDetailClient.module.css'
 type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl?: string; sold: boolean }
 type Drop = { id: string; name: string; emoji: string; owner: string; boxPrice: number; boxes: Box[] }
 
-function rarityLabel(price: number, allPrices: number[]) {
-  const sorted = [...allPrices].sort((a, b) => a - b)
-  const idx = sorted.lastIndexOf(price)
-  const r = idx / ((sorted.length - 1) || 1)
-  if (r >= 0.8) return { label: 'Legendary', cls: styles.legendary }
-  if (r >= 0.6) return { label: 'Epic', cls: styles.epic }
-  if (r >= 0.35) return { label: 'Rare', cls: styles.rare }
-  return { label: 'Common', cls: styles.common }
-}
-
 export default function DropDetailClient({ drop, user }: { drop: Drop; user: { walletBalance: number } }) {
   const router = useRouter()
   const [buying, setBuying] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const allPrices = drop.boxes.map(b => b.itemPrice)
+
   const available = drop.boxes.filter(b => !b.sold).length
 
   const itemMap: Record<string, { name: string; price: number; count: number }> = {}
@@ -70,18 +60,16 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: { w
       <div className={styles.section}>Possible items &amp; odds</div>
       <div className={styles.oddsTable}>
         <div className={styles.oddsHead}>
-          <span></span><span>Item</span><span>Value</span><span>Rarity</span><span>Odds</span>
+          <span></span><span>Item</span><span>Value</span><span>Odds</span>
         </div>
         {Object.values(itemMap).map((it, i) => {
-          const { label, cls } = rarityLabel(it.price, allPrices)
           const pct = Math.round(it.count / drop.boxes.length * 100)
           return (
             <div key={i} className={styles.oddsRow}>
               <span>📦</span>
               <span className={styles.oddsName}>{it.name}{it.count > 1 ? ` ×${it.count}` : ''}</span>
               <span className={styles.oddsPrice}>${it.price}</span>
-              <span className={`${styles.rarityBadge} ${cls}`}>{label}</span>
-              <div className={styles.oddsBar}><div className={styles.oddsFill} style={{ width: `${pct}%` }} /></div>
+              <span className={styles.oddsPct}>{pct}%</span>
             </div>
           )
         })}
