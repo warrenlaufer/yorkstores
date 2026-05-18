@@ -11,6 +11,11 @@ export default function WalletPage() {
   const [error, setError] = useState('')
   const [step, setStep] = useState<'pick' | 'paying' | 'done'>('pick')
 
+  const [promoCode, setPromoCode] = useState('')
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [promoError, setPromoError] = useState('')
+  const [promoSuccess, setPromoSuccess] = useState('')
+
   const finalAmount = customAmt ? parseFloat(customAmt) : amount
 
   async function startPayment() {
@@ -26,17 +31,35 @@ export default function WalletPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
-
-      // In production: load Stripe.js and mount PaymentElement
-      // const stripe = await loadStripe(data.data.publishableKey)
-      // const elements = stripe.elements({ clientSecret: data.data.clientSecret })
-      // For now, simulate completion:
       setStep('paying')
       setTimeout(() => setStep('done'), 2000)
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function applyPromo() {
+    const code = promoCode.trim().toUpperCase()
+    if (!code) { setPromoError('Please enter a promo code.'); return }
+    setPromoError('')
+    setPromoSuccess('')
+    setPromoLoading(true)
+    try {
+      const res = await fetch('/api/promo/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setPromoError(data.error || 'Invalid promo code.'); return }
+      setPromoSuccess(data.data.message)
+      setPromoCode('')
+    } catch {
+      setPromoError('Something went wrong. Please try again.')
+    } finally {
+      setPromoLoading(false)
     }
   }
 
@@ -53,6 +76,7 @@ export default function WalletPage() {
 
   return (
     <div className={styles.wrap}>
+
       <div className={styles.card}>
         <h1 className={styles.title}>Add Funds</h1>
         <p className={styles.sub}>Funds are added to your wallet instantly after payment.</p>
@@ -73,7 +97,6 @@ export default function WalletPage() {
           <span className={styles.dollarSign}>$</span>
           <input
             type="number"
-            placeholder="Custom amount"
             min="1"
             max="10000"
             value={customAmt}
@@ -100,6 +123,33 @@ export default function WalletPage() {
           Secured by Stripe
         </p>
       </div>
+
+      <div className={styles.promoCard}>
+        <h2 className={styles.promoTitle}>🎟 Promo Code</h2>
+        <p className={styles.promoSub}>Have a promo code? Enter it below to add credit to your wallet instantly.</p>
+
+        <div className={styles.promoRow}>
+          <input
+            className={styles.promoInput}
+            type="text"
+            value={promoCode}
+            onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); setPromoSuccess('') }}
+            onKeyDown={e => e.key === 'Enter' && applyPromo()}
+            maxLength={32}
+          />
+          <button
+            className={styles.promoBtn}
+            onClick={applyPromo}
+            disabled={promoLoading}
+          >
+            {promoLoading ? <span className="spin" /> : 'Apply'}
+          </button>
+        </div>
+
+        {promoError && <div className={styles.promoErr}>{promoError}</div>}
+        {promoSuccess && <div className={styles.promoOk}>🎉 {promoSuccess}</div>}
+      </div>
+
     </div>
   )
 }

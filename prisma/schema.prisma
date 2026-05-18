@@ -50,6 +50,7 @@ model User {
   orders            Order[]
   transactions      Transaction[]
   walletTopups      WalletTopup[]
+  promoRedemptions  PromoRedemption[]
 }
 
 model Session {
@@ -151,4 +152,30 @@ model WalletTopup {
   createdAt             DateTime @default(now())
 
   user                  User     @relation(fields: [userId], references: [id])
+}
+
+model PromoCode {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?
+  maxUses     Int?
+  usedCount   Int      @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  redemptions PromoRedemption[]
+}
+
+model PromoRedemption {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  userId      String
+  createdAt   DateTime  @default(now())
+
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([promoCodeId, userId])
 }
