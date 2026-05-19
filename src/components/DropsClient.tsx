@@ -7,6 +7,7 @@ type Drop = {
   id: string
   name: string
   emoji: string
+  logoUrl?: string
   owner: string
   boxPrice: number
   totalBoxes: number
@@ -23,16 +24,12 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
   const [purchasing, setPurchasing] = useState(false)
   const [error, setError] = useState('')
 
-  function openChoice(dropId: string) {
-    setChoiceDropId(dropId)
-    setError('')
-  }
+  function openChoice(dropId: string) { setChoiceDropId(dropId); setError('') }
   function closeChoice() { setChoiceDropId(null) }
 
   async function buyRandom() {
     if (!choiceDropId) return
-    setPurchasing(true)
-    setError('')
+    setPurchasing(true); setError('')
     try {
       const res = await fetch(`/api/drops/${choiceDropId}/purchase`, {
         method: 'POST',
@@ -75,7 +72,11 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
           return (
             <div key={d.id} className={styles.card}>
               <div className={styles.cardBanner}>
-                <span className={styles.cardEmoji}>{d.emoji}</span>
+                {d.logoUrl ? (
+                  <img src={d.logoUrl} alt={d.name} className={styles.cardLogo} />
+                ) : (
+                  <span className={styles.cardEmoji}>{d.emoji || '📦'}</span>
+                )}
                 <span className={`${styles.badge} ${soldOut ? styles.badgeOff : styles.badgeOn}`}>
                   {soldOut ? 'Sold Out' : '● Live'}
                 </span>
@@ -103,7 +104,6 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
         })}
       </div>
 
-      {/* Box choice modal */}
       {choiceDropId && (
         <div className={styles.overlay} onClick={closeChoice}>
           <div className={styles.choiceBox} onClick={e => e.stopPropagation()}>
