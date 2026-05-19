@@ -11,7 +11,7 @@
 .section { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.85rem; }
 
 /* Logo banner — 5x the original 84px = 420px, full logo visible */
-.logoBanner { width: 100%; height: 840px; background: #1D1D26; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.09); }
+.logoBanner { width: 100%; height: 260px; background: #1D1D26; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.09); }
 .logoBannerImg { width: 100%; height: 100%; object-fit: contain; }
 
 .oddsTable { background: #0F0F14; border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
