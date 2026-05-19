@@ -9,67 +9,16 @@
   gap: 2rem;
 }
 
-/* Box scene */
-.boxScene {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 200px;
-  height: 200px;
-}
-
-.glowRing {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,107,133,0.35) 0%, transparent 70%);
-  transform: scale(0);
-  opacity: 0;
-  transition: transform 0.8s ease, opacity 0.8s ease;
-  pointer-events: none;
-}
-.glowRingActive {
-  transform: scale(1.4);
-  opacity: 1;
-}
-
-.boxWrap {
-  width: 150px;
-  height: 170px;
-  position: relative;
-  z-index: 1;
-}
-
-.boxShake {
-  animation: shake 0.6s ease-in-out infinite;
-}
-@keyframes shake {
-  0%, 100% { transform: rotate(0deg); }
-  20%       { transform: rotate(-4deg) translateX(-3px); }
-  40%       { transform: rotate(5deg) translateX(3px); }
-  60%       { transform: rotate(-3deg) translateX(-2px); }
-  80%       { transform: rotate(3deg) translateX(2px); }
-}
-
-.boxSvg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  filter: drop-shadow(0 8px 24px rgba(255,107,133,0.3));
-}
-
-/* Lid */
-.lid {
-  transform-origin: 70px 55px;
-  transition: transform 0s;
-}
+/* Box */
+.boxArea { position: relative; display: flex; align-items: center; justify-content: center; }
+.boxWrap { width: 160px; height: 160px; }
+.boxSvg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 8px 24px rgba(255,107,133,0.3)); }
+.lid { transform-origin: 70px 53px; }
 .lidOpen {
-  transform-origin: 70px 55px;
-  transform: rotate(-80deg) translate(-20px, -30px) scale(0.85);
+  transform-origin: 70px 53px;
+  transform: rotate(-75deg) translate(-15px, -25px) scale(0.88);
   opacity: 0;
-  transition: transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.4s 0.3s ease;
+  transition: transform 0.8s cubic-bezier(0.34,1.2,0.64,1), opacity 0.5s 0.3s ease;
 }
 
 /* Reveal card */
@@ -77,42 +26,37 @@
   background: linear-gradient(135deg, #0F0F14 0%, #1a0810 100%);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 20px;
-  padding: 1.5rem 1.75rem;
-  text-align: center;
-  width: min(340px, 90vw);
+  width: min(360px, 90vw);
   opacity: 0;
   transform: translateY(24px) scale(0.94);
-  transition: all 0.6s cubic-bezier(0.34, 1.15, 0.64, 1);
+  transition: all 0.6s cubic-bezier(0.34,1.15,0.64,1);
+  overflow: hidden;
   box-shadow: 0 24px 64px rgba(0,0,0,0.6);
 }
-.revealCardVisible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+.revealCardVisible { opacity: 1; transform: translateY(0) scale(1); }
+
+/* Item image */
+.itemImageWrap {
+  width: 100%;
+  height: 220px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.itemImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
-.revealLabel {
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #FF8FA3;
-  margin-bottom: 0.5rem;
-  opacity: 0.85;
-}
-.revealName {
-  font-size: 1.3rem;
-  font-weight: 900;
-  color: #fff;
-  margin-bottom: 0.25rem;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-.revealVal {
-  font-family: var(--mono);
-  font-size: 0.9rem;
-  color: var(--gold);
-  margin-bottom: 1.1rem;
-}
+/* Reveal body */
+.revealBody { padding: 1.25rem 1.5rem 1.5rem; text-align: center; }
+.revealLabel { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #FF8FA3; margin-bottom: 0.5rem; opacity: 0.85; }
+.revealName { font-size: 1.3rem; font-weight: 900; color: #fff; margin-bottom: 0.25rem; letter-spacing: -0.02em; line-height: 1.2; }
+.revealVal { font-family: var(--mono); font-size: 0.9rem; color: var(--gold); margin-bottom: 1.1rem; }
 
 /* Countdown */
 .countdown { margin-bottom: 1rem; }
@@ -125,31 +69,17 @@
 
 /* Actions */
 .actions { display: flex; flex-direction: column; gap: 0.5rem; }
-.deliveryBtn {
-  background: #3DD68C; color: #001a08; border: none; border-radius: 10px;
-  font-family: var(--font); font-size: 0.88rem; font-weight: 800;
-  padding: 0.72rem 1.2rem; cursor: pointer; transition: background 0.15s, transform 0.1s;
-}
-.deliveryBtn:hover { background: #5FFFA8; transform: translateY(-1px); }
-.sellBtn {
-  background: #2a2a35; color: #fff; border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px; font-family: var(--font); font-size: 0.85rem; font-weight: 700;
-  padding: 0.7rem 1.2rem; cursor: pointer; transition: all 0.15s;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-}
-.sellBtn:hover { background: #333345; border-color: rgba(255,255,255,0.4); }
-.sellBtn:disabled, .deliveryBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.deliveryBtn { background: #3DD68C; color: #001a08; border: none; border-radius: 10px; font-family: var(--font); font-size: 0.88rem; font-weight: 800; padding: 0.72rem 1.2rem; cursor: pointer; transition: background 0.15s; }
+.deliveryBtn:hover { background: #5FFFA8; }
+.sellBtn { background: #2a2a35; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; font-family: var(--font); font-size: 0.85rem; font-weight: 700; padding: 0.7rem 1.2rem; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.sellBtn:hover { background: #333345; }
+.sellBtn:disabled, .deliveryBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Outcome */
 .outcomeMsg { font-size: 0.82rem; padding: 0.6rem 0.75rem; border-radius: 8px; margin-bottom: 0.85rem; line-height: 1.5; }
 .outcomeDel { background: rgba(96,165,250,0.15); color: #7EC8FF; border: 1px solid rgba(96,165,250,0.3); }
 .outcomeSold { background: rgba(61,214,140,0.12); color: #5FFFA8; border: 1px solid rgba(61,214,140,0.3); }
-
-.backBtn {
-  background: transparent; color: #FF8FA3; border: 2px solid #FF6B85;
-  border-radius: 8px; font-family: var(--font); font-size: 0.78rem; font-weight: 700;
-  padding: 0.45rem 1rem; cursor: pointer; transition: all 0.15s;
-}
+.backBtn { background: transparent; color: #FF8FA3; border: 2px solid #FF6B85; border-radius: 8px; font-family: var(--font); font-size: 0.78rem; font-weight: 700; padding: 0.45rem 1rem; cursor: pointer; transition: all 0.15s; }
 .backBtn:hover { background: rgba(255,107,133,0.15); color: #fff; }
 
 /* Address modal */
@@ -158,8 +88,7 @@
 .addrTitle { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 0.25rem; }
 .addrSub { font-size: 0.75rem; color: var(--text2); margin-bottom: 1.1rem; }
 .addrErr { background: rgba(255,107,133,0.12); border: 1px solid rgba(255,107,133,0.3); color: #FF8FA3; font-size: 0.78rem; padding: 0.5rem 0.75rem; border-radius: 8px; margin-bottom: 0.85rem; }
-.cancelBtn { flex: 1; background: transparent; color: #FF8FA3; border: 2px solid #FF6B85; border-radius: 9px; font-family: var(--font); font-size: 0.82rem; font-weight: 700; padding: 0.6rem; cursor: pointer; transition: all 0.15s; }
-.cancelBtn:hover { background: rgba(255,107,133,0.12); }
-.confirmBtn { flex: 2; background: #3DD68C; color: #001a08; border: none; border-radius: 9px; font-family: var(--font); font-size: 0.85rem; font-weight: 800; padding: 0.62rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
+.cancelBtn { flex: 1; background: transparent; color: #FF8FA3; border: 2px solid #FF6B85; border-radius: 9px; font-family: var(--font); font-size: 0.82rem; font-weight: 700; padding: 0.6rem; cursor: pointer; }
+.confirmBtn { flex: 2; background: #3DD68C; color: #001a08; border: none; border-radius: 9px; font-family: var(--font); font-size: 0.85rem; font-weight: 800; padding: 0.62rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .confirmBtn:hover:not(:disabled) { background: #5FFFA8; }
 .confirmBtn:disabled { background: #1D1D26; color: var(--text2); cursor: not-allowed; }

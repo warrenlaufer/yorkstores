@@ -25,61 +25,36 @@ function Confetti({ active }: { active: boolean }) {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
-
     const colors = ['#FF6B85','#F5C842','#3DD68C','#60A5FA','#C084FC','#FB923C','#fff']
     const pieces = Array.from({ length: 120 }, () => ({
-      x: Math.random() * canvas.width,
-      y: -20 - Math.random() * 100,
-      w: 6 + Math.random() * 10,
-      h: 4 + Math.random() * 6,
+      x: Math.random() * canvas.width, y: -20 - Math.random() * 100,
+      w: 6 + Math.random() * 10, h: 4 + Math.random() * 6,
       color: colors[Math.floor(Math.random() * colors.length)],
-      rot: Math.random() * Math.PI * 2,
-      rotSpeed: (Math.random() - 0.5) * 0.15,
-      vx: (Math.random() - 0.5) * 4,
-      vy: 3 + Math.random() * 5,
-      opacity: 1,
+      rot: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.15,
+      vx: (Math.random() - 0.5) * 4, vy: 3 + Math.random() * 5, opacity: 1,
     }))
-
     const start = performance.now()
-
     function draw(now: number) {
       if (!ctx || !canvas) return
       const elapsed = now - start
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       pieces.forEach(p => {
-        p.x += p.vx
-        p.y += p.vy
-        p.rot += p.rotSpeed
-        p.vy += 0.08
+        p.x += p.vx; p.y += p.vy; p.rot += p.rotSpeed; p.vy += 0.08
         if (elapsed > 1500) p.opacity = Math.max(0, p.opacity - 0.012)
-        ctx.save()
-        ctx.translate(p.x, p.y)
-        ctx.rotate(p.rot)
-        ctx.globalAlpha = p.opacity
-        ctx.fillStyle = p.color
-        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h)
-        ctx.restore()
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot)
+        ctx.globalAlpha = p.opacity; ctx.fillStyle = p.color
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore()
       })
-      if (elapsed < 3000) {
-        animRef.current = requestAnimationFrame(draw)
-      } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-      }
+      if (elapsed < 3000) animRef.current = requestAnimationFrame(draw)
+      else ctx.clearRect(0, 0, canvas.width, canvas.height)
     }
-
     animRef.current = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(animRef.current)
   }, [active])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999 }}
-    />
-  )
+  return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999 }} />
 }
 
 function RevealContent() {
@@ -88,10 +63,11 @@ function RevealContent() {
   const purchaseId = params.get('purchaseId')
 
   const [data, setData] = useState<PurchaseData | null>(null)
-  const [phase, setPhase] = useState<'shake' | 'opening' | 'revealed'>('shake')
-  const [showConfetti, setShowConfetti] = useState(false)
+  const [phase, setPhase] = useState<'opening' | 'revealed' | 'done'>('opening')
+  const [lidOpen, setLidOpen] = useState(false)
   const [cardVisible, setCardVisible] = useState(false)
   const [actionsVisible, setActionsVisible] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
   const [countdown, setCountdown] = useState(300)
   const [showAddr, setShowAddr] = useState(false)
   const [addrForm, setAddrForm] = useState<AddressForm>({
@@ -106,7 +82,6 @@ function RevealContent() {
 
   useEffect(() => {
     if (!purchaseId) { router.push('/dashboard'); return }
-
     fetch(`/api/orders?purchaseId=${purchaseId}`)
       .then(r => r.json())
       .then(d => {
@@ -115,16 +90,15 @@ function RevealContent() {
           if (p) setData({
             purchaseId,
             box: { itemName: p.itemName, itemPrice: p.itemPrice, itemShippingCost: p.itemShippingCost, itemImageUrl: p.itemImageUrl },
-            pricePaid: p.pricePaid,
-            newBalance: 0,
+            pricePaid: p.pricePaid, newBalance: 0,
           })
         }
       }).catch(() => {})
 
-    setTimeout(() => setPhase('opening'), 700)
+    setTimeout(() => setLidOpen(true), 500)
     setTimeout(() => setShowConfetti(true), 900)
-    setTimeout(() => setCardVisible(true), 1400)
-    setTimeout(() => { setActionsVisible(true); setPhase('revealed') }, 1900)
+    setTimeout(() => setCardVisible(true), 1700)
+    setTimeout(() => { setActionsVisible(true); setPhase('revealed') }, 2200)
   }, [purchaseId])
 
   useEffect(() => {
@@ -138,9 +112,7 @@ function RevealContent() {
     return () => clearInterval(timerRef.current!)
   }, [phase, outcome])
 
-  function stopTimer() {
-    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
-  }
+  function stopTimer() { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
 
   async function handleSellBack() {
     stopTimer(); setSubmitting(true)
@@ -198,71 +170,85 @@ function RevealContent() {
     <div className={styles.screen}>
       <Confetti active={showConfetti} />
 
-      <div className={styles.boxScene}>
-        <div className={`${styles.glowRing} ${phase === 'opening' || phase === 'revealed' ? styles.glowRingActive : ''}`} />
-        <div className={`${styles.boxWrap} ${phase === 'shake' ? styles.boxShake : ''}`}>
-          <svg className={styles.boxSvg} viewBox="0 0 140 160" fill="none">
-            <rect x="14" y="72" width="112" height="72" rx="6" fill="#1a0812" stroke="#FF6B85" strokeWidth="1.5"/>
-            <polygon points="14,72 5,63 5,135 14,144" fill="#130610" opacity="0.9"/>
-            <polygon points="126,72 135,63 135,135 126,144" fill="#130610" opacity="0.6"/>
-            <rect x="14" y="100" width="112" height="9" fill="#FF6B85" opacity="0.35"/>
-            <rect x="63" y="72" width="14" height="72" fill="#FF6B85" opacity="0.35"/>
-            <g className={phase === 'opening' || phase === 'revealed' ? styles.lidOpen : styles.lid}>
-              <rect x="9" y="55" width="122" height="21" rx="5" fill="#25091a" stroke="#FF8FA3" strokeWidth="1.5"/>
-              <rect x="63" y="55" width="14" height="21" fill="#FF8FA3" opacity="0.45"/>
-              <ellipse cx="57" cy="56" rx="12" ry="8" fill="#FFAABB" transform="rotate(-28 57 56)"/>
-              <ellipse cx="83" cy="56" rx="12" ry="8" fill="#FFAABB" transform="rotate(28 83 56)"/>
-              <ellipse cx="70" cy="56" rx="6" ry="5.5" fill="#FF6B85"/>
-              <ellipse cx="70" cy="55" rx="3.5" ry="3" fill="#CC2E50"/>
-              <line x1="63" y1="60" x2="50" y2="72" stroke="#FF8FA3" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="77" y1="60" x2="90" y2="72" stroke="#FF8FA3" strokeWidth="1.5" strokeLinecap="round"/>
+      {/* Box animation */}
+      <div className={styles.boxArea}>
+        <div className={styles.boxWrap}>
+          <svg className={styles.boxSvg} viewBox="0 0 140 140" fill="none">
+            <rect x="16" y="68" width="108" height="64" rx="6" fill="#1a0810" stroke="#FF6B85" strokeWidth="1.5"/>
+            <polygon points="16,68 7,61 7,124 16,132" fill="#140610" opacity="0.8"/>
+            <polygon points="124,68 133,61 133,124 124,132" fill="#140610" opacity="0.5"/>
+            <rect x="16" y="94" width="108" height="8" fill="#FF6B85" opacity="0.4"/>
+            <rect x="64" y="68" width="12" height="64" fill="#FF6B85" opacity="0.4"/>
+            <g className={lidOpen ? styles.lidOpen : styles.lid}>
+              <rect x="11" y="53" width="118" height="19" rx="5" fill="#230c18" stroke="#FF8FA3" strokeWidth="1.5"/>
+              <rect x="64" y="53" width="12" height="19" fill="#FF8FA3" opacity="0.5"/>
+              <ellipse cx="59" cy="54" rx="11" ry="7.5" fill="#FFAABB" transform="rotate(-30 59 54)"/>
+              <ellipse cx="81" cy="54" rx="11" ry="7.5" fill="#FFAABB" transform="rotate(30 81 54)"/>
+              <ellipse cx="70" cy="54" rx="5.5" ry="5" fill="#FF6B85"/>
+              <ellipse cx="70" cy="53" rx="3" ry="2.8" fill="#CC3050"/>
             </g>
           </svg>
         </div>
       </div>
 
+      {/* Reveal card */}
       {data && (
         <div className={`${styles.revealCard} ${cardVisible ? styles.revealCardVisible : ''}`}>
-          <div className={styles.revealLabel}>✦ You revealed</div>
-          <div className={styles.revealName}>{data.box.itemName}</div>
-          <div className={styles.revealVal}>
-            ${data.box.itemPrice.toFixed(2)} value
-            {data.box.itemShippingCost > 0 ? ` · $${data.box.itemShippingCost.toFixed(2)} shipping` : ''}
+
+          {/* Item image */}
+          {data.box.itemImageUrl && (
+            <div className={styles.itemImageWrap}>
+              <img
+                src={data.box.itemImageUrl}
+                alt={data.box.itemName}
+                className={styles.itemImage}
+              />
+            </div>
+          )}
+
+          <div className={styles.revealBody}>
+            <div className={styles.revealLabel}>✦ You revealed</div>
+            <div className={styles.revealName}>{data.box.itemName}</div>
+            <div className={styles.revealVal}>
+              ${data.box.itemPrice.toFixed(2)} value
+              {data.box.itemShippingCost > 0 ? ` · $${data.box.itemShippingCost.toFixed(2)} shipping` : ''}
+            </div>
+
+            {!outcome && (
+              <div className={styles.countdown}>
+                <div className={styles.countdownLabel}>Sell back automatically in</div>
+                <div className={styles.countdownBarBg}>
+                  <div className={styles.countdownBar} style={{ width: `${pct}%`, background: barColor }} />
+                </div>
+                <div className={`${styles.countdownTime} ${urgent ? styles.urgent : ''}`}>
+                  {mins}:{String(secs).padStart(2, '0')}
+                </div>
+              </div>
+            )}
+
+            {actionsVisible && !outcome && (
+              <div className={styles.actions}>
+                <button className={styles.deliveryBtn} onClick={openDelivery} disabled={submitting}>📦 Take Delivery</button>
+                <button className={styles.sellBtn} onClick={handleSellBack} disabled={submitting}>
+                  {submitting ? <span className="spin" /> : `💸 Sell Back for $${(data.box.itemPrice * 0.9).toFixed(2)}`}
+                </button>
+              </div>
+            )}
+
+            {outcome && (
+              <div className={`${styles.outcomeMsg} ${outcome === 'delivery' ? styles.outcomeDel : styles.outcomeSold}`}>
+                {outcomeMsg}
+              </div>
+            )}
+
+            {outcome && (
+              <button className={styles.backBtn} onClick={() => router.push('/dashboard')}>Back to Drops</button>
+            )}
           </div>
-
-          {!outcome && (
-            <div className={styles.countdown}>
-              <div className={styles.countdownLabel}>Sell back automatically in</div>
-              <div className={styles.countdownBarBg}>
-                <div className={styles.countdownBar} style={{ width: `${pct}%`, background: barColor }} />
-              </div>
-              <div className={`${styles.countdownTime} ${urgent ? styles.urgent : ''}`}>
-                {mins}:{String(secs).padStart(2, '0')}
-              </div>
-            </div>
-          )}
-
-          {actionsVisible && !outcome && (
-            <div className={styles.actions}>
-              <button className={styles.deliveryBtn} onClick={openDelivery} disabled={submitting}>📦 Take Delivery</button>
-              <button className={styles.sellBtn} onClick={handleSellBack} disabled={submitting}>
-                {submitting ? <span className="spin" /> : `💸 Sell Back for $${(data.box.itemPrice * 0.9).toFixed(2)}`}
-              </button>
-            </div>
-          )}
-
-          {outcome && (
-            <div className={`${styles.outcomeMsg} ${outcome === 'delivery' ? styles.outcomeDel : styles.outcomeSold}`}>
-              {outcomeMsg}
-            </div>
-          )}
-
-          {outcome && (
-            <button className={styles.backBtn} onClick={() => router.push('/dashboard')}>Back to Drops</button>
-          )}
         </div>
       )}
 
+      {/* Address modal */}
       {showAddr && (
         <div className={styles.addrOverlay} onClick={cancelDelivery}>
           <div className={styles.addrBox} onClick={e => e.stopPropagation()}>
