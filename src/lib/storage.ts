@@ -15,7 +15,6 @@ const BUCKET = process.env.R2_BUCKET_NAME!
 const PUBLIC_URL = process.env.R2_PUBLIC_URL!
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const MAX_SIZE_MB = 5
 
 export async function generateUploadUrl(mimeType: string) {
   if (!ALLOWED_TYPES.includes(mimeType)) {
@@ -31,9 +30,11 @@ export async function generateUploadUrl(mimeType: string) {
       Bucket: BUCKET,
       Key: key,
       ContentType: mimeType,
-      ContentLength: MAX_SIZE_MB * 1024 * 1024,
     }),
-    { expiresIn: 300 }
+    {
+      expiresIn: 300,
+      unhoistableHeaders: new Set(['x-amz-checksum-crc32', 'x-amz-sdk-checksum-algorithm']),
+    }
   )
 
   return { uploadUrl: url, publicUrl: `${PUBLIC_URL}/${key}`, key }
