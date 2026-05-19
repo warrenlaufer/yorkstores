@@ -26,50 +26,53 @@ export default function StoreOwnerClient({ user, transactions }: {
   const [success, setSuccess] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
 
-  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
-    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
+async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
+  if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
 
-    setLogoUploading(true)
-    setError('')
+  setLogoUploading(true)
+  setError('')
 
-    try {
-      // Get presigned upload URL
-      const res = await fetch('/api/users/upload-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: file.name, contentType: file.type }),
-      })
-      const data = await res.json()
+  try {
+    const res = await fetch('/api/users/upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mimeType: file.type }),
+    })
+    const data = await res.json()
+    console.log('Upload URL response:', data)
 
-      if (!res.ok) {
-        // Fallback: use a local object URL for preview if upload service not configured
-        const localUrl = URL.createObjectURL(file)
-        setLogoPreview(localUrl)
-        setLogoUrl(localUrl)
-        return
-      }
-
-      // Upload to storage
-      await fetch(data.data.uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
-      })
-
-      setLogoUrl(data.data.publicUrl)
-      setLogoPreview(data.data.publicUrl)
-    } catch {
-      // Fallback to local preview
-      const localUrl = URL.createObjectURL(file)
-      setLogoPreview(localUrl)
-      setLogoUrl(localUrl)
-    } finally {
+    if (!res.ok) {
+      setError('Upload failed: ' + (data.error || 'Unknown error'))
       setLogoUploading(false)
+      return
     }
+
+    const uploadRes = await fetch(data.data.uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type },
+    })
+
+    console.log('PUT response status:', uploadRes.status)
+
+    if (!uploadRes.ok) {
+      setError('Failed to upload image. Please try again.')
+      setLogoUploading(false)
+      return
+    }
+
+    setLogoUrl(data.data.publicUrl)
+    setLogoPreview(data.data.publicUrl)
+  } catch (e: any) {
+    console.error('Upload error:', e)
+    setError('Upload failed: ' + e.message)
+  } finally {
+    setLogoUploading(false)
   }
+}
 
   function addBox() {
     const price = parseFloat(iPrice)
