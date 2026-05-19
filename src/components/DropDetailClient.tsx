@@ -45,11 +45,15 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     <div className={styles.wrap}>
       <Link href="/dashboard" className={styles.back}>← Back to Drops</Link>
 
+      {drop.logoUrl && (
+        <div className={styles.logoBanner}>
+          <img src={drop.logoUrl} alt={drop.name} className={styles.logoBannerImg} />
+        </div>
+      )}
+
       <div className={styles.header}>
         <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-          {drop.logoUrl ? (
-            <img src={drop.logoUrl} alt={drop.name} style={{width:48,height:48,objectFit:'contain',borderRadius:8,background:'#1D1D26',padding:4}} />
-          ) : (
+          {!drop.logoUrl && (
             <span style={{fontSize:'2rem'}}>{drop.emoji || '📦'}</span>
           )}
           <div>
