@@ -26,6 +26,7 @@ export default async function DashboardPage() {
       id: d.id,
       name: d.name,
       emoji: d.emoji,
+      logoUrl: d.logoUrl ?? undefined,
       owner: d.owner.company ?? d.owner.name,
       boxPrice: calcBoxPrice(allPrices),
       totalBoxes: d.boxes.length,
