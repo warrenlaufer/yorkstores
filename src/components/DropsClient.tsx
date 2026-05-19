@@ -71,15 +71,17 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
           const pct = Math.round((d.availableBoxes / d.totalBoxes) * 100)
           return (
             <div key={d.id} className={styles.card}>
+              <div className={styles.badgeRow}>
+                <span className={`${styles.badge} ${soldOut ? styles.badgeOff : styles.badgeOn}`}>
+                  {soldOut ? 'Sold Out' : '● Live'}
+                </span>
+              </div>
               <div className={styles.cardBanner}>
                 {d.logoUrl ? (
                   <img src={d.logoUrl} alt={d.name} className={styles.cardLogo} />
                 ) : (
                   <span className={styles.cardEmoji}>{d.emoji || '📦'}</span>
                 )}
-                <span className={`${styles.badge} ${soldOut ? styles.badgeOff : styles.badgeOn}`}>
-                  {soldOut ? 'Sold Out' : '● Live'}
-                </span>
               </div>
               <div className={styles.cardBody}>
                 <div className={styles.cardName}>{d.name}</div>
