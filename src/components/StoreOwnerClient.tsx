@@ -20,43 +20,56 @@ export default function StoreOwnerClient({ user, transactions }: {
   const [iPrice, setIPrice] = useState('')
   const [iShip, setIShip] = useState('')
   const [iImg, setIImg] = useState('')
+  const [iImgPreview, setIImgPreview] = useState('')
+  const [iImgUploading, setIImgUploading] = useState(false)
   const [iQty, setIQty] = useState('1')
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const itemImgInputRef = useRef<HTMLInputElement>(null)
+
+  async function uploadImage(file: File): Promise<string> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await fetch('/api/users/upload-url', {
+      method: 'POST',
+      body: formData,
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Upload failed')
+    return data.data.publicUrl
+  }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
-
-    setLogoUploading(true)
-    setError('')
-
+    setLogoUploading(true); setError('')
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const res = await fetch('/api/users/upload-url', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError('Upload failed: ' + (data.error || 'Unknown error'))
-        return
-      }
-
-      setLogoUrl(data.data.publicUrl)
-      setLogoPreview(data.data.publicUrl)
+      const url = await uploadImage(file)
+      setLogoUrl(url); setLogoPreview(url)
     } catch (e: any) {
-      setError('Upload failed: ' + e.message)
+      setError('Logo upload failed: ' + e.message)
     } finally {
       setLogoUploading(false)
+    }
+  }
+
+  async function handleItemImgUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
+    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
+    setIImgUploading(true); setError('')
+    try {
+      const url = await uploadImage(file)
+      setIImg(url); setIImgPreview(url)
+    } catch (e: any) {
+      setError('Image upload failed: ' + e.message)
+    } finally {
+      setIImgUploading(false)
     }
   }
 
@@ -67,7 +80,7 @@ export default function StoreOwnerClient({ user, transactions }: {
       itemName: iName, itemPrice: price, itemShippingCost: parseFloat(iShip) || 0,
       itemImageUrl: iImg, qty: Math.max(1, parseInt(iQty) || 1), _id: Math.random().toString(36).slice(2),
     }])
-    setIName(''); setIPrice(''); setIShip(''); setIImg(''); setIQty('1')
+    setIName(''); setIPrice(''); setIShip(''); setIImg(''); setIImgPreview(''); setIQty('1')
     setError('')
   }
 
@@ -112,7 +125,6 @@ export default function StoreOwnerClient({ user, transactions }: {
               <label>Drop Name</label>
               <input value={name} onChange={e => setName(e.target.value)} />
             </div>
-
             <div className="field">
               <label>Drop Logo</label>
               <div className={styles.logoUploadArea} onClick={() => logoInputRef.current?.click()}>
@@ -123,25 +135,14 @@ export default function StoreOwnerClient({ user, transactions }: {
                     {logoUploading ? (
                       <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></>
                     ) : (
-                      <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span><span className={styles.logoHint}>PNG, JPG or SVG · Max 5MB</span></>
+                      <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span><span className={styles.logoHint}>PNG, JPG or WebP · Max 5MB</span></>
                     )}
                   </div>
                 )}
               </div>
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleLogoUpload}
-              />
+              <input ref={logoInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleLogoUpload} />
               {logoPreview && (
-                <button
-                  className={styles.removeLogoBtn}
-                  onClick={() => { setLogoUrl(''); setLogoPreview('') }}
-                >
-                  Remove logo
-                </button>
+                <button className={styles.removeLogoBtn} onClick={() => { setLogoUrl(''); setLogoPreview('') }}>Remove logo</button>
               )}
             </div>
           </div>
@@ -154,11 +155,36 @@ export default function StoreOwnerClient({ user, transactions }: {
               <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} min="0" /></div>
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="50" /></div>
             </div>
-            <div className="field"><label>Image URL (optional)</label><input value={iImg} onChange={e => setIImg(e.target.value)} /></div>
+
+            {/* Item image upload */}
+            <div className="field">
+              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(optional)</span></label>
+              <div className={styles.itemImgRow}>
+                <div className={styles.itemImgUpload} onClick={() => itemImgInputRef.current?.click()}>
+                  {iImgPreview ? (
+                    <img src={iImgPreview} alt="Item preview" className={styles.itemImgPreview} />
+                  ) : (
+                    <div className={styles.itemImgPlaceholder}>
+                      {iImgUploading ? (
+                        <span className="spin" style={{width:16,height:16}} />
+                      ) : (
+                        <span style={{fontSize:'1.2rem'}}>📷</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {iImgPreview && (
+                  <button className={styles.removeLogoBtn} onClick={() => { setIImg(''); setIImgPreview('') }}>Remove</button>
+                )}
+              </div>
+              <input ref={itemImgInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleItemImgUpload} />
+            </div>
+
             <button className={styles.addBtn} onClick={addBox}>+ Add Item</button>
             <div className={styles.itemList}>
               {boxes.map(b => (
                 <div key={b._id} className={styles.itemRow}>
+                  {b.itemImageUrl && <img src={b.itemImageUrl} alt={b.itemName} style={{width:28,height:28,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
                   <span className={styles.itemName}>{b.itemName}{b.qty > 1 ? ` ×${b.qty}` : ''}</span>
                   <span className={styles.itemPrice}>${b.itemPrice}</span>
                   <span className={styles.itemShip}>+${b.itemShippingCost.toFixed(2)} ship</span>
