@@ -26,53 +26,39 @@ export default function StoreOwnerClient({ user, transactions }: {
   const [success, setSuccess] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
 
-async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-  const file = e.target.files?.[0]
-  if (!file) return
-  if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
-  if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
+    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
 
-  setLogoUploading(true)
-  setError('')
+    setLogoUploading(true)
+    setError('')
 
-  try {
-    const res = await fetch('/api/users/upload-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mimeType: file.type }),
-    })
-    const data = await res.json()
-    console.log('Upload URL response:', data)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
 
-    if (!res.ok) {
-      setError('Upload failed: ' + (data.error || 'Unknown error'))
+      const res = await fetch('/api/users/upload-url', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError('Upload failed: ' + (data.error || 'Unknown error'))
+        return
+      }
+
+      setLogoUrl(data.data.publicUrl)
+      setLogoPreview(data.data.publicUrl)
+    } catch (e: any) {
+      setError('Upload failed: ' + e.message)
+    } finally {
       setLogoUploading(false)
-      return
     }
-
-    const uploadRes = await fetch(data.data.uploadUrl, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': file.type },
-    })
-
-    console.log('PUT response status:', uploadRes.status)
-
-    if (!uploadRes.ok) {
-      setError('Failed to upload image. Please try again.')
-      setLogoUploading(false)
-      return
-    }
-
-    setLogoUrl(data.data.publicUrl)
-    setLogoPreview(data.data.publicUrl)
-  } catch (e: any) {
-    console.error('Upload error:', e)
-    setError('Upload failed: ' + e.message)
-  } finally {
-    setLogoUploading(false)
   }
-}
 
   function addBox() {
     const price = parseFloat(iPrice)
@@ -127,7 +113,6 @@ async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
               <input value={name} onChange={e => setName(e.target.value)} />
             </div>
 
-            {/* Logo upload */}
             <div className="field">
               <label>Drop Logo</label>
               <div className={styles.logoUploadArea} onClick={() => logoInputRef.current?.click()}>
