@@ -1,33 +1,62 @@
-.wrap { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
-.back { display: inline-flex; align-items: center; gap: 5px; background: #1D1D26; color: #fff; border: 2px solid rgba(255,255,255,0.28); border-radius: 7px; font-size: 0.73rem; font-weight: 700; padding: 0.35rem 0.85rem; cursor: pointer; margin-bottom: 1.25rem; transition: all 0.15s; text-decoration: none; }
-.back:hover { border-color: rgba(255,255,255,0.55); background: #23232E; }
-.header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
-.title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 0.2rem; }
-.sub { font-size: 0.75rem; color: var(--text2); font-family: var(--mono); }
-.priceTag { background: #1D1D26; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 0.55rem 1rem; text-align: center; flex-shrink: 0; }
-.priceVal { font-size: 1.15rem; font-weight: 800; font-family: var(--mono); color: var(--gold); }
-.priceLbl { font-size: 0.57rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
-.errBox { background: rgba(255,107,133,0.12); border: 1px solid rgba(255,107,133,0.3); color: #FF8FA3; font-size: 0.8rem; padding: 0.6rem 0.875rem; border-radius: 8px; margin-bottom: 1rem; }
-.section { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 0.85rem; }
+.wrap { max-width: 900px; margin: 0 auto; padding: 0 1.25rem 3rem; }
 
-/* Logo banner — 2x the drop card height (252px), full logo visible */
-.logoBanner { width: 100%; height: 504px; background: #1D1D26; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.09); }
-.logoBannerImg { width: 100%; height: 100%; object-fit: contain; }
+.hero { padding: 1.5rem 0 1rem; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 1.25rem; }
+.heroTitle { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
+.heroSub { font-size: 0.8rem; color: var(--text2); }
 
-.oddsTable { background: #0F0F14; border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; }
-.oddsHead { display: grid; grid-template-columns: 36px 1fr 80px 60px; gap: 6px; padding: 0.45rem 0.9rem; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 0.58rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text3); }
-.oddsRow { display: grid; grid-template-columns: 36px 1fr 80px 60px; gap: 6px; padding: 0.5rem 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.06); align-items: center; font-size: 0.8rem; }
-.oddsRow:last-child { border: none; }
-.oddsName { font-weight: 600; color: #fff; }
-.oddsPrice { font-family: var(--mono); color: var(--gold); font-size: 0.74rem; }
-.oddsPct { font-family: var(--mono); font-size: 0.78rem; font-weight: 700; color: #FF8FA3; }
-.boxGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 0.5rem; }
-.boxTile { background: #0F0F14; border: 2px solid rgba(255,255,255,0.22); border-radius: 12px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.18s; position: relative; overflow: hidden; gap: 3px; }
-.boxTile:hover:not(:disabled) { border-color: #FF6B85; background: rgba(255,107,133,0.07); transform: translateY(-2px); }
-.boxSold { opacity: 0.18; cursor: default; filter: grayscale(1); }
-.boxTile:disabled:not(.boxSold) { opacity: 0.5; cursor: wait; }
-.boxEmoji { font-size: 1.55rem; transition: transform 0.2s; }
-.boxTile:hover:not(:disabled) .boxEmoji { transform: scale(1.18) rotate(-5deg); }
-.boxNum { font-size: 0.55rem; font-weight: 700; color: var(--text3); letter-spacing: 0.06em; }
-.shimmer { position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%); background-size: 300% 100%; animation: shimmer 2.5s infinite; }
-@keyframes shimmer { 0% { background-position: 300% 0 } 100% { background-position: -300% 0 } }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.75rem; }
+
+.empty { grid-column: 1/-1; text-align: center; padding: 4rem 1rem; color: var(--text2); }
+.emptyIcon { font-size: 2.5rem; opacity: 0.2; margin-bottom: 0.75rem; }
+.empty p { font-size: 0.85rem; }
+
+.card { background: #0F0F14; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; transition: all 0.18s; display: flex; flex-direction: column; height: 508px; }
+.card:hover { border-color: rgba(255,255,255,0.22); transform: translateY(-2px); }
+
+.cardBanner { height: 252px; background: #1D1D26; display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0; overflow: hidden; }
+.cardLogo { width: 100%; height: 100%; object-fit: cover; }
+.cardEmoji { font-size: 2.2rem; }
+.badge { position: absolute; top: 8px; right: 8px; font-size: 0.6rem; font-weight: 700; padding: 3px 9px; border-radius: 5px; }
+.badgeOn { background: rgba(61,214,140,0.2); color: #5FFFA8; border: 1px solid rgba(61,214,140,0.4); }
+.badgeOff { background: rgba(255,255,255,0.07); color: var(--text2); border: 1px solid rgba(255,255,255,0.1); }
+
+.cardBody { padding: 0.95rem; display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+.cardName { font-size: 0.95rem; font-weight: 800; color: #fff; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cardOwner { font-size: 0.67rem; color: var(--text2); margin-bottom: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-bottom: 0.7rem; }
+.stat { background: #1D1D26; border-radius: 6px; padding: 5px 6px; text-align: center; overflow: hidden; }
+.statVal { font-size: 0.68rem; font-weight: 700; font-family: var(--mono); color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.statLbl { font-size: 0.55rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 1px; }
+
+.progBar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 0.5rem; }
+.progFill { height: 100%; background: var(--pink); border-radius: 2px; transition: width 0.3s; }
+.avail { font-size: 0.67rem; color: var(--text2); margin-bottom: 0.75rem; }
+.avail strong { color: #fff; }
+
+.openBtn {
+  display: block; width: 100%; margin-top: auto;
+  background: var(--pink); color: #fff; border: none;
+  border-radius: 10px; font-family: var(--font);
+  font-size: 0.83rem; font-weight: 800;
+  padding: 0.68rem 1rem; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+.openBtn:hover:not(:disabled) { background: var(--pink-dark); transform: translateY(-1px); }
+.openBtn:disabled { background: #252535; color: rgba(255,255,255,0.3); cursor: default; border: 2px solid rgba(255,255,255,0.08); }
+
+.overlay { position: fixed; inset: 0; background: rgba(5,5,8,0.88); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.choiceBox { background: #0F0F14; border: 1px solid rgba(255,255,255,0.14); border-radius: 20px; width: min(440px, 100%); padding: 2rem; text-align: center; }
+.choiceTitle { font-size: 1.1rem; font-weight: 800; color: #fff; margin-bottom: 0.4rem; }
+.choiceSub { font-size: 0.8rem; color: var(--text2); line-height: 1.6; margin-bottom: 1.75rem; }
+.choiceError { background: rgba(255,107,133,0.12); border: 1px solid rgba(255,107,133,0.3); color: #FF8FA3; font-size: 0.78rem; padding: 0.5rem 0.75rem; border-radius: 8px; margin-bottom: 1rem; }
+.choiceCards { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem; }
+.choiceCard { background: #1D1D26; border: 2px solid rgba(255,255,255,0.12); border-radius: 14px; padding: 1.35rem 0.85rem; cursor: pointer; transition: all 0.18s; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.choiceCard:hover:not(:disabled) { border-color: var(--pink); background: rgba(255,107,133,0.08); transform: translateY(-2px); }
+.choiceCard:disabled { opacity: 0.5; cursor: not-allowed; }
+.choiceIcon { font-size: 2.4rem; margin-bottom: 0.25rem; }
+.choiceName { font-size: 0.88rem; font-weight: 800; color: #fff; }
+.choiceDesc { font-size: 0.67rem; color: var(--text2); line-height: 1.4; }
+.choiceCancel { background: #2a2a35; border: 1px solid rgba(255,255,255,0.15); color: var(--text2); font-family: var(--font); font-size: 0.78rem; font-weight: 600; padding: 0.4rem 1.2rem; border-radius: 8px; cursor: pointer; }
+.choiceCancel:hover { color: #fff; background: #333345; }
