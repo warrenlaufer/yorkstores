@@ -6,7 +6,6 @@ import { createDropSchema } from '@/lib/schemas'
 import { calcBoxPrice } from '@/lib/stripe'
 import { Role } from '@prisma/client'
 
-// GET /api/drops - list all active drops with box prices
 export async function GET() {
   const drops = await prisma.drop.findMany({
     where: { isActive: true },
@@ -24,6 +23,7 @@ export async function GET() {
       id: d.id,
       name: d.name,
       emoji: d.emoji,
+      logoUrl: d.logoUrl,
       owner: d.owner.company ?? d.owner.name,
       boxPrice: calcBoxPrice(allPrices),
       totalBoxes: d.boxes.length,
@@ -34,7 +34,6 @@ export async function GET() {
   }))
 }
 
-// POST /api/drops - create a new drop (store owners only)
 export async function POST(req: NextRequest) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
@@ -45,6 +44,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
   const { name, emoji, boxes: boxDefs } = parsed.data
+  const logoUrl = body?.logoUrl ?? null
 
   const boxRecords = boxDefs.flatMap(b =>
     Array.from({ length: b.qty }, () => ({
@@ -55,7 +55,6 @@ export async function POST(req: NextRequest) {
     }))
   )
 
-  // Shuffle boxes server-side
   for (let i = boxRecords.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[boxRecords[i], boxRecords[j]] = [boxRecords[j], boxRecords[i]]
@@ -65,6 +64,7 @@ export async function POST(req: NextRequest) {
     data: {
       name,
       emoji,
+      logoUrl,
       ownerId: user.id,
       boxes: { create: boxRecords },
     },

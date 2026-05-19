@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './StoreOwnerClient.module.css'
 
@@ -12,7 +12,9 @@ export default function StoreOwnerClient({ user, transactions }: {
 }) {
   const router = useRouter()
   const [name, setName] = useState('')
-  const [emoji, setEmoji] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
+  const [logoPreview, setLogoPreview] = useState('')
+  const [logoUploading, setLogoUploading] = useState(false)
   const [boxes, setBoxes] = useState<BoxDef[]>([])
   const [iName, setIName] = useState('')
   const [iPrice, setIPrice] = useState('')
@@ -22,6 +24,52 @@ export default function StoreOwnerClient({ user, transactions }: {
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const logoInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
+    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
+
+    setLogoUploading(true)
+    setError('')
+
+    try {
+      // Get presigned upload URL
+      const res = await fetch('/api/users/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        // Fallback: use a local object URL for preview if upload service not configured
+        const localUrl = URL.createObjectURL(file)
+        setLogoPreview(localUrl)
+        setLogoUrl(localUrl)
+        return
+      }
+
+      // Upload to storage
+      await fetch(data.data.uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      })
+
+      setLogoUrl(data.data.publicUrl)
+      setLogoPreview(data.data.publicUrl)
+    } catch {
+      // Fallback to local preview
+      const localUrl = URL.createObjectURL(file)
+      setLogoPreview(localUrl)
+      setLogoUrl(localUrl)
+    } finally {
+      setLogoUploading(false)
+    }
+  }
 
   function addBox() {
     const price = parseFloat(iPrice)
@@ -49,12 +97,12 @@ export default function StoreOwnerClient({ user, transactions }: {
       const res = await fetch('/api/drops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, emoji: emoji || '📦', boxes }),
+        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '📦', boxes }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setSuccess('Drop published!')
-      setName(''); setEmoji(''); setBoxes([])
+      setName(''); setLogoUrl(''); setLogoPreview(''); setBoxes([])
       setTimeout(() => { setSuccess(''); router.refresh() }, 1500)
     } catch { setError('Something went wrong.') }
     finally { setPublishing(false) }
@@ -71,19 +119,54 @@ export default function StoreOwnerClient({ user, transactions }: {
         <div>
           <div className={styles.panel}>
             <div className={styles.panelTitle}>Drop Info</div>
-            <div className="field"><label>Drop Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sneaker Surprise Drop" /></div>
-            <div className="field"><label>Icon (emoji)</label><input value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="👟" style={{maxWidth:80,textAlign:'center'}} /></div>
+            <div className="field">
+              <label>Drop Name</label>
+              <input value={name} onChange={e => setName(e.target.value)} />
+            </div>
+
+            {/* Logo upload */}
+            <div className="field">
+              <label>Drop Logo</label>
+              <div className={styles.logoUploadArea} onClick={() => logoInputRef.current?.click()}>
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo preview" className={styles.logoPreview} />
+                ) : (
+                  <div className={styles.logoPlaceholder}>
+                    {logoUploading ? (
+                      <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></>
+                    ) : (
+                      <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span><span className={styles.logoHint}>PNG, JPG or SVG · Max 5MB</span></>
+                    )}
+                  </div>
+                )}
+              </div>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleLogoUpload}
+              />
+              {logoPreview && (
+                <button
+                  className={styles.removeLogoBtn}
+                  onClick={() => { setLogoUrl(''); setLogoPreview('') }}
+                >
+                  Remove logo
+                </button>
+              )}
+            </div>
           </div>
 
           <div className={styles.panel} style={{marginTop:'0.75rem'}}>
             <div className={styles.panelTitle}>Add Items</div>
             <div className={styles.itemGrid}>
-              <div><label>Name</label><input value={iName} onChange={e => setIName(e.target.value)} onKeyDown={e => e.key==='Enter'&&addBox()} placeholder="Nike Dunk Low" /></div>
-              <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} placeholder="120" min="0.01" /></div>
-              <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} placeholder="9.99" min="0" /></div>
+              <div><label>Name</label><input value={iName} onChange={e => setIName(e.target.value)} onKeyDown={e => e.key==='Enter'&&addBox()} /></div>
+              <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" /></div>
+              <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} min="0" /></div>
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="50" /></div>
             </div>
-            <div className="field"><label>Image URL (optional)</label><input value={iImg} onChange={e => setIImg(e.target.value)} placeholder="https://..." /></div>
+            <div className="field"><label>Image URL (optional)</label><input value={iImg} onChange={e => setIImg(e.target.value)} /></div>
             <button className={styles.addBtn} onClick={addBox}>+ Add Item</button>
             <div className={styles.itemList}>
               {boxes.map(b => (

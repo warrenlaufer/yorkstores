@@ -66,6 +66,7 @@ model Drop {
   id          String   @id @default(cuid())
   name        String
   emoji       String   @default("📦")
+  logoUrl     String?
   ownerId     String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -78,14 +79,14 @@ model Drop {
 }
 
 model Box {
-  id        String    @id @default(cuid())
-  dropId    String
-  itemName  String
-  itemPrice Decimal   @db.Decimal(10, 2)
-  itemShippingCost Decimal @default(0) @db.Decimal(10, 2)
-  itemImageUrl String?
-  sold      Boolean   @default(false)
-  createdAt DateTime  @default(now())
+  id               String    @id @default(cuid())
+  dropId           String
+  itemName         String
+  itemPrice        Decimal   @db.Decimal(10, 2)
+  itemShippingCost Decimal   @default(0) @db.Decimal(10, 2)
+  itemImageUrl     String?
+  sold             Boolean   @default(false)
+  createdAt        DateTime  @default(now())
 
   drop      Drop      @relation(fields: [dropId], references: [id], onDelete: Cascade)
   purchase  Purchase?
