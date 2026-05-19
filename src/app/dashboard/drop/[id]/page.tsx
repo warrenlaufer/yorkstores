@@ -30,6 +30,7 @@ export default async function DropPage({ params }: { params: { id: string } }) {
         id: drop.id,
         name: drop.name,
         emoji: drop.emoji,
+        logoUrl: drop.logoUrl ?? undefined,
         owner: drop.owner.company ?? drop.owner.name,
         boxPrice: calcBoxPrice(allPrices),
         boxes: drop.boxes.map(b => ({
@@ -41,7 +42,13 @@ export default async function DropPage({ params }: { params: { id: string } }) {
           sold: b.sold,
         })),
       }}
-      user={{ walletBalance: Number(user.walletBalance) }}
+      user={{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        walletBalance: Number(user.walletBalance),
+      }}
     />
   )
 }
