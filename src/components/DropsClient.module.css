@@ -23,7 +23,7 @@
 .cardEmoji { font-size: 2.2rem; }
 
 .cardBody { padding: 0.95rem; display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-.cardName { font-size: 0.95rem; font-weight: 800; color: #fff; margin-bottom: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cardName { font-size: 0.95rem; font-weight: 800; color: #fff; margin-bottom: 0.1rem; white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.3; }
 .cardOwner { font-size: 0.67rem; color: var(--text2); margin-bottom: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-bottom: 0.7rem; }
