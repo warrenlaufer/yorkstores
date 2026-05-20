@@ -1,10 +1,12 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import styles from './wallet.module.css'
 
 const PRESETS = [10, 25, 50, 100]
 
 export default function WalletPage() {
+  const router = useRouter()
   const [amount, setAmount] = useState(25)
   const [customAmt, setCustomAmt] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,7 +34,10 @@ export default function WalletPage() {
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setStep('paying')
-      setTimeout(() => setStep('done'), 2000)
+      setTimeout(() => {
+        setStep('done')
+        router.refresh()
+      }, 2000)
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -56,6 +61,7 @@ export default function WalletPage() {
       if (!res.ok) { setPromoError(data.error || 'Invalid promo code.'); return }
       setPromoSuccess(data.data.message)
       setPromoCode('')
+      router.refresh()
     } catch {
       setPromoError('Something went wrong. Please try again.')
     } finally {

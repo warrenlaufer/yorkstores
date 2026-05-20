@@ -20,9 +20,23 @@
   align-items: center;
   flex-shrink: 0;
   text-decoration: none;
+  gap: 5px;
 }
-.dog { height: 0.85em; width: auto; margin-right: 5px; flex-shrink: 0; }
+.dog { height: 0.85em; width: auto; flex-shrink: 0; }
+.logoText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  gap: 2px;
+}
 .em { color: #FF6B85; font-style: normal; }
+.beta {
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+}
 
 .tabs {
   display: flex;
@@ -103,9 +117,7 @@
 .signOutBtn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
 /* Promo code popover */
-.promoWrap {
-  position: relative;
-}
+.promoWrap { position: relative; }
 
 .promoToggle {
   background: #ffffff;

@@ -100,7 +100,11 @@ export default function DashboardNav({ user }: { user: User }) {
           <rect x="7" y="35" width="4" height="8" rx="2"/>
           <circle cx="35" cy="15" r="1.2" fill="#0F0F14"/>
           <ellipse cx="40" cy="20" rx="1.5" ry="1" fill="#0F0F14"/>
-        </svg>York<em className={styles.em}>stores</em>
+        </svg>
+        <span className={styles.logoText}>
+          York<em className={styles.em}>stores</em>
+          <span className={styles.beta}>beta</span>
+        </span>
       </a>
 
       <div className={styles.tabs}>
