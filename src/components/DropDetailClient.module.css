@@ -32,10 +32,10 @@
 /* Item cards grid */
 .itemGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 0.6rem;
   margin-bottom: 0.5rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .itemCard {
@@ -47,34 +47,49 @@
   cursor: default;
   position: relative;
   z-index: 0;
+  display: flex;
+  flex-direction: column;
 }
 .itemCard:hover {
   border-color: #FF6B85;
-  transform: scale(1.06);
+  transform: scale(1.04);
   box-shadow: 0 8px 32px rgba(255,107,133,0.25);
   z-index: 10;
 }
 
 .itemImageWrap {
   width: 100%;
-  aspect-ratio: 1;
+  height: 160px;
   background: #1D1D26;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: aspect-ratio 0.2s;
+  flex-shrink: 0;
 }
-.itemImageWrapExpanded {
-  aspect-ratio: auto;
-  height: 220px;
-}
+.itemImageWrapExpanded { height: 220px; }
 
 .itemImage { width: 100%; height: 100%; object-fit: contain; }
 .itemEmoji { font-size: 2rem; }
-.itemInfo { padding: 0.5rem 0.6rem; }
-.itemName { font-size: 0.72rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.itemMeta { display: flex; justify-content: space-between; align-items: center; }
+
+.itemInfo {
+  padding: 0.6rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+}
+.itemName {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+.itemMeta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
 .itemPrice { font-family: var(--mono); font-size: 0.68rem; color: var(--gold); font-weight: 700; }
 .itemPct { font-family: var(--mono); font-size: 0.65rem; color: #FF8FA3; font-weight: 700; }
 
