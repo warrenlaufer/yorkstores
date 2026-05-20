@@ -12,6 +12,8 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
   const router = useRouter()
   const [buying, setBuying] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
+  const [confirmRandom, setConfirmRandom] = useState(false)
 
   const available = drop.boxes.filter(b => !b.sold)
 
@@ -22,15 +24,17 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     itemMap[k].count++
   })
 
-  async function pickBox(boxId: string) {
-    if (buying) return
+  async function confirmPurchase() {
+    if (!confirmBoxId) return
     setError('')
-    setBuying(boxId)
+    setBuying(confirmBoxId)
+    setConfirmBoxId(null)
+    setConfirmRandom(false)
     try {
       const res = await fetch(`/api/drops/${drop.id}/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boxId }),
+        body: JSON.stringify({ boxId: confirmBoxId }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); setBuying(null); return }
@@ -41,10 +45,22 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     }
   }
 
-  async function chooseForMe() {
+  function handleBoxClick(boxId: string) {
+    if (buying) return
+    setConfirmBoxId(boxId)
+    setConfirmRandom(false)
+  }
+
+  function handleChooseForMe() {
     if (buying || available.length === 0) return
     const random = available[Math.floor(Math.random() * available.length)]
-    await pickBox(random.id)
+    setConfirmBoxId(random.id)
+    setConfirmRandom(true)
+  }
+
+  function cancelConfirm() {
+    setConfirmBoxId(null)
+    setConfirmRandom(false)
   }
 
   return (
@@ -74,7 +90,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
           </div>
           <button
             className={styles.chooseForMeBtn}
-            onClick={chooseForMe}
+            onClick={handleChooseForMe}
             disabled={!!buying || available.length === 0}
           >
             {buying ? <span className="spin" style={{width:14,height:14}} /> : '🎲 Choose For Me'}
@@ -122,7 +138,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
             key={b.id}
             className={`${styles.boxTile} ${b.sold ? styles.boxSold : ''}`}
             disabled={b.sold || !!buying}
-            onClick={() => !b.sold && pickBox(b.id)}
+            onClick={() => !b.sold && handleBoxClick(b.id)}
           >
             {buying === b.id ? <span className="spin" style={{ width: 20, height: 20 }} /> : (
               <>
@@ -134,6 +150,35 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
           </button>
         ))}
       </div>
+
+      {/* Confirm purchase modal */}
+      {confirmBoxId && (
+        <div className={styles.confirmOverlay} onClick={cancelConfirm}>
+          <div className={styles.confirmBox} onClick={e => e.stopPropagation()}>
+            <div className={styles.confirmIcon}>📦</div>
+            <h2 className={styles.confirmTitle}>
+              {confirmRandom ? 'Random Box Selected' : 'Confirm Purchase'}
+            </h2>
+            <p className={styles.confirmSub}>
+              {confirmRandom
+                ? `A box has been randomly selected for you.`
+                : `You're about to open a mystery box.`}
+            </p>
+            <div className={styles.confirmPrice}>${drop.boxPrice}</div>
+            <p className={styles.confirmBalance}>
+              Your balance: ${user.walletBalance.toFixed(2)}
+            </p>
+            <div className={styles.confirmActions}>
+              <button className={styles.confirmBtn} onClick={confirmPurchase}>
+                Confirm Purchase — ${drop.boxPrice}
+              </button>
+              <button className={styles.cancelBtn} onClick={cancelConfirm}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
