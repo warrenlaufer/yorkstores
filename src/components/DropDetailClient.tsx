@@ -15,10 +15,10 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
 
   const available = drop.boxes.filter(b => !b.sold)
 
-  const itemMap: Record<string, { name: string; price: number; count: number }> = {}
+  const itemMap: Record<string, { name: string; price: number; count: number; imageUrl?: string }> = {}
   drop.boxes.forEach(b => {
     const k = `${b.itemName}|${b.itemPrice}`
-    if (!itemMap[k]) itemMap[k] = { name: b.itemName, price: b.itemPrice, count: 0 }
+    if (!itemMap[k]) itemMap[k] = { name: b.itemName, price: b.itemPrice, count: 0, imageUrl: b.itemImageUrl }
     itemMap[k].count++
   })
 
@@ -67,41 +67,53 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
             <p className={styles.sub}>{available.length} of {drop.boxes.length} available · by {drop.owner}</p>
           </div>
         </div>
-        <div className={styles.priceTag}>
-          <div className={styles.priceVal}>${drop.boxPrice}</div>
-          <div className={styles.priceLbl}>per box</div>
+        <div className={styles.priceGroup}>
+          <div className={styles.priceTag}>
+            <div className={styles.priceVal}>${drop.boxPrice}</div>
+            <div className={styles.priceLbl}>per box</div>
+          </div>
+          <button
+            className={styles.chooseForMeBtn}
+            onClick={chooseForMe}
+            disabled={!!buying || available.length === 0}
+          >
+            {buying ? <span className="spin" style={{width:14,height:14}} /> : '🎲 Choose For Me'}
+          </button>
         </div>
       </div>
 
       {error && <div className={styles.errBox}>{error}</div>}
 
-      <div className={styles.section}>Possible items &amp; odds</div>
-      <div className={styles.oddsTable}>
-        <div className={styles.oddsHead}>
-          <span></span><span>Item</span><span>Value</span><span>Odds</span>
-        </div>
+      <div className={styles.sectionRow}>
+        <span className={styles.section}>Possible items &amp; odds</span>
+      </div>
+
+      <div className={styles.itemGrid}>
         {Object.values(itemMap).map((it, i) => {
           const pct = Math.round(it.count / drop.boxes.length * 100)
           return (
-            <div key={i} className={styles.oddsRow}>
-              <span>📦</span>
-              <span className={styles.oddsName}>{it.name}{it.count > 1 ? ` ×${it.count}` : ''}</span>
-              <span className={styles.oddsPrice}>${it.price}</span>
-              <span className={styles.oddsPct}>{pct}%</span>
+            <div key={i} className={styles.itemCard}>
+              <div className={styles.itemImageWrap}>
+                {it.imageUrl ? (
+                  <img src={it.imageUrl} alt={it.name} className={styles.itemImage} />
+                ) : (
+                  <span className={styles.itemEmoji}>📦</span>
+                )}
+              </div>
+              <div className={styles.itemInfo}>
+                <div className={styles.itemName}>{it.name}</div>
+                <div className={styles.itemMeta}>
+                  <span className={styles.itemPrice}>${it.price}</span>
+                  <span className={styles.itemPct}>{pct}%</span>
+                </div>
+              </div>
             </div>
           )
         })}
       </div>
 
-      <div className={styles.sectionRow}>
+      <div className={styles.sectionRow} style={{marginTop:'1.5rem'}}>
         <span className={styles.section}>{drop.boxes.length} boxes — click one to open</span>
-        <button
-          className={styles.chooseForMeBtn}
-          onClick={chooseForMe}
-          disabled={!!buying || available.length === 0}
-        >
-          {buying === 'random' ? <span className="spin" style={{width:14,height:14}} /> : '🎲 Choose For Me'}
-        </button>
       </div>
 
       <div className={styles.boxGrid}>
