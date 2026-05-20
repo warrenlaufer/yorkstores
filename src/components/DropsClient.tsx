@@ -1,5 +1,4 @@
 'use client'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './DropsClient.module.css'
 
@@ -20,38 +19,6 @@ type User = { id: string; name: string; email: string; role: string; walletBalan
 
 export default function DropsClient({ drops, user }: { drops: Drop[]; user: User }) {
   const router = useRouter()
-  const [choiceDropId, setChoiceDropId] = useState<string | null>(null)
-  const [purchasing, setPurchasing] = useState(false)
-  const [error, setError] = useState('')
-
-  function openChoice(dropId: string) { setChoiceDropId(dropId); setError('') }
-  function closeChoice() { setChoiceDropId(null) }
-
-  async function buyRandom() {
-    if (!choiceDropId) return
-    setPurchasing(true); setError('')
-    try {
-      const res = await fetch(`/api/drops/${choiceDropId}/purchase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
-      closeChoice()
-      router.push(`/dashboard/reveal?purchaseId=${data.data.purchaseId}&dropId=${choiceDropId}`)
-    } catch {
-      setError('Something went wrong.')
-    } finally {
-      setPurchasing(false)
-    }
-  }
-
-  function pickBox() {
-    if (!choiceDropId) return
-    closeChoice()
-    router.push(`/dashboard/drop/${choiceDropId}`)
-  }
 
   return (
     <div className={styles.wrap}>
@@ -96,38 +63,15 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                 <button
                   className={styles.openBtn}
                   disabled={soldOut}
-                  onClick={() => !soldOut && openChoice(d.id)}
+                  onClick={() => !soldOut && router.push(`/dashboard/drop/${d.id}`)}
                 >
-                  {soldOut ? 'Sold Out' : `📦 Open a Box — $${d.boxPrice}`}
+                  {soldOut ? 'Sold Out' : `Explore Drop — $${d.boxPrice}`}
                 </button>
               </div>
             </div>
           )
         })}
       </div>
-
-      {choiceDropId && (
-        <div className={styles.overlay} onClick={closeChoice}>
-          <div className={styles.choiceBox} onClick={e => e.stopPropagation()}>
-            <h2 className={styles.choiceTitle}>How would you like your box?</h2>
-            <p className={styles.choiceSub}>Each box hides a different item — pick one yourself or let us choose for you.</p>
-            {error && <div className={styles.choiceError}>{error}</div>}
-            <div className={styles.choiceCards}>
-              <button className={styles.choiceCard} onClick={buyRandom} disabled={purchasing}>
-                <span className={styles.choiceIcon}>🎲</span>
-                <span className={styles.choiceName}>Random box</span>
-                <span className={styles.choiceDesc}>We pick one at random instantly</span>
-              </button>
-              <button className={styles.choiceCard} onClick={pickBox} disabled={purchasing}>
-                <span className={styles.choiceIcon}>👆</span>
-                <span className={styles.choiceName}>Pick my box</span>
-                <span className={styles.choiceDesc}>Browse and choose a specific box</span>
-              </button>
-            </div>
-            <button className={styles.choiceCancel} onClick={closeChoice}>Cancel</button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

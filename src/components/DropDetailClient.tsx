@@ -13,7 +13,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
   const [buying, setBuying] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  const available = drop.boxes.filter(b => !b.sold).length
+  const available = drop.boxes.filter(b => !b.sold)
 
   const itemMap: Record<string, { name: string; price: number; count: number }> = {}
   drop.boxes.forEach(b => {
@@ -41,6 +41,12 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     }
   }
 
+  async function chooseForMe() {
+    if (buying || available.length === 0) return
+    const random = available[Math.floor(Math.random() * available.length)]
+    await pickBox(random.id)
+  }
+
   return (
     <div className={styles.wrap}>
       <Link href="/dashboard" className={styles.back}>← Back to Drops</Link>
@@ -58,7 +64,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
           )}
           <div>
             <h1 className={styles.title}>{drop.name}</h1>
-            <p className={styles.sub}>{available} of {drop.boxes.length} available · by {drop.owner}</p>
+            <p className={styles.sub}>{available.length} of {drop.boxes.length} available · by {drop.owner}</p>
           </div>
         </div>
         <div className={styles.priceTag}>
@@ -87,7 +93,17 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
         })}
       </div>
 
-      <div className={styles.section}>{drop.boxes.length} boxes — click one to open</div>
+      <div className={styles.sectionRow}>
+        <span className={styles.section}>{drop.boxes.length} boxes — click one to open</span>
+        <button
+          className={styles.chooseForMeBtn}
+          onClick={chooseForMe}
+          disabled={!!buying || available.length === 0}
+        >
+          {buying === 'random' ? <span className="spin" style={{width:14,height:14}} /> : '🎲 Choose For Me'}
+        </button>
+      </div>
+
       <div className={styles.boxGrid}>
         {drop.boxes.map((b, i) => (
           <button
