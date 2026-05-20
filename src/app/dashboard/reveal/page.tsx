@@ -128,7 +128,7 @@ function RevealContent() {
     setSubmitting(false)
     if (res.ok) {
       setOutcome('soldback')
-      setOutcomeMsg(`💸 Sold for $${d.data.refundAmount.toFixed(2)} — added to your wallet.`)
+      setOutcomeMsg(`💸 $${d.data.refundAmount.toFixed(2)} has been credited to your account.`)
       router.refresh()
     } else setOutcomeMsg(d.error)
   }
@@ -141,9 +141,9 @@ function RevealContent() {
     const d = await res.json()
     if (res.ok) {
       setOutcome('soldback')
-      setOutcomeMsg(`⏰ Time expired — auto sold back for $${d.data.refundAmount.toFixed(2)}.`)
+      setOutcomeMsg(`⏰ Time expired — $${d.data.refundAmount.toFixed(2)} has been credited to your account.`)
       router.refresh()
-    } else setOutcomeMsg('⏰ Time expired — auto sell-back failed.')
+    } else setOutcomeMsg('⏰ Time expired — sell-back failed.')
     setActionsVisible(false)
   }
 
@@ -234,7 +234,7 @@ function RevealContent() {
               <div className={styles.actions}>
                 <button className={styles.deliveryBtn} onClick={openDelivery} disabled={submitting}>📦 Take Delivery</button>
                 <button className={styles.sellBtn} onClick={handleSellBack} disabled={submitting}>
-                  {submitting ? <span className="spin" /> : `💸 Sell Back for $${(data.box.itemPrice * 0.9).toFixed(2)}`}
+                  {submitting ? <span className="spin" /> : `💸 Sell Back — Get $${(data.box.itemPrice * 0.9).toFixed(2)} Credit`}
                 </button>
               </div>
             )}
