@@ -22,7 +22,7 @@
 
 .errBox { background: rgba(255,107,133,0.12); border: 1px solid rgba(255,107,133,0.3); color: #FF8FA3; font-size: 0.8rem; padding: 0.6rem 0.875rem; border-radius: 8px; margin-bottom: 1rem; }
 
-.section { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); }
+.section { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; }
 .sectionRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem; gap: 1rem; }
 
 /* Logo banner */
