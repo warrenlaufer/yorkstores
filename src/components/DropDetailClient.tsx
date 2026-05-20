@@ -94,8 +94,9 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
             onClick={handleChooseForMe}
             disabled={!!buying || available.length === 0}
           >
-            {buying ? <span className="spin" style={{width:14,height:14}} /> : '🎲 Choose For Me'}
+            {buying ? <span className="spin" style={{width:14,height:14}} /> : 'Buy a Random Box'}
           </button>
+          <p className={styles.scrollHint}>Scroll Down to Choose Your Box</p>
         </div>
       </div>
 
