@@ -7,10 +7,9 @@ import { z } from 'zod'
 
 const schema = z.object({
   dropId: z.string().cuid(),
-  boxId: z.string().cuid().optional(), // omit for random
+  boxId: z.string().cuid().optional(),
 })
 
-// POST /api/drops/[id]/purchase
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
@@ -21,7 +20,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const { dropId, boxId } = parsed.data
 
-  // Use a transaction to prevent race conditions
   const result = await prisma.$transaction(async (tx) => {
     const drop = await tx.drop.findUnique({
       where: { id: dropId },
@@ -34,7 +32,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!drop || !drop.isActive) throw new Error('Drop not found or inactive')
     if (!drop.boxes.length) throw new Error('No boxes available')
 
-    // Get the box to purchase
     let box = boxId
       ? drop.boxes.find(b => b.id === boxId)
       : drop.boxes[Math.floor(Math.random() * drop.boxes.length)]
@@ -51,7 +48,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (buyerBalance < boxPrice) throw new Error('Insufficient wallet balance')
 
-    const platformFee = Math.round(boxPrice * 0.1 * 100) / 100
     const storeCredit = Math.round(boxPrice * 0.9 * 100) / 100
 
     // Mark box as sold
@@ -69,14 +65,32 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: { storeBalance: { increment: storeCredit } },
     })
 
-    // Record purchase
-    const purchase = await tx.purchase.create({
-      data: {
-        buyerId: user.id,
-        boxId: box.id,
-        pricePaid: boxPrice,
-      },
-    })
+    // Check if a previous purchase exists for this box (sold back previously)
+    const existingPurchase = await tx.purchase.findUnique({ where: { boxId: box.id } })
+
+    let purchase
+    if (existingPurchase) {
+      // Update the existing purchase record for reuse
+      purchase = await tx.purchase.update({
+        where: { boxId: box.id },
+        data: {
+          buyerId: user.id,
+          pricePaid: boxPrice,
+          outcome: null,
+          refundAmt: 0,
+          resolvedAt: null,
+          createdAt: new Date(),
+        },
+      })
+    } else {
+      purchase = await tx.purchase.create({
+        data: {
+          buyerId: user.id,
+          boxId: box.id,
+          pricePaid: boxPrice,
+        },
+      })
+    }
 
     // Record transactions
     await tx.transaction.createMany({
