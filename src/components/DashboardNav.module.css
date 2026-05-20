@@ -27,8 +27,8 @@
   display: flex;
   flex-direction: column;
   line-height: 1;
-  gap: 2px;
 }
+.logoWordmark { display: block; }
 .em { color: #FF6B85; font-style: normal; }
 .beta {
   font-size: 0.5rem;
@@ -36,6 +36,9 @@
   color: rgba(255,255,255,0.45);
   letter-spacing: 0.12em;
   text-transform: lowercase;
+  text-align: right;
+  display: block;
+  margin-top: 2px;
 }
 
 .tabs {
