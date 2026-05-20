@@ -11,11 +11,20 @@ export default async function StorePage() {
   if (!user) redirect('/signin')
   if (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) redirect('/dashboard')
 
-  const transactions = await prisma.transaction.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
-    take: 20,
-  })
+  const [transactions, drops] = await Promise.all([
+    prisma.transaction.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    }),
+    prisma.drop.findMany({
+      where: { ownerId: user.id },
+      include: {
+        boxes: { select: { id: true, sold: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ])
 
   return (
     <StoreOwnerClient
@@ -32,6 +41,14 @@ export default async function StorePage() {
         description: t.description,
         amount: Number(t.amount),
         createdAt: t.createdAt.toISOString(),
+      }))}
+      drops={drops.map(d => ({
+        id: d.id,
+        name: d.name,
+        logoUrl: d.logoUrl ?? undefined,
+        isActive: d.isActive,
+        totalBoxes: d.boxes.length,
+        soldBoxes: d.boxes.filter(b => b.sold).length,
       }))}
     />
   )
