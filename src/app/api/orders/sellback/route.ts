@@ -28,19 +28,50 @@ export async function POST(req: NextRequest) {
 
     const itemValue = Number(purchase.box.itemPrice)
     const buyerRefund = Math.round(itemValue * 0.9 * 100) / 100
-    const platformFee = Math.round(itemValue * 0.1 * 100) / 100
     const owner = purchase.box.drop.owner
 
     if (Number(owner.storeBalance) < itemValue) throw new Error('Store wallet insufficient for buyback')
 
-    // Refund buyer
+    // Credit buyer
     await tx.user.update({ where: { id: user.id }, data: { walletBalance: { increment: buyerRefund } } })
 
     // Deduct from store
     await tx.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: itemValue } } })
 
-    // Return box to pool & reshuffle (mark unsold)
-    await tx.box.update({ where: { id: purchase.box.id }, data: { sold: false } })
+    // Find a random unsold box in the same drop to swap items with
+    const unsoldBoxes = await tx.box.findMany({
+      where: { dropId: purchase.box.dropId, sold: false, id: { not: purchase.box.id } },
+      select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
+    })
+
+    if (unsoldBoxes.length > 0) {
+      // Pick a random unsold box to swap with
+      const swapBox = unsoldBoxes[Math.floor(Math.random() * unsoldBoxes.length)]
+
+      // Swap item details between the sold-back box and the random unsold box
+      await tx.box.update({
+        where: { id: purchase.box.id },
+        data: {
+          sold: false,
+          itemName: swapBox.itemName,
+          itemPrice: swapBox.itemPrice,
+          itemShippingCost: swapBox.itemShippingCost,
+          itemImageUrl: swapBox.itemImageUrl,
+        },
+      })
+      await tx.box.update({
+        where: { id: swapBox.id },
+        data: {
+          itemName: purchase.box.itemName,
+          itemPrice: purchase.box.itemPrice,
+          itemShippingCost: purchase.box.itemShippingCost,
+          itemImageUrl: purchase.box.itemImageUrl,
+        },
+      })
+    } else {
+      // No other unsold boxes — just mark it unsold as-is
+      await tx.box.update({ where: { id: purchase.box.id }, data: { sold: false } })
+    }
 
     // Record outcome
     await tx.purchase.update({
