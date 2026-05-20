@@ -24,6 +24,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     if (!itemMap[k]) itemMap[k] = { name: b.itemName, price: b.itemPrice, count: 0, imageUrl: b.itemImageUrl }
     itemMap[k].count++
   })
+  const sortedItems = Object.values(itemMap).sort((a, b) => b.price - a.price)
 
   async function confirmPurchase() {
     if (!confirmBoxId) return
@@ -108,7 +109,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
       </div>
 
       <div className={styles.itemGrid}>
-        {Object.values(itemMap).map((it, i) => {
+        {sortedItems.map((it, i) => {
           const raw = (it.count / drop.boxes.length) * 100
           const pct = raw < 1 ? Math.round(raw * 100) / 100 : Math.round(raw)
           const key = `${it.name}|${it.price}`
