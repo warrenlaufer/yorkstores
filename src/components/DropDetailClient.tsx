@@ -27,15 +27,16 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
 
   async function confirmPurchase() {
     if (!confirmBoxId) return
+    const boxToOpen = confirmBoxId
     setError('')
-    setBuying(confirmBoxId)
+    setBuying(boxToOpen)
     setConfirmBoxId(null)
     setConfirmRandom(false)
     try {
       const res = await fetch(`/api/drops/${drop.id}/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boxId: confirmBoxId }),
+        body: JSON.stringify({ boxId: boxToOpen }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); setBuying(null); return }
