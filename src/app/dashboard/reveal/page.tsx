@@ -98,7 +98,11 @@ function RevealContent() {
     setTimeout(() => setLidOpen(true), 500)
     setTimeout(() => setShowConfetti(true), 900)
     setTimeout(() => setCardVisible(true), 1700)
-    setTimeout(() => { setActionsVisible(true); setPhase('revealed') }, 2200)
+    setTimeout(() => {
+      setActionsVisible(true)
+      setPhase('revealed')
+      router.refresh()
+    }, 2200)
   }, [purchaseId])
 
   useEffect(() => {
@@ -122,8 +126,11 @@ function RevealContent() {
     })
     const d = await res.json()
     setSubmitting(false)
-    if (res.ok) { setOutcome('soldback'); setOutcomeMsg(`💸 Sold for $${d.data.refundAmount.toFixed(2)} — added to your wallet.`) }
-    else setOutcomeMsg(d.error)
+    if (res.ok) {
+      setOutcome('soldback')
+      setOutcomeMsg(`💸 Sold for $${d.data.refundAmount.toFixed(2)} — added to your wallet.`)
+      router.refresh()
+    } else setOutcomeMsg(d.error)
   }
 
   async function handleAutoSell() {
@@ -132,8 +139,11 @@ function RevealContent() {
       body: JSON.stringify({ purchaseId }),
     })
     const d = await res.json()
-    if (res.ok) { setOutcome('soldback'); setOutcomeMsg(`⏰ Time expired — auto sold back for $${d.data.refundAmount.toFixed(2)}.`) }
-    else setOutcomeMsg('⏰ Time expired — auto sell-back failed.')
+    if (res.ok) {
+      setOutcome('soldback')
+      setOutcomeMsg(`⏰ Time expired — auto sold back for $${d.data.refundAmount.toFixed(2)}.`)
+      router.refresh()
+    } else setOutcomeMsg('⏰ Time expired — auto sell-back failed.')
     setActionsVisible(false)
   }
 
@@ -153,8 +163,10 @@ function RevealContent() {
     const d = await res.json()
     setSubmitting(false)
     if (res.ok) {
-      setShowAddr(false); setOutcome('delivery')
+      setShowAddr(false)
+      setOutcome('delivery')
       setOutcomeMsg(`📦 Delivery confirmed! We'll ship to ${addrForm.recipientName}, ${addrForm.city}.`)
+      router.refresh()
     } else setAddrError(d.error)
   }
 
@@ -170,7 +182,6 @@ function RevealContent() {
     <div className={styles.screen}>
       <Confetti active={showConfetti} />
 
-      {/* Box animation */}
       <div className={styles.boxArea}>
         <div className={styles.boxWrap}>
           <svg className={styles.boxSvg} viewBox="0 0 140 140" fill="none">
@@ -191,18 +202,11 @@ function RevealContent() {
         </div>
       </div>
 
-      {/* Reveal card */}
       {data && (
         <div className={`${styles.revealCard} ${cardVisible ? styles.revealCardVisible : ''}`}>
-
-          {/* Item image */}
           {data.box.itemImageUrl && (
             <div className={styles.itemImageWrap}>
-              <img
-                src={data.box.itemImageUrl}
-                alt={data.box.itemName}
-                className={styles.itemImage}
-              />
+              <img src={data.box.itemImageUrl} alt={data.box.itemName} className={styles.itemImage} />
             </div>
           )}
 
@@ -248,7 +252,6 @@ function RevealContent() {
         </div>
       )}
 
-      {/* Address modal */}
       {showAddr && (
         <div className={styles.addrOverlay} onClick={cancelDelivery}>
           <div className={styles.addrBox} onClick={e => e.stopPropagation()}>
