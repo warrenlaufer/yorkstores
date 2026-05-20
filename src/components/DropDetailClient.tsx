@@ -108,7 +108,8 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
 
       <div className={styles.itemGrid}>
         {Object.values(itemMap).map((it, i) => {
-          const pct = Math.round(it.count / drop.boxes.length * 100)
+          const raw = (it.count / drop.boxes.length) * 100
+          const pct = raw < 1 ? Math.round(raw * 100) / 100 : Math.round(raw)
           const key = `${it.name}|${it.price}`
           const isHovered = hoveredItem === key
           return (
@@ -129,7 +130,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
                 <div className={styles.itemName}>{it.name}</div>
                 <div className={styles.itemMeta}>
                   <span className={styles.itemPrice}>${it.price}</span>
-                  <span className={styles.itemPct}>{pct}%</span>
+                  <span className={styles.itemPct}>{raw < 1 ? pct.toFixed(2) : pct}%</span>
                 </div>
               </div>
             </div>
