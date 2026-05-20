@@ -2,116 +2,106 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
-import { calcBoxPrice } from '@/lib/stripe'
+import { sendSellBackConfirmationEmail } from '@/lib/email'
+import { OutcomeType } from '@prisma/client'
 import { z } from 'zod'
 
-const schema = z.object({
-  dropId: z.string().cuid(),
-  boxId: z.string().cuid().optional(),
-})
+const schema = z.object({ purchaseId: z.string().cuid() })
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
 
   const body = await req.json().catch(() => null)
-  const parsed = schema.safeParse({ dropId: params.id, ...body })
+  const parsed = schema.safeParse(body)
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
-  const { dropId, boxId } = parsed.data
-
   const result = await prisma.$transaction(async (tx) => {
-    const drop = await tx.drop.findUnique({
-      where: { id: dropId },
-      include: {
-        boxes: { where: { sold: false } },
-        owner: true,
-      },
+    const purchase = await tx.purchase.findUnique({
+      where: { id: parsed.data.purchaseId },
+      include: { box: { include: { drop: { include: { owner: true } } } } },
     })
 
-    if (!drop || !drop.isActive) throw new Error('Drop not found or inactive')
-    if (!drop.boxes.length) throw new Error('No boxes available')
+    if (!purchase) throw new Error('Purchase not found')
+    if (purchase.buyerId !== user.id) throw new Error('Forbidden')
+    if (purchase.outcome) throw new Error('This purchase has already been resolved')
 
-    let box = boxId
-      ? drop.boxes.find(b => b.id === boxId)
-      : drop.boxes[Math.floor(Math.random() * drop.boxes.length)]
+    const itemValue = Number(purchase.box.itemPrice)
+    const buyerRefund = Math.round(itemValue * 0.9 * 100) / 100
+    const owner = purchase.box.drop.owner
 
-    if (!box) throw new Error('Box not available')
+    if (Number(owner.storeBalance) < itemValue) throw new Error('Store wallet insufficient for buyback')
 
-    const allPrices = (await tx.box.findMany({
-      where: { dropId },
-      select: { itemPrice: true },
-    })).map(b => Number(b.itemPrice))
+    // Credit buyer
+    await tx.user.update({ where: { id: user.id }, data: { walletBalance: { increment: buyerRefund } } })
 
-    const boxPrice = calcBoxPrice(allPrices)
-    const buyerBalance = Number(user.walletBalance)
+    // Deduct from store
+    await tx.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: itemValue } } })
 
-    if (buyerBalance < boxPrice) throw new Error('Insufficient wallet balance')
+    // Mark sold-back box as unsold
+    await tx.box.update({ where: { id: purchase.box.id }, data: { sold: false } })
 
-    const storeCredit = Math.round(boxPrice * 0.9 * 100) / 100
-
-    // Mark box as sold
-    await tx.box.update({ where: { id: box.id }, data: { sold: true } })
-
-    // Deduct from buyer
-    await tx.user.update({
-      where: { id: user.id },
-      data: { walletBalance: { decrement: boxPrice } },
+    // Get ALL unsold boxes in this drop (including the one just returned)
+    const unsoldBoxes = await tx.box.findMany({
+      where: { dropId: purchase.box.dropId, sold: false },
+      select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
     })
 
-    // Credit store owner
-    await tx.user.update({
-      where: { id: drop.ownerId },
-      data: { storeBalance: { increment: storeCredit } },
-    })
+    // Shuffle the item contents randomly across all unsold boxes
+    const items = unsoldBoxes.map(b => ({
+      itemName: b.itemName,
+      itemPrice: b.itemPrice,
+      itemShippingCost: b.itemShippingCost,
+      itemImageUrl: b.itemImageUrl,
+    }))
 
-    // Check if a previous purchase exists for this box (sold back previously)
-    const existingPurchase = await tx.purchase.findUnique({ where: { boxId: box.id } })
-
-    let purchase
-    if (existingPurchase) {
-      // Update the existing purchase record for reuse
-      purchase = await tx.purchase.update({
-        where: { boxId: box.id },
-        data: {
-          buyerId: user.id,
-          pricePaid: boxPrice,
-          outcome: null,
-          refundAmt: 0,
-          resolvedAt: null,
-          createdAt: new Date(),
-        },
-      })
-    } else {
-      purchase = await tx.purchase.create({
-        data: {
-          buyerId: user.id,
-          boxId: box.id,
-          pricePaid: boxPrice,
-        },
-      })
+    // Fisher-Yates shuffle
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[items[i], items[j]] = [items[j], items[i]]
     }
 
-    // Record transactions
+    // Write shuffled items back to boxes
+    await Promise.all(
+      unsoldBoxes.map((box, idx) =>
+        tx.box.update({
+          where: { id: box.id },
+          data: items[idx],
+        })
+      )
+    )
+
+    // Record outcome
+    await tx.purchase.update({
+      where: { id: purchase.id },
+      data: { outcome: OutcomeType.SOLD_BACK, refundAmt: buyerRefund, resolvedAt: new Date() },
+    })
+
+    // Transactions
     await tx.transaction.createMany({
       data: [
-        { userId: user.id, dropId, type: 'purchase', description: `Opened box: ${drop.name}`, amount: -boxPrice },
-        { userId: drop.ownerId, dropId, type: 'sale', description: `Sale: ${drop.name}`, amount: storeCredit },
+        { userId: user.id, dropId: purchase.box.dropId, type: 'sellback', description: `Sold back: ${purchase.box.itemName}`, amount: buyerRefund },
+        { userId: owner.id, dropId: purchase.box.dropId, type: 'buyback', description: `Buyback: ${purchase.box.itemName}`, amount: -itemValue },
       ],
     })
 
-    return {
-      purchaseId: purchase.id,
-      box: {
-        itemName: box.itemName,
-        itemPrice: Number(box.itemPrice),
-        itemShippingCost: Number(box.itemShippingCost),
-        itemImageUrl: box.itemImageUrl,
-      },
-      pricePaid: boxPrice,
-      newBalance: buyerBalance - boxPrice,
-    }
+    return { refundAmount: buyerRefund, newBalance: Number(user.walletBalance) + buyerRefund }
   })
 
-  return ok(result, 201)
+  try {
+    const purchase = await prisma.purchase.findUnique({
+      where: { id: parsed.data.purchaseId },
+      include: { box: true },
+    })
+    if (purchase) {
+      await sendSellBackConfirmationEmail(user.email, user.name, {
+        itemName: purchase.box.itemName,
+        refundAmount: result.refundAmount,
+      })
+    }
+  } catch (e) {
+    console.error('Sell-back email failed:', e)
+  }
+
+  return ok(result)
 }
