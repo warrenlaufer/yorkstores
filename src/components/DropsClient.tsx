@@ -30,7 +30,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
       <div className={styles.grid}>
         {drops.length === 0 ? (
           <div className={styles.empty}>
-            <div className={styles.emptyIcon}>📦</div>
+            <div className={styles.emptyIcon}>🎁</div>
             <p>No drops yet.</p>
           </div>
         ) : drops.map(d => {
@@ -47,7 +47,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                 {d.logoUrl ? (
                   <img src={d.logoUrl} alt={d.name} className={styles.cardLogo} />
                 ) : (
-                  <span className={styles.cardEmoji}>{d.emoji || '📦'}</span>
+                  <span className={styles.cardEmoji}>{d.emoji || '🎁'}</span>
                 )}
               </div>
               <div className={styles.cardBody}>
