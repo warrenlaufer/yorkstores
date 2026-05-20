@@ -8,6 +8,9 @@ const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], varia
 export const metadata: Metadata = {
   title: 'Yorkstores — Mystery Box Platform',
   description: 'Open mystery boxes. Choose delivery or sell back within 5 minutes.',
+  icons: {
+    icon: '/favicon.svg',
+  },
   openGraph: {
     title: 'Yorkstores',
     description: 'Mystery box drops — buy, reveal, decide.',
@@ -18,6 +21,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${outfit.variable} ${spaceMono.variable}`}>
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
       <body>{children}</body>
     </html>
   )
