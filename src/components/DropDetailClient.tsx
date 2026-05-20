@@ -14,6 +14,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
   const [error, setError] = useState('')
   const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
   const [confirmRandom, setConfirmRandom] = useState(false)
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
 
   const available = drop.boxes.filter(b => !b.sold)
 
@@ -76,7 +77,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
       <div className={styles.header}>
         <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
           {!drop.logoUrl && (
-            <span style={{fontSize:'2rem'}}>{drop.emoji || '📦'}</span>
+            <span style={{fontSize:'2rem'}}>{drop.emoji || '🎁'}</span>
           )}
           <div>
             <h1 className={styles.title}>{drop.name}</h1>
@@ -107,13 +108,20 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
       <div className={styles.itemGrid}>
         {Object.values(itemMap).map((it, i) => {
           const pct = Math.round(it.count / drop.boxes.length * 100)
+          const key = `${it.name}|${it.price}`
+          const isHovered = hoveredItem === key
           return (
-            <div key={i} className={styles.itemCard}>
-              <div className={styles.itemImageWrap}>
+            <div
+              key={i}
+              className={`${styles.itemCard} ${isHovered ? styles.itemCardExpanded : ''}`}
+              onMouseEnter={() => setHoveredItem(key)}
+              onMouseLeave={() => setHoveredItem(null)}
+            >
+              <div className={`${styles.itemImageWrap} ${isHovered ? styles.itemImageWrapExpanded : ''}`}>
                 {it.imageUrl ? (
                   <img src={it.imageUrl} alt={it.name} className={styles.itemImage} />
                 ) : (
-                  <span className={styles.itemEmoji}>📦</span>
+                  <span className={styles.itemEmoji}>🎁</span>
                 )}
               </div>
               <div className={styles.itemInfo}>
@@ -142,7 +150,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
           >
             {buying === b.id ? <span className="spin" style={{ width: 20, height: 20 }} /> : (
               <>
-                <span className={styles.boxEmoji}>{drop.emoji || '📦'}</span>
+                <span className={styles.boxEmoji}>{drop.emoji || '🎁'}</span>
                 <span className={styles.boxNum}>#{String(i + 1).padStart(2, '0')}</span>
                 {!b.sold && <div className={styles.shimmer} />}
               </>
@@ -151,11 +159,10 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
         ))}
       </div>
 
-      {/* Confirm purchase modal */}
       {confirmBoxId && (
         <div className={styles.confirmOverlay} onClick={cancelConfirm}>
           <div className={styles.confirmBox} onClick={e => e.stopPropagation()}>
-            <div className={styles.confirmIcon}>📦</div>
+            <div className={styles.confirmIcon}>🎁</div>
             <h2 className={styles.confirmTitle}>
               {confirmRandom ? 'Random Box Selected' : 'Confirm Purchase'}
             </h2>
