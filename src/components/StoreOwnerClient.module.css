@@ -31,6 +31,9 @@
 .removeLogoBtn { background: none; border: none; color: rgba(255,107,133,0.6); font-family: var(--font); font-size: 0.7rem; cursor: pointer; padding: 0; text-decoration: underline; transition: color 0.15s; }
 .removeLogoBtn:hover { color: #FF6B85; }
 
+/* Sell-back hint */
+.sellBackHint { font-size: 0.65rem; color: #FF8FA3; margin-top: 0.25rem; font-weight: 600; }
+
 /* Item image upload */
 .itemImgRow { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
 .itemImgUpload { width: 56px; height: 56px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #1D1D26; transition: border-color 0.15s; overflow: hidden; flex-shrink: 0; }
