@@ -2,82 +2,133 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
-import { createDropSchema } from '@/lib/schemas'
 import { calcBoxPrice } from '@/lib/stripe'
-import { Role } from '@prisma/client'
+import { z } from 'zod'
 
-export async function GET() {
-  const drops = await prisma.drop.findMany({
-    where: { isActive: true },
-    include: {
-      owner: { select: { name: true, company: true } },
-      boxes: { select: { id: true, itemPrice: true, sold: true, itemName: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
+const schema = z.object({
+  dropId: z.string().min(1),
+  boxId: z.string().optional(),
+})
 
-  return ok(drops.map(d => {
-    const allPrices = d.boxes.map(b => Number(b.itemPrice))
-    const available = d.boxes.filter(b => !b.sold).length
-    return {
-      id: d.id,
-      name: d.name,
-      emoji: d.emoji,
-      logoUrl: d.logoUrl,
-      owner: d.owner.company ?? d.owner.name,
-      boxPrice: calcBoxPrice(allPrices),
-      totalBoxes: d.boxes.length,
-      availableBoxes: available,
-      minPrice: Math.min(...allPrices),
-      maxPrice: Math.max(...allPrices),
-      sellBackPct: d.sellBackPct,
-    }
-  }))
-}
-
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
-  if (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) return err('Forbidden', 403)
 
   const body = await req.json().catch(() => null)
-  const parsed = createDropSchema.safeParse(body)
+  const parsed = schema.safeParse({ dropId: params.id, ...body })
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
-  const { name, emoji, boxes: boxDefs } = parsed.data
-  const logoUrl = body?.logoUrl ?? null
-  const sellBackPct = typeof body?.sellBackPct === 'number'
-    ? Math.min(100, Math.max(0, Math.round(body.sellBackPct)))
-    : 90
+  const { dropId, boxId } = parsed.data
 
-  const boxRecords = boxDefs.flatMap(b =>
-    Array.from({ length: b.qty }, () => ({
-      itemName: b.itemName,
-      itemPrice: b.itemPrice,
-      itemShippingCost: b.itemShippingCost,
-      itemImageUrl: b.itemImageUrl || null,
-    }))
-  )
-
-  for (let i = boxRecords.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[boxRecords[i], boxRecords[j]] = [boxRecords[j], boxRecords[i]]
-  }
-
-  const drop = await prisma.drop.create({
-    data: {
-      name,
-      emoji,
-      logoUrl,
-      sellBackPct,
-      ownerId: user.id,
-      boxes: { create: boxRecords },
-    },
+  const drop = await prisma.drop.findUnique({
+    where: { id: dropId },
     include: {
-      boxes: true,
-      owner: { select: { name: true, company: true } },
+      boxes: { where: { sold: false } },
+      owner: true,
     },
   })
 
-  return ok(drop, 201)
+  if (!drop || !drop.isActive) return err('Drop not found or inactive')
+  if (!drop.boxes.length) return err('No boxes available')
+
+  let box = boxId
+    ? drop.boxes.find(b => b.id === boxId)
+    : drop.boxes[Math.floor(Math.random() * drop.boxes.length)]
+
+  if (!box) return err('Box not available')
+
+  const allPrices = await prisma.box.findMany({
+    where: { dropId },
+    select: { itemPrice: true },
+  })
+
+  const boxPrice = calcBoxPrice(allPrices.map(b => Number(b.itemPrice)))
+  const buyerBalance = Number(user.walletBalance)
+
+  if (buyerBalance < boxPrice) return err('Insufficient wallet balance')
+
+  const storeCredit = Math.round(boxPrice * 0.9 * 100) / 100
+  const existingPurchase = await prisma.purchase.findUnique({ where: { boxId: box.id } })
+
+  let purchase
+  if (existingPurchase) {
+    purchase = await prisma.$transaction(async tx => {
+      await tx.box.update({ where: { id: box!.id }, data: { sold: true } })
+      await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: boxPrice } } })
+      await tx.user.update({ where: { id: drop.ownerId }, data: { storeBalance: { increment: storeCredit } } })
+      const p = await tx.purchase.update({
+        where: { boxId: box!.id },
+        data: { buyerId: user.id, pricePaid: boxPrice, outcome: null, refundAmt: 0, resolvedAt: null },
+      })
+      await tx.transaction.createMany({
+        data: [
+          { userId: user.id, dropId, type: 'purchase', description: `Opened box: ${drop.name}`, amount: -boxPrice },
+          { userId: drop.ownerId, dropId, type: 'sale', description: `Sale: ${drop.name}`, amount: storeCredit },
+        ],
+      })
+      return p
+    })
+  } else {
+    purchase = await prisma.$transaction(async tx => {
+      await tx.box.update({ where: { id: box!.id }, data: { sold: true } })
+      await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: boxPrice } } })
+      await tx.user.update({ where: { id: drop.ownerId }, data: { storeBalance: { increment: storeCredit } } })
+      const p = await tx.purchase.create({
+        data: { buyerId: user.id, boxId: box!.id, pricePaid: boxPrice },
+      })
+      await tx.transaction.createMany({
+        data: [
+          { userId: user.id, dropId, type: 'purchase', description: `Opened box: ${drop.name}`, amount: -boxPrice },
+          { userId: drop.ownerId, dropId, type: 'sale', description: `Sale: ${drop.name}`, amount: storeCredit },
+        ],
+      })
+      return p
+    })
+  }
+
+  // Shuffle remaining unsold boxes in background
+  const unsoldBoxes = await prisma.box.findMany({
+    where: { dropId, sold: false },
+    select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
+  })
+
+  if (unsoldBoxes.length > 1) {
+    const imageMap: Record<string, string | null> = {}
+    unsoldBoxes.forEach(b => {
+      const k = `${b.itemName}|${Number(b.itemPrice)}`
+      if (!imageMap[k]) imageMap[k] = b.itemImageUrl ?? null
+    })
+    const identities = unsoldBoxes.map(b => ({ itemName: b.itemName, itemPrice: b.itemPrice, itemShippingCost: b.itemShippingCost }))
+    for (let i = identities.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[identities[i], identities[j]] = [identities[j], identities[i]]
+    }
+    const values = unsoldBoxes.map((b, idx) => {
+      const identity = identities[idx]
+      const k = `${identity.itemName}|${Number(identity.itemPrice)}`
+      const img = imageMap[k]
+      return `('${b.id}', '${identity.itemName.replace(/'/g, "''")}', ${Number(identity.itemPrice)}, ${Number(identity.itemShippingCost)}, ${img ? `'${img.replace(/'/g, "''")}'` : 'NULL'})`
+    }).join(',')
+    prisma.$executeRawUnsafe(`
+      UPDATE "Box" AS b SET
+        "itemName" = v."itemName",
+        "itemPrice" = v."itemPrice"::numeric,
+        "itemShippingCost" = v."itemShippingCost"::numeric,
+        "itemImageUrl" = v."itemImageUrl"
+      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl")
+      WHERE b.id = v.id
+    `).catch(e => console.error('Shuffle failed:', e))
+  }
+
+  return ok({
+    purchaseId: purchase.id,
+    box: {
+      itemName: box.itemName,
+      itemPrice: Number(box.itemPrice),
+      itemShippingCost: Number(box.itemShippingCost),
+      itemImageUrl: box.itemImageUrl,
+    },
+    pricePaid: boxPrice,
+    newBalance: buyerBalance - boxPrice,
+  }, 201)
 }
