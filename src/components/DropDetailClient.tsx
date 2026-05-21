@@ -11,7 +11,6 @@ type User = { id: string; name: string; email: string; role: string; walletBalan
 export default function DropDetailClient({ drop, user }: { drop: Drop; user: User }) {
   const router = useRouter()
   const [buying, setBuying] = useState<string | null>(null)
-  const [purchasing, setPurchasing] = useState(false)
   const [error, setError] = useState('')
   const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
   const [confirmRandom, setConfirmRandom] = useState(false)
@@ -34,20 +33,30 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     setBuying(boxToOpen)
     setConfirmBoxId(null)
     setConfirmRandom(false)
-    setPurchasing(true)
+
+    // Start the API call
+    const purchasePromise = fetch(`/api/drops/${drop.id}/purchase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boxId: boxToOpen }),
+    })
+
+    // Redirect immediately to reveal page with a pending state
+    router.push(`/dashboard/reveal?pending=1&dropId=${drop.id}&boxId=${boxToOpen}`)
+
+    // API call completes in background — reveal page polls for the result
     try {
-      const res = await fetch(`/api/drops/${drop.id}/purchase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ boxId: boxToOpen }),
-      })
+      const res = await purchasePromise
       const data = await res.json()
-      if (!res.ok) { setError(data.error); setBuying(null); setPurchasing(false); return }
-      router.push(`/dashboard/reveal?purchaseId=${data.data.purchaseId}&dropId=${drop.id}`)
+      if (!res.ok) {
+        // If purchase failed, go back with error
+        router.push(`/dashboard/drop/${drop.id}?error=${encodeURIComponent(data.error)}`)
+        return
+      }
+      // Push the purchaseId into the URL so reveal page can fetch the item
+      router.replace(`/dashboard/reveal?purchaseId=${data.data.purchaseId}&dropId=${drop.id}`)
     } catch {
-      setError('Something went wrong.')
-      setBuying(null)
-      setPurchasing(false)
+      router.push(`/dashboard/drop/${drop.id}?error=Something+went+wrong`)
     }
   }
 
@@ -71,16 +80,6 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
 
   return (
     <div className={styles.wrap}>
-      {/* Full screen loading overlay */}
-      {purchasing && (
-        <div className={styles.purchasingOverlay}>
-          <div className={styles.purchasingInner}>
-            <span className="spin" style={{width:36,height:36}} />
-            <p className={styles.purchasingText}>Opening your box…</p>
-          </div>
-        </div>
-      )}
-
       <Link href="/dashboard" className={styles.back}>← Back to Drops</Link>
 
       {drop.logoUrl && (

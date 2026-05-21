@@ -42,12 +42,12 @@ function Confetti({ active }: { active: boolean }) {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       pieces.forEach(p => {
         p.x += p.vx; p.y += p.vy; p.rot += p.rotSpeed; p.vy += 0.08
-        if (elapsed > 1500) p.opacity = Math.max(0, p.opacity - 0.012)
+        if (elapsed > 2000) p.opacity = Math.max(0, p.opacity - 0.012)
         ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot)
         ctx.globalAlpha = p.opacity; ctx.fillStyle = p.color
         ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore()
       })
-      if (elapsed < 3000) animRef.current = requestAnimationFrame(draw)
+      if (elapsed < 4000) animRef.current = requestAnimationFrame(draw)
       else ctx.clearRect(0, 0, canvas.width, canvas.height)
     }
     animRef.current = requestAnimationFrame(draw)
@@ -62,6 +62,7 @@ function RevealContent() {
   const router = useRouter()
   const purchaseId = params.get('purchaseId')
   const dropId = params.get('dropId')
+  const pending = params.get('pending')
 
   const [data, setData] = useState<PurchaseData | null>(null)
   const [phase, setPhase] = useState<'opening' | 'revealed' | 'done'>('opening')
@@ -80,9 +81,35 @@ function RevealContent() {
   const [outcome, setOutcome] = useState<'delivery' | 'soldback' | null>(null)
   const [outcomeMsg, setOutcomeMsg] = useState('')
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const pollRef = useRef<NodeJS.Timeout | null>(null)
+
+  // If pending, poll for purchaseId to appear in URL
+  useEffect(() => {
+    if (!pending) return
+    pollRef.current = setInterval(() => {
+      const current = new URLSearchParams(window.location.search)
+      const pid = current.get('purchaseId')
+      if (pid) {
+        clearInterval(pollRef.current!)
+        fetch(`/api/orders?purchaseId=${pid}`)
+          .then(r => r.json())
+          .then(d => {
+            if (d.ok && d.data) {
+              const p = d.data.find((x: any) => x.id === pid)
+              if (p) setData({
+                purchaseId: pid,
+                box: { itemName: p.itemName, itemPrice: p.itemPrice, itemShippingCost: p.itemShippingCost, itemImageUrl: p.itemImageUrl },
+                pricePaid: p.pricePaid, newBalance: 0,
+              })
+            }
+          }).catch(() => {})
+      }
+    }, 200)
+    return () => clearInterval(pollRef.current!)
+  }, [pending])
 
   useEffect(() => {
-    if (!purchaseId) { router.push('/dashboard'); return }
+    if (!purchaseId || pending) return
     fetch(`/api/orders?purchaseId=${purchaseId}`)
       .then(r => r.json())
       .then(d => {
@@ -95,16 +122,21 @@ function RevealContent() {
           })
         }
       }).catch(() => {})
+  }, [purchaseId])
 
-    setTimeout(() => setLidOpen(true), 500)
-    setTimeout(() => setShowConfetti(true), 900)
-    setTimeout(() => setCardVisible(true), 1700)
+  useEffect(() => {
+    if (!pending && !purchaseId) { router.push('/dashboard'); return }
+
+    // Animation timings — 3.25 seconds total before reveal
+    setTimeout(() => setLidOpen(true), 600)
+    setTimeout(() => setShowConfetti(true), 1100)
+    setTimeout(() => setCardVisible(true), 2200)
     setTimeout(() => {
       setActionsVisible(true)
       setPhase('revealed')
       router.refresh()
-    }, 2200)
-  }, [purchaseId])
+    }, 3250)
+  }, [])
 
   useEffect(() => {
     if (phase !== 'revealed' || outcome) return
@@ -119,11 +151,15 @@ function RevealContent() {
 
   function stopTimer() { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
 
+  const getPurchaseId = () => {
+    return purchaseId || new URLSearchParams(window.location.search).get('purchaseId') || ''
+  }
+
   async function handleSellBack() {
     stopTimer(); setSubmitting(true)
     const res = await fetch('/api/orders/sellback', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ purchaseId }),
+      body: JSON.stringify({ purchaseId: getPurchaseId() }),
     })
     const d = await res.json()
     setSubmitting(false)
@@ -137,7 +173,7 @@ function RevealContent() {
   async function handleAutoSell() {
     const res = await fetch('/api/orders/sellback', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ purchaseId }),
+      body: JSON.stringify({ purchaseId: getPurchaseId() }),
     })
     const d = await res.json()
     if (res.ok) {
@@ -159,7 +195,7 @@ function RevealContent() {
     setSubmitting(true)
     const res = await fetch('/api/orders', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ purchaseId, ...addrForm }),
+      body: JSON.stringify({ purchaseId: getPurchaseId(), ...addrForm }),
     })
     const d = await res.json()
     setSubmitting(false)
@@ -176,8 +212,6 @@ function RevealContent() {
   const pct = (countdown / 300) * 100
   const barColor = countdown <= 60 ? '#ff3355' : countdown <= 120 ? '#FF8C00' : '#FF6B85'
   const urgent = countdown <= 30
-
-  if (!purchaseId) return null
 
   return (
     <div className={styles.screen}>
