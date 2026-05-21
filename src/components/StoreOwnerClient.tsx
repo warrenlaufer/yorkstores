@@ -14,11 +14,11 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 }) {
   const router = useRouter()
 
-  // New drop state
   const [name, setName] = useState('')
   const [logoUrl, setLogoUrl] = useState('')
   const [logoPreview, setLogoPreview] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
+  const [sellBackPct, setSellBackPct] = useState('90')
   const [boxes, setBoxes] = useState<BoxDef[]>([])
   const [iName, setIName] = useState('')
   const [iPrice, setIPrice] = useState('')
@@ -33,7 +33,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const itemImgInputRef = useRef<HTMLInputElement>(null)
 
-  // Edit drop state
   const [editingDrop, setEditingDrop] = useState<DropSummary | null>(null)
   const [editName, setEditName] = useState('')
   const [editLogoUrl, setEditLogoUrl] = useState('')
@@ -142,6 +141,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const avgVal = boxes.length ? boxes.reduce((s, b) => s + b.itemPrice * b.qty, 0) / boxes.reduce((s, b) => s + b.qty, 0) : 0
   const boxPrice = Math.round(avgVal * 1.05)
   const totalBoxes = boxes.reduce((s, b) => s + b.qty, 0)
+  const sellBackNum = Math.min(100, Math.max(0, parseInt(sellBackPct) || 90))
 
   async function publish() {
     if (!name) { setError('Give your drop a name.'); return }
@@ -152,12 +152,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       const res = await fetch('/api/drops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', boxes }),
+        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, boxes }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setSuccess('Drop published!')
-      setName(''); setLogoUrl(''); setLogoPreview(''); setBoxes([])
+      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setBoxes([])
       setTimeout(() => { setSuccess(''); router.refresh() }, 1500)
     } catch { setError('Something went wrong.') }
     finally { setPublishing(false) }
@@ -170,7 +170,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <p className={styles.sub}>Box price = average item value +5%, rounded to nearest dollar.</p>
       </div>
 
-      {/* Existing drops */}
       {drops.length > 0 && (
         <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
           <div className={styles.panelTitle}>Your Drops</div>
@@ -183,10 +182,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               </div>
               <div className={styles.dropRowActions}>
                 <button className={styles.editBtn} onClick={() => openEdit(d)}>Edit</button>
-                <button
-                  className={d.isActive ? styles.deactivateBtn : styles.activateBtn}
-                  onClick={() => toggleActive(d)}
-                >
+                <button className={d.isActive ? styles.deactivateBtn : styles.activateBtn} onClick={() => toggleActive(d)}>
                   {d.isActive ? 'Deactivate' : 'Activate'}
                 </button>
               </div>
@@ -220,6 +216,17 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               </div>
               <input ref={logoInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleLogoUpload} />
               {logoPreview && <button className={styles.removeLogoBtn} onClick={() => { setLogoUrl(''); setLogoPreview('') }}>Remove logo</button>}
+            </div>
+            <div className="field">
+              <label>Sell-Back Percentage</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={sellBackPct}
+                onChange={e => setSellBackPct(e.target.value)}
+              />
+              <p className={styles.sellBackHint}>90%+ recommended</p>
             </div>
           </div>
 
@@ -272,6 +279,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 <div className={styles.previewRow}><span>Boxes</span><span>{totalBoxes}</span></div>
                 <div className={styles.previewRow}><span>Avg value</span><span>${avgVal.toFixed(2)}</span></div>
                 <div className={styles.previewRow}><span>Box price (avg +5%)</span><span style={{color:'#F5C842'}}>${boxPrice}</span></div>
+                <div className={styles.previewRow}><span>Sell-back rate</span><span>{sellBackNum}%</span></div>
                 <div className={styles.previewRow}><span>Your revenue (90%)</span><span style={{color:'#3DD68C'}}>${(boxPrice * totalBoxes * 0.9).toFixed(2)}</span></div>
               </div>
             ) : (
@@ -306,7 +314,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         </div>
       </div>
 
-      {/* Edit drop modal */}
       {editingDrop && (
         <div className={styles.editOverlay} onClick={() => setEditingDrop(null)}>
           <div className={styles.editBox} onClick={e => e.stopPropagation()}>
