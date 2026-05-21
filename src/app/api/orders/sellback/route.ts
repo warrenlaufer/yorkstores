@@ -38,40 +38,51 @@ export async function POST(req: NextRequest) {
     // Deduct from store
     await tx.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: itemValue } } })
 
-    // Find a random unsold box in the same drop to swap items with
+    // Mark sold-back box as unsold
+    await tx.box.update({ where: { id: purchase.box.id }, data: { sold: false } })
+
+    // Get ALL unsold boxes in this drop (including the one just returned)
     const unsoldBoxes = await tx.box.findMany({
-      where: { dropId: purchase.box.dropId, sold: false, id: { not: purchase.box.id } },
+      where: { dropId: purchase.box.dropId, sold: false },
       select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
     })
 
-    if (unsoldBoxes.length > 0) {
-      // Pick a random unsold box to swap with
-      const swapBox = unsoldBoxes[Math.floor(Math.random() * unsoldBoxes.length)]
+    // Build a map of item name+price -> imageUrl so images stay tied to item identity
+    const imageMap: Record<string, string | null> = {}
+    unsoldBoxes.forEach(b => {
+      const k = `${b.itemName}|${Number(b.itemPrice)}`
+      if (!imageMap[k]) imageMap[k] = b.itemImageUrl ?? null
+    })
 
-      // Swap item details between the sold-back box and the random unsold box
-      await tx.box.update({
-        where: { id: purchase.box.id },
-        data: {
-          sold: false,
-          itemName: swapBox.itemName,
-          itemPrice: swapBox.itemPrice,
-          itemShippingCost: swapBox.itemShippingCost,
-          itemImageUrl: swapBox.itemImageUrl,
-        },
-      })
-      await tx.box.update({
-        where: { id: swapBox.id },
-        data: {
-          itemName: purchase.box.itemName,
-          itemPrice: purchase.box.itemPrice,
-          itemShippingCost: purchase.box.itemShippingCost,
-          itemImageUrl: purchase.box.itemImageUrl,
-        },
-      })
-    } else {
-      // No other unsold boxes — just mark it unsold as-is
-      await tx.box.update({ where: { id: purchase.box.id }, data: { sold: false } })
+    // Shuffle only the item identity (name, price, shipping) — not images
+    const itemIdentities = unsoldBoxes.map(b => ({
+      itemName: b.itemName,
+      itemPrice: b.itemPrice,
+      itemShippingCost: b.itemShippingCost,
+    }))
+
+    // Fisher-Yates shuffle
+    for (let i = itemIdentities.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[itemIdentities[i], itemIdentities[j]] = [itemIdentities[j], itemIdentities[i]]
     }
+
+    // Write shuffled identities back, restoring the correct image for each item
+    await Promise.all(
+      unsoldBoxes.map((box, idx) => {
+        const identity = itemIdentities[idx]
+        const k = `${identity.itemName}|${Number(identity.itemPrice)}`
+        return tx.box.update({
+          where: { id: box.id },
+          data: {
+            itemName: identity.itemName,
+            itemPrice: identity.itemPrice,
+            itemShippingCost: identity.itemShippingCost,
+            itemImageUrl: imageMap[k] ?? null,
+          },
+        })
+      })
+    )
 
     // Record outcome
     await tx.purchase.update({
