@@ -1,30 +1,27 @@
-import type { Metadata } from 'next'
-import { Outfit, Space_Mono } from 'next/font/google'
-import './globals.css'
+import { getSession } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import DashboardNav from '@/components/DashboardNav'
+import ContactModal from '@/components/ContactModal'
 
-const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })
-const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-mono' })
+export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'Yorkstores — Mystery Box Platform',
-  description: 'Open mystery boxes. Choose delivery or sell back within 5 minutes.',
-  icons: {
-    icon: '/favicon.svg',
-  },
-  openGraph: {
-    title: 'Yorkstores',
-    description: 'Mystery box drops — buy, reveal, decide.',
-    type: 'website',
-  },
-}
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const user = await getSession()
+  if (!user) redirect('/signin')
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${outfit.variable} ${spaceMono.variable}`}>
-      <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-      </head>
-      <body>{children}</body>
-    </html>
+    <>
+      <DashboardNav user={{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        company: user.company ?? undefined,
+        walletBalance: Number(user.walletBalance),
+        storeBalance: Number(user.storeBalance),
+      }} />
+      <main>{children}</main>
+      <ContactModal />
+    </>
   )
 }
