@@ -18,7 +18,6 @@ export default async function HistoryPage() {
     orderBy: { createdAt: 'desc' },
   })
 
-  // Calculate running wallet balance for each purchase
   let runningBalance = Number(user.walletBalance)
   const purchasesWithBalance = [...purchases].reverse().map(p => {
     const before = runningBalance + Number(p.pricePaid) - Number(p.refundAmt)
@@ -28,6 +27,7 @@ export default async function HistoryPage() {
       id: p.id,
       itemName: p.box.itemName,
       itemPrice: Number(p.box.itemPrice),
+      itemShippingCost: Number(p.box.itemShippingCost),
       itemImageUrl: p.box.itemImageUrl,
       dropName: p.box.drop.name,
       dropEmoji: p.box.drop.emoji,

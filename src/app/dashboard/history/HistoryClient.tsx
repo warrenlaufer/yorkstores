@@ -6,6 +6,7 @@ type Purchase = {
   id: string
   itemName: string
   itemPrice: number
+  itemShippingCost: number
   itemImageUrl: string | null
   dropName: string
   dropEmoji: string
@@ -43,13 +44,12 @@ type ListRow = {
 export default function HistoryClient({ purchases, stats }: { purchases: Purchase[]; stats: Stats }) {
   const [view, setView] = useState<'icons' | 'list'>('icons')
 
-  // Build flat list of events — each purchase becomes 1 or 2 rows
   const listRows: ListRow[] = []
   purchases.forEach(p => {
-    // Row 1: the purchase itself
     const purchaseBalanceBefore = p.balanceBefore
     const purchaseBalanceAfter = purchaseBalanceBefore - p.pricePaid
 
+    // Row 1: the purchase
     listRows.push({
       id: p.id + '_buy',
       date: new Date(p.createdAt).toLocaleDateString(),
@@ -61,7 +61,7 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
       balanceAfter: purchaseBalanceAfter,
     })
 
-    // Row 2: sell-back or delivery (if resolved)
+    // Row 2: outcome event
     if (p.outcome === 'SOLD_BACK' || p.outcome === 'AUTO_SOLD') {
       listRows.push({
         id: p.id + '_sell',
@@ -82,7 +82,7 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
         action: 'Delivery',
         actionClass: 'outcome_DELIVERY',
         balanceBefore: purchaseBalanceAfter,
-        balanceAfter: purchaseBalanceAfter,
+        balanceAfter: purchaseBalanceAfter - p.itemShippingCost,
       })
     }
   })
@@ -95,18 +95,8 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
           <p className={styles.sub}>All boxes you've opened and their outcomes.</p>
         </div>
         <div className={styles.toggleWrap}>
-          <button
-            className={`${styles.toggleBtn} ${view === 'icons' ? styles.toggleActive : ''}`}
-            onClick={() => setView('icons')}
-          >
-            ⊞ Icons
-          </button>
-          <button
-            className={`${styles.toggleBtn} ${view === 'list' ? styles.toggleActive : ''}`}
-            onClick={() => setView('list')}
-          >
-            ≡ List
-          </button>
+          <button className={`${styles.toggleBtn} ${view === 'icons' ? styles.toggleActive : ''}`} onClick={() => setView('icons')}>⊞ Icons</button>
+          <button className={`${styles.toggleBtn} ${view === 'list' ? styles.toggleActive : ''}`} onClick={() => setView('list')}>≡ List</button>
         </div>
       </div>
 
@@ -158,9 +148,7 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
                 <div className={styles.cellSub}>{row.dropName}</div>
               </span>
               <span>
-                <span className={`${styles.outcomeTag} ${styles[row.actionClass]}`}>
-                  {row.action}
-                </span>
+                <span className={`${styles.outcomeTag} ${styles[row.actionClass]}`}>{row.action}</span>
               </span>
               <span className={styles.cellMono}>${row.balanceBefore.toFixed(2)}</span>
               <span className={styles.cellMono} style={{color: row.balanceAfter >= row.balanceBefore ? '#5FFFA8' : '#FF8FA3'}}>
