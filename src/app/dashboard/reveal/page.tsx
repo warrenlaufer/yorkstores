@@ -61,6 +61,7 @@ function RevealContent() {
   const params = useSearchParams()
   const router = useRouter()
   const purchaseId = params.get('purchaseId')
+  const dropId = params.get('dropId')
 
   const [data, setData] = useState<PurchaseData | null>(null)
   const [phase, setPhase] = useState<'opening' | 'revealed' | 'done'>('opening')
@@ -246,7 +247,14 @@ function RevealContent() {
             )}
 
             {outcome && (
-              <button className={styles.backBtn} onClick={() => router.push('/dashboard')}>Back to Drops</button>
+              <div className={styles.backBtns}>
+                <button className={styles.backBtn} onClick={() => router.push(`/dashboard/drop/${dropId}`)}>
+                  Back to This Drop
+                </button>
+                <button className={styles.backBtnAlt} onClick={() => router.push('/dashboard')}>
+                  Back to All Drops
+                </button>
+              </div>
             )}
           </div>
         </div>

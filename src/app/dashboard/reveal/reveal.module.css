@@ -46,11 +46,7 @@
   overflow: hidden;
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.itemImage {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
+.itemImage { width: 100%; height: 100%; object-fit: contain; }
 
 /* Reveal body */
 .revealBody { padding: 1.25rem 1.5rem 1.5rem; text-align: center; }
@@ -79,8 +75,26 @@
 .outcomeMsg { font-size: 0.82rem; padding: 0.6rem 0.75rem; border-radius: 8px; margin-bottom: 0.85rem; line-height: 1.5; }
 .outcomeDel { background: rgba(96,165,250,0.15); color: #7EC8FF; border: 1px solid rgba(96,165,250,0.3); }
 .outcomeSold { background: rgba(61,214,140,0.12); color: #5FFFA8; border: 1px solid rgba(61,214,140,0.3); }
-.backBtn { background: transparent; color: #FF8FA3; border: 2px solid #FF6B85; border-radius: 8px; font-family: var(--font); font-size: 0.78rem; font-weight: 700; padding: 0.45rem 1rem; cursor: pointer; transition: all 0.15s; }
-.backBtn:hover { background: rgba(255,107,133,0.15); color: #fff; }
+
+/* Back buttons */
+.backBtns { display: flex; flex-direction: column; gap: 0.5rem; }
+.backBtn {
+  background: #FF6B85; color: #fff; border: none;
+  border-radius: 8px; font-family: var(--font);
+  font-size: 0.82rem; font-weight: 800;
+  padding: 0.55rem 1rem; cursor: pointer;
+  transition: background 0.15s;
+}
+.backBtn:hover { background: #ff4d6d; }
+.backBtnAlt {
+  background: transparent; color: var(--text2);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px; font-family: var(--font);
+  font-size: 0.78rem; font-weight: 700;
+  padding: 0.45rem 1rem; cursor: pointer;
+  transition: all 0.15s;
+}
+.backBtnAlt:hover { background: rgba(255,255,255,0.05); color: #fff; }
 
 /* Address modal */
 .addrOverlay { position: fixed; inset: 0; background: rgba(5,5,8,0.95); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
