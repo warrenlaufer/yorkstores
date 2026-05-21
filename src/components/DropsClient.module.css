@@ -62,3 +62,16 @@
 .choiceDesc { font-size: 0.67rem; color: var(--text2); line-height: 1.4; }
 .choiceCancel { background: #2a2a35; border: 1px solid rgba(255,255,255,0.15); color: var(--text2); font-family: var(--font); font-size: 0.78rem; font-weight: 600; padding: 0.4rem 1.2rem; border-radius: 8px; cursor: pointer; }
 .choiceCancel:hover { color: #fff; background: #333345; }
+
+.sellBackHint {
+  font-size: 0.65rem;
+  color: #FF8FA3;
+  margin-top: 0.25rem;
+  font-weight: 600;
+}
+
+.confirmSellBack {
+  font-size: 0.68rem;
+  color: var(--text2);
+  margin-bottom: 1.5rem;
+}

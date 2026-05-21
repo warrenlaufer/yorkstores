@@ -5,7 +5,7 @@ import Link from 'next/link'
 import styles from './DropDetailClient.module.css'
 
 type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl?: string; sold: boolean }
-type Drop = { id: string; name: string; emoji: string; logoUrl?: string; owner: string; boxPrice: number; boxes: Box[] }
+type Drop = { id: string; name: string; emoji: string; logoUrl?: string; owner: string; boxPrice: number; sellBackPct: number; boxes: Box[] }
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
 export default function DropDetailClient({ drop, user }: { drop: Drop; user: User }) {
@@ -25,6 +25,8 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     itemMap[k].count++
   })
   const sortedItems = Object.values(itemMap).sort((a, b) => b.price - a.price)
+
+  const sellBackAmount = (price: number) => Math.round(price * (drop.sellBackPct / 100) * 100) / 100
 
   async function confirmPurchase() {
     if (!confirmBoxId) return
@@ -178,6 +180,9 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
             <div className={styles.confirmPrice}>${drop.boxPrice}</div>
             <p className={styles.confirmBalance}>
               Your balance: ${user.walletBalance.toFixed(2)}
+            </p>
+            <p className={styles.confirmSellBack}>
+              Sell back value: {drop.sellBackPct}% of item value
             </p>
             <div className={styles.confirmActions}>
               <button className={styles.confirmBtn} onClick={confirmPurchase}>

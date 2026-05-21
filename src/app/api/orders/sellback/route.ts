@@ -26,12 +26,12 @@ export async function POST(req: NextRequest) {
   if (purchase.outcome) return err('This purchase has already been resolved')
 
   const itemValue = Number(purchase.box.itemPrice)
-  const buyerRefund = Math.round(itemValue * 0.9 * 100) / 100
+  const sellBackPct = purchase.box.drop.sellBackPct
+  const buyerRefund = Math.round(itemValue * (sellBackPct / 100) * 100) / 100
   const owner = purchase.box.drop.owner
 
   if (Number(owner.storeBalance) < itemValue) return err('Store wallet insufficient for buyback')
 
-  // Single fast batch transaction
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { walletBalance: { increment: buyerRefund } } }),
     prisma.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: itemValue } } }),
@@ -48,7 +48,6 @@ export async function POST(req: NextRequest) {
     }),
   ])
 
-  // Send email
   try {
     await sendSellBackConfirmationEmail(user.email, user.name, {
       itemName: purchase.box.itemName,

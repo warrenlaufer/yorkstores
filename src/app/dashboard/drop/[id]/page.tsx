@@ -33,6 +33,7 @@ export default async function DropPage({ params }: { params: { id: string } }) {
         logoUrl: drop.logoUrl ?? undefined,
         owner: drop.owner.company ?? drop.owner.name,
         boxPrice: calcBoxPrice(allPrices),
+        sellBackPct: drop.sellBackPct,
         boxes: drop.boxes.map(b => ({
           id: b.id,
           itemName: b.itemName,

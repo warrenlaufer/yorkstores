@@ -65,8 +65,9 @@ model Session {
 model Drop {
   id          String   @id @default(cuid())
   name        String
-  emoji       String   @default("📦")
+  emoji       String   @default("🎁")
   logoUrl     String?
+  sellBackPct Int      @default(90)
   ownerId     String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -180,3 +181,4 @@ model PromoRedemption {
 
   @@unique([promoCodeId, userId])
 }
+
