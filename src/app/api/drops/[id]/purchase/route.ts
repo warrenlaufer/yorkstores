@@ -10,6 +10,53 @@ const schema = z.object({
   boxId: z.string().optional(),
 })
 
+async function shuffleUnsoldBoxes(dropId: string) {
+  try {
+    const unsoldBoxes = await prisma.box.findMany({
+      where: { dropId, sold: false },
+      select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
+    })
+
+    if (unsoldBoxes.length <= 1) return
+
+    const imageMap: Record<string, string | null> = {}
+    unsoldBoxes.forEach(b => {
+      const k = `${b.itemName}|${Number(b.itemPrice)}`
+      if (!imageMap[k]) imageMap[k] = b.itemImageUrl ?? null
+    })
+
+    const identities = unsoldBoxes.map(b => ({
+      itemName: b.itemName,
+      itemPrice: b.itemPrice,
+      itemShippingCost: b.itemShippingCost,
+    }))
+
+    for (let i = identities.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[identities[i], identities[j]] = [identities[j], identities[i]]
+    }
+
+    const values = unsoldBoxes.map((b, idx) => {
+      const identity = identities[idx]
+      const k = `${identity.itemName}|${Number(identity.itemPrice)}`
+      const img = imageMap[k]
+      return `('${b.id}', '${identity.itemName.replace(/'/g, "''")}', ${Number(identity.itemPrice)}, ${Number(identity.itemShippingCost)}, ${img ? `'${img.replace(/'/g, "''")}'` : 'NULL'})`
+    }).join(',')
+
+    await prisma.$executeRawUnsafe(`
+      UPDATE "Box" AS b SET
+        "itemName" = v."itemName",
+        "itemPrice" = v."itemPrice"::numeric,
+        "itemShippingCost" = v."itemShippingCost"::numeric,
+        "itemImageUrl" = v."itemImageUrl"
+      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl")
+      WHERE b.id = v.id
+    `)
+  } catch (e) {
+    console.error('Shuffle failed:', e)
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
@@ -22,10 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const drop = await prisma.drop.findUnique({
     where: { id: dropId },
-    include: {
-      boxes: { where: { sold: false } },
-      owner: true,
-    },
+    include: { boxes: { where: { sold: false } }, owner: true },
   })
 
   if (!drop || !drop.isActive) return err('Drop not found or inactive')
@@ -86,41 +130,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     })
   }
 
-  // Shuffle remaining unsold boxes in background
-  const unsoldBoxes = await prisma.box.findMany({
-    where: { dropId, sold: false },
-    select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
-  })
-
-  if (unsoldBoxes.length > 1) {
-    const imageMap: Record<string, string | null> = {}
-    unsoldBoxes.forEach(b => {
-      const k = `${b.itemName}|${Number(b.itemPrice)}`
-      if (!imageMap[k]) imageMap[k] = b.itemImageUrl ?? null
-    })
-    const identities = unsoldBoxes.map(b => ({ itemName: b.itemName, itemPrice: b.itemPrice, itemShippingCost: b.itemShippingCost }))
-    for (let i = identities.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[identities[i], identities[j]] = [identities[j], identities[i]]
-    }
-    const values = unsoldBoxes.map((b, idx) => {
-      const identity = identities[idx]
-      const k = `${identity.itemName}|${Number(identity.itemPrice)}`
-      const img = imageMap[k]
-      return `('${b.id}', '${identity.itemName.replace(/'/g, "''")}', ${Number(identity.itemPrice)}, ${Number(identity.itemShippingCost)}, ${img ? `'${img.replace(/'/g, "''")}'` : 'NULL'})`
-    }).join(',')
-    prisma.$executeRawUnsafe(`
-      UPDATE "Box" AS b SET
-        "itemName" = v."itemName",
-        "itemPrice" = v."itemPrice"::numeric,
-        "itemShippingCost" = v."itemShippingCost"::numeric,
-        "itemImageUrl" = v."itemImageUrl"
-      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl")
-      WHERE b.id = v.id
-    `).catch(e => console.error('Shuffle failed:', e))
-  }
-
-  return ok({
+  const response = ok({
     purchaseId: purchase.id,
     box: {
       itemName: box.itemName,
@@ -131,4 +141,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     pricePaid: boxPrice,
     newBalance: buyerBalance - boxPrice,
   }, 201)
+
+  shuffleUnsoldBoxes(dropId)
+
+  return response
 }
