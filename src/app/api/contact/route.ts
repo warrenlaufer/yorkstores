@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     await resend.emails.send({
       from: process.env.EMAIL_FROM ?? 'noreply@yorkstores.com',
       to: 'admin@yorkstores.com',
-      replyTo: email,
+      reply_to: email,
       subject: `Contact form message from ${name}`,
       html: `
         <!DOCTYPE html>
