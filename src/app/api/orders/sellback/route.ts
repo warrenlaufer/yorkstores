@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   if (Number(owner.storeBalance) < itemValue) return err('Store wallet insufficient for buyback')
 
-  // Step 2 — do financial updates and outcome in a fast transaction
+  // Step 2 — financial updates in a fast batch transaction
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { walletBalance: { increment: buyerRefund } } }),
     prisma.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: itemValue } } }),
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }),
   ])
 
-  // Step 3 — shuffle unsold boxes outside transaction (can be slower)
+  // Step 3 — shuffle unsold boxes with a single SQL query
   const unsoldBoxes = await prisma.box.findMany({
     where: { dropId: purchase.box.dropId, sold: false },
     select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
@@ -75,22 +75,23 @@ export async function POST(req: NextRequest) {
       ;[identities[i], identities[j]] = [identities[j], identities[i]]
     }
 
-    // Write shuffled items back using raw SQL for speed
-    await Promise.all(
-      unsoldBoxes.map((box, idx) => {
-        const identity = identities[idx]
-        const k = `${identity.itemName}|${Number(identity.itemPrice)}`
-        return prisma.box.update({
-          where: { id: box.id },
-          data: {
-            itemName: identity.itemName,
-            itemPrice: identity.itemPrice,
-            itemShippingCost: identity.itemShippingCost,
-            itemImageUrl: imageMap[k] ?? null,
-          },
-        })
-      })
-    )
+    // Build values for bulk SQL update
+    const values = unsoldBoxes.map((box, idx) => {
+      const identity = identities[idx]
+      const k = `${identity.itemName}|${Number(identity.itemPrice)}`
+      const img = imageMap[k]
+      return `('${box.id}', '${identity.itemName.replace(/'/g, "''")}', ${Number(identity.itemPrice)}, ${Number(identity.itemShippingCost)}, ${img ? `'${img.replace(/'/g, "''")}'` : 'NULL'})`
+    }).join(',')
+
+    await prisma.$executeRawUnsafe(`
+      UPDATE "Box" AS b SET
+        "itemName" = v."itemName",
+        "itemPrice" = v."itemPrice"::numeric,
+        "itemShippingCost" = v."itemShippingCost"::numeric,
+        "itemImageUrl" = v."itemImageUrl"
+      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl")
+      WHERE b.id = v.id
+    `)
   }
 
   // Step 4 — send email
