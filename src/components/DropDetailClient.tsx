@@ -11,6 +11,7 @@ type User = { id: string; name: string; email: string; role: string; walletBalan
 export default function DropDetailClient({ drop, user }: { drop: Drop; user: User }) {
   const router = useRouter()
   const [buying, setBuying] = useState<string | null>(null)
+  const [purchasing, setPurchasing] = useState(false)
   const [error, setError] = useState('')
   const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
   const [confirmRandom, setConfirmRandom] = useState(false)
@@ -26,8 +27,6 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
   })
   const sortedItems = Object.values(itemMap).sort((a, b) => b.price - a.price)
 
-  const sellBackAmount = (price: number) => Math.round(price * (drop.sellBackPct / 100) * 100) / 100
-
   async function confirmPurchase() {
     if (!confirmBoxId) return
     const boxToOpen = confirmBoxId
@@ -35,6 +34,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     setBuying(boxToOpen)
     setConfirmBoxId(null)
     setConfirmRandom(false)
+    setPurchasing(true)
     try {
       const res = await fetch(`/api/drops/${drop.id}/purchase`, {
         method: 'POST',
@@ -42,11 +42,12 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
         body: JSON.stringify({ boxId: boxToOpen }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); setBuying(null); return }
+      if (!res.ok) { setError(data.error); setBuying(null); setPurchasing(false); return }
       router.push(`/dashboard/reveal?purchaseId=${data.data.purchaseId}&dropId=${drop.id}`)
     } catch {
       setError('Something went wrong.')
       setBuying(null)
+      setPurchasing(false)
     }
   }
 
@@ -70,6 +71,16 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
 
   return (
     <div className={styles.wrap}>
+      {/* Full screen loading overlay */}
+      {purchasing && (
+        <div className={styles.purchasingOverlay}>
+          <div className={styles.purchasingInner}>
+            <span className="spin" style={{width:36,height:36}} />
+            <p className={styles.purchasingText}>Opening your box…</p>
+          </div>
+        </div>
+      )}
+
       <Link href="/dashboard" className={styles.back}>← Back to Drops</Link>
 
       {drop.logoUrl && (
@@ -98,7 +109,7 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
             onClick={handleChooseForMe}
             disabled={!!buying || available.length === 0}
           >
-            {buying ? <span className="spin" style={{width:14,height:14}} /> : 'Buy a Random Box'}
+            {buying && !confirmBoxId ? <span className="spin" style={{width:14,height:14}} /> : 'Buy a Random Box'}
           </button>
           <p className={styles.scrollHint}>Scroll Down to Choose Your Box</p>
         </div>
