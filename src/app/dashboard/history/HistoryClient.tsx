@@ -49,19 +49,7 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
     const purchaseBalanceBefore = p.balanceBefore
     const purchaseBalanceAfter = purchaseBalanceBefore - p.pricePaid
 
-    // Row 1: the purchase
-    listRows.push({
-      id: p.id + '_buy',
-      date: new Date(p.createdAt).toLocaleDateString(),
-      itemName: p.itemName,
-      dropName: p.dropName,
-      action: 'Bought',
-      actionClass: 'outcome_AUTO_FAILED',
-      balanceBefore: purchaseBalanceBefore,
-      balanceAfter: purchaseBalanceAfter,
-    })
-
-    // Row 2: outcome event
+    // Outcome row first (newer event — appears above in reverse-chrono list)
     if (p.outcome === 'SOLD_BACK' || p.outcome === 'AUTO_SOLD') {
       listRows.push({
         id: p.id + '_sell',
@@ -85,6 +73,18 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
         balanceAfter: purchaseBalanceAfter - p.itemShippingCost,
       })
     }
+
+    // Buy row second (older event — appears below in reverse-chrono list)
+    listRows.push({
+      id: p.id + '_buy',
+      date: new Date(p.createdAt).toLocaleDateString(),
+      itemName: p.itemName,
+      dropName: p.dropName,
+      action: 'Bought',
+      actionClass: 'outcome_AUTO_FAILED',
+      balanceBefore: purchaseBalanceBefore,
+      balanceAfter: purchaseBalanceAfter,
+    })
   })
 
   return (
