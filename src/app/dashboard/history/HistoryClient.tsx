@@ -29,15 +29,63 @@ const outcomeLabel: Record<string, string> = {
   AUTO_FAILED: '⚠️ Auto-failed',
 }
 
-const actionLabel: Record<string, string> = {
-  DELIVERY: 'Delivery',
-  SOLD_BACK: 'Sold Back',
-  AUTO_SOLD: 'Sold Back',
-  AUTO_FAILED: 'Bought',
+type ListRow = {
+  id: string
+  date: string
+  itemName: string
+  dropName: string
+  action: string
+  actionClass: string
+  balanceBefore: number
+  balanceAfter: number
 }
 
 export default function HistoryClient({ purchases, stats }: { purchases: Purchase[]; stats: Stats }) {
   const [view, setView] = useState<'icons' | 'list'>('icons')
+
+  // Build flat list of events — each purchase becomes 1 or 2 rows
+  const listRows: ListRow[] = []
+  purchases.forEach(p => {
+    // Row 1: the purchase itself
+    const purchaseBalanceBefore = p.balanceBefore
+    const purchaseBalanceAfter = purchaseBalanceBefore - p.pricePaid
+
+    listRows.push({
+      id: p.id + '_buy',
+      date: new Date(p.createdAt).toLocaleDateString(),
+      itemName: p.itemName,
+      dropName: p.dropName,
+      action: 'Bought',
+      actionClass: 'outcome_AUTO_FAILED',
+      balanceBefore: purchaseBalanceBefore,
+      balanceAfter: purchaseBalanceAfter,
+    })
+
+    // Row 2: sell-back or delivery (if resolved)
+    if (p.outcome === 'SOLD_BACK' || p.outcome === 'AUTO_SOLD') {
+      listRows.push({
+        id: p.id + '_sell',
+        date: new Date(p.createdAt).toLocaleDateString(),
+        itemName: p.itemName,
+        dropName: p.dropName,
+        action: p.outcome === 'AUTO_SOLD' ? 'Auto Sold Back' : 'Sold Back',
+        actionClass: 'outcome_SOLD_BACK',
+        balanceBefore: purchaseBalanceAfter,
+        balanceAfter: purchaseBalanceAfter + p.refundAmt,
+      })
+    } else if (p.outcome === 'DELIVERY') {
+      listRows.push({
+        id: p.id + '_del',
+        date: new Date(p.createdAt).toLocaleDateString(),
+        itemName: p.itemName,
+        dropName: p.dropName,
+        action: 'Delivery',
+        actionClass: 'outcome_DELIVERY',
+        balanceBefore: purchaseBalanceAfter,
+        balanceAfter: purchaseBalanceAfter,
+      })
+    }
+  })
 
   return (
     <div className={styles.wrap}>
@@ -102,21 +150,21 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
             <span>Prev Balance</span>
             <span>New Balance</span>
           </div>
-          {purchases.map(p => (
-            <div key={p.id} className={styles.tableRow}>
-              <span className={styles.cellMuted}>{new Date(p.createdAt).toLocaleDateString()}</span>
+          {listRows.map(row => (
+            <div key={row.id} className={styles.tableRow}>
+              <span className={styles.cellMuted}>{row.date}</span>
               <span>
-                <div className={styles.cellName}>{p.itemName}</div>
-                <div className={styles.cellSub}>{p.dropName}</div>
+                <div className={styles.cellName}>{row.itemName}</div>
+                <div className={styles.cellSub}>{row.dropName}</div>
               </span>
               <span>
-                <span className={`${styles.outcomeTag} ${p.outcome ? styles['outcome_' + p.outcome] : ''}`}>
-                  {p.outcome ? (actionLabel[p.outcome] ?? 'Bought') : 'Pending'}
+                <span className={`${styles.outcomeTag} ${styles[row.actionClass]}`}>
+                  {row.action}
                 </span>
               </span>
-              <span className={styles.cellMono}>${p.balanceBefore.toFixed(2)}</span>
-              <span className={styles.cellMono} style={{color: p.balanceAfter > p.balanceBefore ? '#5FFFA8' : '#FF8FA3'}}>
-                ${p.balanceAfter.toFixed(2)}
+              <span className={styles.cellMono}>${row.balanceBefore.toFixed(2)}</span>
+              <span className={styles.cellMono} style={{color: row.balanceAfter >= row.balanceBefore ? '#5FFFA8' : '#FF8FA3'}}>
+                ${row.balanceAfter.toFixed(2)}
               </span>
             </div>
           ))}
