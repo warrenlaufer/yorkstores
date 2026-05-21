@@ -218,7 +218,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               {logoPreview && <button className={styles.removeLogoBtn} onClick={() => { setLogoUrl(''); setLogoPreview('') }}>Remove logo</button>}
             </div>
             <div className="field">
-              <label>Sell-Back Percentage</label>
+              <label>Buy-Back Percentage</label>
               <input
                 type="number"
                 min="0"
