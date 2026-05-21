@@ -10,6 +10,53 @@ const schema = z.object({
   boxId: z.string().optional(),
 })
 
+async function shuffleUnsoldBoxes(dropId: string) {
+  try {
+    const unsoldBoxes = await prisma.box.findMany({
+      where: { dropId, sold: false },
+      select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
+    })
+
+    if (unsoldBoxes.length <= 1) return
+
+    const imageMap: Record<string, string | null> = {}
+    unsoldBoxes.forEach(b => {
+      const k = `${b.itemName}|${Number(b.itemPrice)}`
+      if (!imageMap[k]) imageMap[k] = b.itemImageUrl ?? null
+    })
+
+    const identities = unsoldBoxes.map(b => ({
+      itemName: b.itemName,
+      itemPrice: b.itemPrice,
+      itemShippingCost: b.itemShippingCost,
+    }))
+
+    for (let i = identities.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[identities[i], identities[j]] = [identities[j], identities[i]]
+    }
+
+    const values = unsoldBoxes.map((b, idx) => {
+      const identity = identities[idx]
+      const k = `${identity.itemName}|${Number(identity.itemPrice)}`
+      const img = imageMap[k]
+      return `('${b.id}', '${identity.itemName.replace(/'/g, "''")}', ${Number(identity.itemPrice)}, ${Number(identity.itemShippingCost)}, ${img ? `'${img.replace(/'/g, "''")}'` : 'NULL'})`
+    }).join(',')
+
+    await prisma.$executeRawUnsafe(`
+      UPDATE "Box" AS b SET
+        "itemName" = v."itemName",
+        "itemPrice" = v."itemPrice"::numeric,
+        "itemShippingCost" = v."itemShippingCost"::numeric,
+        "itemImageUrl" = v."itemImageUrl"
+      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl")
+      WHERE b.id = v.id
+    `)
+  } catch (e) {
+    console.error('Shuffle failed:', e)
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
@@ -20,96 +67,84 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const { dropId, boxId } = parsed.data
 
-  const result = await prisma.$transaction(async (tx) => {
-    const drop = await tx.drop.findUnique({
-      where: { id: dropId },
-      include: {
-        boxes: { where: { sold: false } },
-        owner: true,
-      },
-    })
-
-    if (!drop || !drop.isActive) throw new Error('Drop not found or inactive')
-    if (!drop.boxes.length) throw new Error('No boxes available')
-
-    let box = boxId
-      ? drop.boxes.find(b => b.id === boxId)
-      : drop.boxes[Math.floor(Math.random() * drop.boxes.length)]
-
-    if (!box) throw new Error('Box not available')
-
-    const allPrices = (await tx.box.findMany({
-      where: { dropId },
-      select: { itemPrice: true },
-    })).map(b => Number(b.itemPrice))
-
-    const boxPrice = calcBoxPrice(allPrices)
-    const buyerBalance = Number(user.walletBalance)
-
-    if (buyerBalance < boxPrice) throw new Error('Insufficient wallet balance')
-
-    const storeCredit = Math.round(boxPrice * 0.9 * 100) / 100
-
-    // Mark box as sold
-    await tx.box.update({ where: { id: box.id }, data: { sold: true } })
-
-    // Deduct from buyer
-    await tx.user.update({
-      where: { id: user.id },
-      data: { walletBalance: { decrement: boxPrice } },
-    })
-
-    // Credit store owner
-    await tx.user.update({
-      where: { id: drop.ownerId },
-      data: { storeBalance: { increment: storeCredit } },
-    })
-
-    // Check if a previous purchase exists for this box (sold back previously)
-    const existingPurchase = await tx.purchase.findUnique({ where: { boxId: box.id } })
-
-    let purchase
-    if (existingPurchase) {
-      purchase = await tx.purchase.update({
-        where: { boxId: box.id },
-        data: {
-          buyerId: user.id,
-          pricePaid: boxPrice,
-          outcome: null,
-          refundAmt: 0,
-          resolvedAt: null,
-        },
-      })
-    } else {
-      purchase = await tx.purchase.create({
-        data: {
-          buyerId: user.id,
-          boxId: box.id,
-          pricePaid: boxPrice,
-        },
-      })
-    }
-
-    // Record transactions
-    await tx.transaction.createMany({
-      data: [
-        { userId: user.id, dropId, type: 'purchase', description: `Opened box: ${drop.name}`, amount: -boxPrice },
-        { userId: drop.ownerId, dropId, type: 'sale', description: `Sale: ${drop.name}`, amount: storeCredit },
-      ],
-    })
-
-    return {
-      purchaseId: purchase.id,
-      box: {
-        itemName: box.itemName,
-        itemPrice: Number(box.itemPrice),
-        itemShippingCost: Number(box.itemShippingCost),
-        itemImageUrl: box.itemImageUrl,
-      },
-      pricePaid: boxPrice,
-      newBalance: buyerBalance - boxPrice,
-    }
+  const drop = await prisma.drop.findUnique({
+    where: { id: dropId },
+    include: { boxes: { where: { sold: false } }, owner: true },
   })
 
-  return ok(result, 201)
+  if (!drop || !drop.isActive) return err('Drop not found or inactive')
+  if (!drop.boxes.length) return err('No boxes available')
+
+  let box = boxId
+    ? drop.boxes.find(b => b.id === boxId)
+    : drop.boxes[Math.floor(Math.random() * drop.boxes.length)]
+
+  if (!box) return err('Box not available')
+
+  const allPrices = await prisma.box.findMany({
+    where: { dropId },
+    select: { itemPrice: true },
+  })
+
+  const boxPrice = calcBoxPrice(allPrices.map(b => Number(b.itemPrice)))
+  const buyerBalance = Number(user.walletBalance)
+
+  if (buyerBalance < boxPrice) return err('Insufficient wallet balance')
+
+  const storeCredit = Math.round(boxPrice * 0.9 * 100) / 100
+  const existingPurchase = await prisma.purchase.findUnique({ where: { boxId: box.id } })
+
+  let purchase
+  if (existingPurchase) {
+    purchase = await prisma.$transaction(async tx => {
+      await tx.box.update({ where: { id: box!.id }, data: { sold: true } })
+      await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: boxPrice } } })
+      await tx.user.update({ where: { id: drop.ownerId }, data: { storeBalance: { increment: storeCredit } } })
+      const p = await tx.purchase.update({
+        where: { boxId: box!.id },
+        data: { buyerId: user.id, pricePaid: boxPrice, outcome: null, refundAmt: 0, resolvedAt: null },
+      })
+      await tx.transaction.createMany({
+        data: [
+          { userId: user.id, dropId, type: 'purchase', description: `Opened box: ${drop.name}`, amount: -boxPrice },
+          { userId: drop.ownerId, dropId, type: 'sale', description: `Sale: ${drop.name}`, amount: storeCredit },
+        ],
+      })
+      return p
+    })
+  } else {
+    purchase = await prisma.$transaction(async tx => {
+      await tx.box.update({ where: { id: box!.id }, data: { sold: true } })
+      await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: boxPrice } } })
+      await tx.user.update({ where: { id: drop.ownerId }, data: { storeBalance: { increment: storeCredit } } })
+      const p = await tx.purchase.create({
+        data: { buyerId: user.id, boxId: box!.id, pricePaid: boxPrice },
+      })
+      await tx.transaction.createMany({
+        data: [
+          { userId: user.id, dropId, type: 'purchase', description: `Opened box: ${drop.name}`, amount: -boxPrice },
+          { userId: drop.ownerId, dropId, type: 'sale', description: `Sale: ${drop.name}`, amount: storeCredit },
+        ],
+      })
+      return p
+    })
+  }
+
+  // Return response immediately — shuffle happens in background
+  const response = ok({
+    purchaseId: purchase.id,
+    box: {
+      itemName: box.itemName,
+      itemPrice: Number(box.itemPrice),
+      itemShippingCost: Number(box.itemShippingCost),
+      itemImageUrl: box.itemImageUrl,
+    },
+    pricePaid: boxPrice,
+    newBalance: buyerBalance - boxPrice,
+  }, 201)
+
+  // Fire and forget — don't await
+  shuffleUnsoldBoxes(dropId)
+
+  return response
 }
