@@ -6,7 +6,7 @@ import { sendSellBackConfirmationEmail } from '@/lib/email'
 import { OutcomeType } from '@prisma/client'
 import { z } from 'zod'
 
-const schema = z.object({ purchaseId: z.string().cuid() })
+const schema = z.object({ purchaseId: z.string().min(1) })
 
 export async function POST(req: NextRequest) {
   const user = await getSession()
