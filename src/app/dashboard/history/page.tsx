@@ -20,9 +20,9 @@ export default async function HistoryPage() {
 
   let runningBalance = Number(user.walletBalance)
   const purchasesWithBalance = [...purchases].reverse().map(p => {
-    const before = runningBalance + Number(p.pricePaid) - Number(p.refundAmt)
-    const after = before - Number(p.pricePaid) + Number(p.refundAmt)
-    runningBalance = after
+    const before = runningBalance
+    runningBalance = before - Number(p.pricePaid) + Number(p.refundAmt)
+    const after = runningBalance
     return {
       id: p.id,
       itemName: p.box.itemName,
