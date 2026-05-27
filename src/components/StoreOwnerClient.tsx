@@ -34,7 +34,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const itemImgInputRef = useRef<HTMLInputElement>(null)
 
-  // Edit state
   const [editingDrop, setEditingDrop] = useState<DropSummary | null>(null)
   const [editName, setEditName] = useState('')
   const [editLogoUrl, setEditLogoUrl] = useState('')
@@ -129,12 +128,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     finally { setEditBoxesLoading(false) }
   }
 
-  function toggleRemoveBox(id: string) {
-    setRemoveBoxIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    )
-  }
-
   function addEditBox() {
     const price = parseFloat(ePrice)
     if (!eName || isNaN(price) || price <= 0) { setEditError('Enter a valid item name and price.'); return }
@@ -217,7 +210,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     finally { setPublishing(false) }
   }
 
-  // Group existing boxes by item for display
   const existingItemMap: Record<string, { name: string; price: number; shipping: number; imageUrl: string | null; unsoldIds: string[]; soldCount: number }> = {}
   existingBoxes.forEach(b => {
     const k = `${b.itemName}|${b.itemPrice}`
@@ -357,7 +349,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         </div>
       </div>
 
-      {/* Edit drop modal */}
       {editingDrop && (
         <div className={styles.editOverlay} onClick={() => setEditingDrop(null)}>
           <div className={styles.editBox} onClick={e => e.stopPropagation()}>
@@ -384,26 +375,44 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <p className={styles.sellBackHint}>90%+ recommended</p>
             </div>
 
-            <div className={styles.editSection}>Items</div>
+            <div className={styles.editSection}>Current Items</div>
             {editBoxesLoading ? <p style={{color:'var(--text2)',fontSize:'0.78rem'}}>Loading items…</p> : (
               <div className={styles.itemList} style={{marginBottom:'0.75rem'}}>
                 {Object.values(existingItemMap).map((it, i) => {
-                  const allUnsoldMarked = it.unsoldIds.length > 0 && it.unsoldIds.every(id => removeBoxIds.includes(id))
+                  const markedCount = it.unsoldIds.filter(id => removeBoxIds.includes(id)).length
+                  const availableAfter = it.unsoldIds.length - markedCount
                   return (
-                    <div key={i} className={`${styles.itemRow} ${allUnsoldMarked ? styles.itemRowRemove : ''}`}>
+                    <div key={i} className={`${styles.itemRow} ${availableAfter === 0 && it.unsoldIds.length > 0 ? styles.itemRowRemove : ''}`}>
                       {it.imageUrl && <img src={it.imageUrl} alt={it.name} style={{width:28,height:28,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
                       <span className={styles.itemName}>{it.name}</span>
                       <span className={styles.itemPrice}>${it.price}</span>
-                      <span className={styles.itemShip}>{it.unsoldIds.length} avail · {it.soldCount} sold</span>
-                      {it.unsoldIds.length > 0 && (
+                      <div className={styles.qtyControls}>
                         <button
-                          className={styles.removeBtn}
-                          onClick={() => it.unsoldIds.forEach(id => toggleRemoveBox(id))}
-                          title={allUnsoldMarked ? 'Undo remove' : 'Remove unsold boxes'}
-                        >
-                          {allUnsoldMarked ? '↩' : '✕'}
-                        </button>
-                      )}
+                          className={styles.qtyBtn}
+                          disabled={availableAfter === 0}
+                          onClick={() => {
+                            const lastUnmarked = it.unsoldIds.find(id => !removeBoxIds.includes(id))
+                            if (lastUnmarked) setRemoveBoxIds(prev => [...prev, lastUnmarked])
+                          }}
+                        >−</button>
+                        <span className={styles.qtyVal}>{availableAfter}</span>
+                        <button
+                          className={styles.qtyBtn}
+                          onClick={() => {
+                            const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id))
+                            if (lastMarked) {
+                              setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked))
+                            } else {
+                              setNewBoxes(prev => [...prev, {
+                                itemName: it.name, itemPrice: it.price,
+                                itemShippingCost: it.shipping, itemImageUrl: it.imageUrl ?? '',
+                                qty: 1, _id: Math.random().toString(36).slice(2),
+                              }])
+                            }
+                          }}
+                        >+</button>
+                      </div>
+                      <span className={styles.itemShip}>{it.soldCount} sold</span>
                     </div>
                   )
                 })}

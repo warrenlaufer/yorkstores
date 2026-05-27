@@ -58,6 +58,13 @@
 .removeBtn { background: none; border: none; color: rgba(255,107,133,0.55); cursor: pointer; font-size: 0.9rem; padding: 0 3px; transition: color 0.15s; }
 .removeBtn:hover { color: #FF6B85; }
 
+/* Qty controls */
+.qtyControls { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.qtyBtn { background: #2a2a35; border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 4px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.9rem; font-family: var(--font); transition: all 0.15s; padding: 0; }
+.qtyBtn:hover:not(:disabled) { background: #FF6B85; border-color: #FF6B85; }
+.qtyBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+.qtyVal { font-family: var(--mono); font-size: 0.78rem; font-weight: 700; color: #fff; min-width: 24px; text-align: center; }
+
 .preview { display: flex; flex-direction: column; gap: 0; margin-bottom: 0.75rem; background: #1D1D26; border: 1px dashed rgba(255,107,133,0.3); border-radius: 10px; padding: 0.8rem; }
 .previewRow { display: flex; justify-content: space-between; font-size: 0.75rem; padding: 0.22rem 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
 .previewRow:last-child { border: none; }
