@@ -15,7 +15,7 @@ export default async function StorePage() {
     prisma.transaction.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      take: 50,
     }),
     prisma.drop.findMany({
       where: { ownerId: user.id },

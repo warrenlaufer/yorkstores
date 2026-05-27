@@ -254,6 +254,17 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}>📦 Fulfilment</a>
       </div>
 
+      {/* Store Wallet — moved to top */}
+      <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.5rem'}}>
+          <div className={styles.panelTitle} style={{margin:0}}>Store Wallet</div>
+          <a href="/dashboard/store/history" className={styles.historyBtn}>View History</a>
+        </div>
+        <div className={styles.storeBalance}>${user.storeBalance.toFixed(2)}</div>
+        <p className={styles.storeBalanceSub}>Funded from box sales. Covers buybacks.</p>
+      </div>
+
+      {/* Your Drops */}
       {drops.length > 0 && (
         <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
           <div className={styles.panelTitle}>Your Drops</div>
@@ -353,24 +364,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             <button className={styles.publishBtn} onClick={publish} disabled={publishing}>
               {publishing ? <span className="spin" /> : 'Publish Drop'}
             </button>
-          </div>
-
-          <div className={styles.panel} style={{marginTop:'0.75rem'}}>
-            <div className={styles.panelTitle}>Store Wallet</div>
-            <div className={styles.storeBalance}>${user.storeBalance.toFixed(2)}</div>
-            <p className={styles.storeBalanceSub}>Funded from box sales (90%). Covers buybacks.</p>
-            {transactions.length === 0 ? <p className={styles.txEmpty}>No transactions yet.</p> : (
-              <div className={styles.txList}>
-                {transactions.map(t => (
-                  <div key={t.id} className={styles.txRow}>
-                    <span className={styles.txDesc}>{t.description}</span>
-                    <span className={`${styles.txAmt} ${t.amount >= 0 ? styles.txPos : styles.txNeg}`}>
-                      {t.amount >= 0 ? '+' : ''}${Math.abs(t.amount).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
