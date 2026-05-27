@@ -4,10 +4,21 @@
 .title { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 0.2rem; }
 .sub { font-size: 0.78rem; color: var(--text2); }
 
-.toggleWrap { display: flex; gap: 3px; background: #16161D; border-radius: 9px; padding: 4px; flex-shrink: 0; }
-.toggleBtn { background: transparent; color: var(--text2); border: none; font-family: var(--font); font-size: 0.72rem; font-weight: 700; padding: 0.32rem 0.85rem; border-radius: 6px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.toggleBtn:hover { color: #fff; }
-.toggleActive { background: #FF6B85 !important; color: #fff !important; }
+.filterSelect {
+  background: #16161D;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+.filterSelect:hover { border-color: #FF6B85; }
 
 .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.6rem; margin-bottom: 1.5rem; }
 .stat { background: #0F0F14; border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; padding: 0.8rem 1rem; }
@@ -18,26 +29,10 @@
 .emptyIcon { font-size: 2.5rem; opacity: 0.2; margin-bottom: 0.75rem; }
 .empty p { font-size: 0.85rem; }
 
-/* Icons view */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.7rem; }
-.card { background: #0F0F14; border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; overflow: hidden; }
-.cardImg { height: 70px; background: #1D1D26; display: flex; align-items: center; justify-content: center; font-size: 2rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
-.cardBody { padding: 0.75rem; }
-.cardName { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.1rem; }
-.cardFrom { font-size: 0.65rem; color: var(--text2); margin-bottom: 0.35rem; }
-.cardPrice { font-family: var(--mono); font-size: 0.78rem; color: var(--gold); margin-bottom: 0.4rem; }
-.outcomeTag { font-size: 0.62rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; display: inline-block; }
-.outcome_DELIVERY { background: rgba(96,165,250,0.15); color: #7EC8FF; }
-.outcome_SOLD_BACK { background: rgba(61,214,140,0.15); color: #5FFFA8; }
-.outcome_AUTO_SOLD { background: rgba(255,255,255,0.08); color: var(--text2); }
-.outcome_AUTO_FAILED { background: rgba(255,107,133,0.12); color: #FF8FA3; }
-.tracking { font-size: 0.65rem; color: #5FFFA8; margin-top: 0.35rem; font-family: var(--mono); }
-
-/* List view */
 .tableWrap { background: #0F0F14; border: 1px solid rgba(255,255,255,0.09); border-radius: 14px; overflow: hidden; }
 .tableHead {
   display: grid;
-  grid-template-columns: 90px 1fr 110px 120px 120px;
+  grid-template-columns: 44px 90px 1fr 110px 120px 120px;
   gap: 8px;
   padding: 0.5rem 1rem;
   background: rgba(255,255,255,0.04);
@@ -50,18 +45,31 @@
 }
 .tableRow {
   display: grid;
-  grid-template-columns: 90px 1fr 110px 120px 120px;
+  grid-template-columns: 44px 90px 1fr 110px 120px 120px;
   gap: 8px;
   padding: 0.65rem 1rem;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   align-items: center;
   font-size: 0.78rem;
   color: var(--text);
-  transition: background 0.1s;
+  cursor: pointer;
+  transition: background 0.12s;
 }
 .tableRow:last-child { border: none; }
-.tableRow:hover { background: rgba(255,255,255,0.02); }
+.tableRowHovered { background: rgba(255,107,133,0.06); }
+
+.cellThumb { display: flex; align-items: center; justify-content: center; }
+.thumbImg { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; }
+.thumbEmoji { font-size: 1.4rem; }
+
 .cellMuted { color: var(--text2); font-size: 0.72rem; }
 .cellName { font-weight: 600; color: #fff; font-size: 0.78rem; }
 .cellSub { font-size: 0.65rem; color: var(--text2); margin-top: 2px; }
 .cellMono { font-family: var(--mono); font-size: 0.75rem; }
+
+.outcomeTag { font-size: 0.62rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; display: inline-block; }
+.outcome_DELIVERY { background: rgba(96,165,250,0.15); color: #7EC8FF; }
+.outcome_SOLD_BACK { background: rgba(61,214,140,0.15); color: #5FFFA8; }
+.outcome_AUTO_SOLD { background: rgba(255,255,255,0.08); color: var(--text2); }
+.outcome_AUTO_FAILED { background: rgba(255,107,133,0.12); color: #FF8FA3; }
+.outcome_BUY { background: rgba(245,200,66,0.15); color: var(--gold); }

@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import styles from './history.module.css'
 
 type Purchase = {
@@ -23,69 +24,76 @@ type Purchase = {
 
 type Stats = { deliveries: number; soldBack: number; spent: number }
 
-const outcomeLabel: Record<string, string> = {
-  DELIVERY: '📦 Delivery',
-  SOLD_BACK: '💸 Sold Back',
-  AUTO_SOLD: '⏰ Auto Sold',
-  AUTO_FAILED: '⚠️ Auto-failed',
-}
-
 type ListRow = {
   id: string
+  purchaseId: string
   date: string
   itemName: string
   dropName: string
+  itemImageUrl: string | null
   action: string
   actionClass: string
   balanceBefore: number
   balanceAfter: number
+  filterType: 'purchase' | 'soldback' | 'shipped'
 }
 
 export default function HistoryClient({ purchases, stats }: { purchases: Purchase[]; stats: Stats }) {
-  const [view, setView] = useState<'icons' | 'list'>('icons')
+  const router = useRouter()
+  const [filter, setFilter] = useState<'all' | 'purchase' | 'soldback' | 'shipped'>('all')
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null)
 
   const listRows: ListRow[] = []
   purchases.forEach(p => {
     const purchaseBalanceBefore = p.balanceBefore
     const purchaseBalanceAfter = purchaseBalanceBefore - p.pricePaid
 
-    // Outcome row first (newer event — appears above in reverse-chrono list)
     if (p.outcome === 'SOLD_BACK' || p.outcome === 'AUTO_SOLD') {
       listRows.push({
         id: p.id + '_sell',
+        purchaseId: p.id,
         date: new Date(p.createdAt).toLocaleDateString(),
         itemName: p.itemName,
         dropName: p.dropName,
+        itemImageUrl: p.itemImageUrl,
         action: p.outcome === 'AUTO_SOLD' ? 'Auto Sold Back' : 'Sold Back',
         actionClass: 'outcome_SOLD_BACK',
         balanceBefore: purchaseBalanceAfter,
         balanceAfter: purchaseBalanceAfter + p.refundAmt,
+        filterType: 'soldback',
       })
     } else if (p.outcome === 'DELIVERY') {
       listRows.push({
         id: p.id + '_del',
+        purchaseId: p.id,
         date: new Date(p.createdAt).toLocaleDateString(),
         itemName: p.itemName,
         dropName: p.dropName,
-        action: 'Delivery',
+        itemImageUrl: p.itemImageUrl,
+        action: 'Shipped',
         actionClass: 'outcome_DELIVERY',
         balanceBefore: purchaseBalanceAfter,
         balanceAfter: purchaseBalanceAfter - p.itemShippingCost,
+        filterType: 'shipped',
       })
     }
 
-    // Buy row second (older event — appears below in reverse-chrono list)
     listRows.push({
       id: p.id + '_buy',
+      purchaseId: p.id,
       date: new Date(p.createdAt).toLocaleDateString(),
       itemName: p.itemName,
       dropName: p.dropName,
+      itemImageUrl: p.itemImageUrl,
       action: 'Bought',
-      actionClass: 'outcome_AUTO_FAILED',
+      actionClass: 'outcome_BUY',
       balanceBefore: purchaseBalanceBefore,
       balanceAfter: purchaseBalanceAfter,
+      filterType: 'purchase',
     })
   })
+
+  const filtered = filter === 'all' ? listRows : listRows.filter(r => r.filterType === filter)
 
   return (
     <div className={styles.wrap}>
@@ -94,10 +102,16 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
           <h1 className={styles.title}>History</h1>
           <p className={styles.sub}>All boxes you've opened and their outcomes.</p>
         </div>
-        <div className={styles.toggleWrap}>
-          <button className={`${styles.toggleBtn} ${view === 'icons' ? styles.toggleActive : ''}`} onClick={() => setView('icons')}>⊞ Icons</button>
-          <button className={`${styles.toggleBtn} ${view === 'list' ? styles.toggleActive : ''}`} onClick={() => setView('list')}>≡ List</button>
-        </div>
+        <select
+          className={styles.filterSelect}
+          value={filter}
+          onChange={e => setFilter(e.target.value as any)}
+        >
+          <option value="all">All Activity</option>
+          <option value="purchase">Purchases</option>
+          <option value="soldback">Sold Back</option>
+          <option value="shipped">Shipped</option>
+        </select>
       </div>
 
       <div className={styles.stats}>
@@ -106,42 +120,31 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
         <div className={styles.stat}><div className={styles.statVal} style={{color:'#FF6B85'}}>${stats.spent.toFixed(2)}</div><div className={styles.statLbl}>Total Spent</div></div>
       </div>
 
-      {purchases.length === 0 ? (
-        <div className={styles.empty}><div className={styles.emptyIcon}>📦</div><p>No boxes opened yet.</p></div>
-      ) : view === 'icons' ? (
-        <div className={styles.grid}>
-          {purchases.map(p => (
-            <div key={p.id} className={styles.card}>
-              <div className={styles.cardImg}>
-                {p.itemImageUrl
-                  ? <img src={p.itemImageUrl} alt={p.itemName} style={{width:'100%',height:'100%',objectFit:'cover'}} />
-                  : p.dropEmoji}
-              </div>
-              <div className={styles.cardBody}>
-                <div className={styles.cardName}>{p.itemName}</div>
-                <div className={styles.cardFrom}>From: {p.dropName}</div>
-                <div className={styles.cardPrice}>${p.itemPrice.toFixed(2)}</div>
-                {p.outcome && (
-                  <span className={`${styles.outcomeTag} ${styles['outcome_' + p.outcome]}`}>
-                    {outcomeLabel[p.outcome] ?? p.outcome}
-                  </span>
-                )}
-                {p.trackingNumber && <div className={styles.tracking}>🚚 {p.trackingNumber}</div>}
-              </div>
-            </div>
-          ))}
-        </div>
+      {filtered.length === 0 ? (
+        <div className={styles.empty}><div className={styles.emptyIcon}>📦</div><p>No activity yet.</p></div>
       ) : (
         <div className={styles.tableWrap}>
           <div className={styles.tableHead}>
+            <span></span>
             <span>Date</span>
             <span>Item</span>
             <span>Action</span>
             <span>Prev Balance</span>
             <span>New Balance</span>
           </div>
-          {listRows.map(row => (
-            <div key={row.id} className={styles.tableRow}>
+          {filtered.map(row => (
+            <div
+              key={row.id}
+              className={`${styles.tableRow} ${hoveredRow === row.id ? styles.tableRowHovered : ''}`}
+              onMouseEnter={() => setHoveredRow(row.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              onClick={() => router.push(`/dashboard/history/${row.purchaseId}`)}
+            >
+              <span className={styles.cellThumb}>
+                {row.itemImageUrl
+                  ? <img src={row.itemImageUrl} alt={row.itemName} className={styles.thumbImg} />
+                  : <span className={styles.thumbEmoji}>🎁</span>}
+              </span>
               <span className={styles.cellMuted}>{row.date}</span>
               <span>
                 <div className={styles.cellName}>{row.itemName}</div>
