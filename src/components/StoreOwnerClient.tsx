@@ -5,7 +5,8 @@ import styles from './StoreOwnerClient.module.css'
 
 type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
-type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number }
+type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number }
+type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
 
 export default function StoreOwnerClient({ user, transactions, drops }: {
   user: { id: string; name: string; email: string; company: string; storeBalance: number }
@@ -33,14 +34,28 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const itemImgInputRef = useRef<HTMLInputElement>(null)
 
+  // Edit state
   const [editingDrop, setEditingDrop] = useState<DropSummary | null>(null)
   const [editName, setEditName] = useState('')
   const [editLogoUrl, setEditLogoUrl] = useState('')
   const [editLogoPreview, setEditLogoPreview] = useState('')
   const [editLogoUploading, setEditLogoUploading] = useState(false)
+  const [editSellBackPct, setEditSellBackPct] = useState('90')
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
+  const [existingBoxes, setExistingBoxes] = useState<ExistingBox[]>([])
+  const [editBoxesLoading, setEditBoxesLoading] = useState(false)
+  const [newBoxes, setNewBoxes] = useState<BoxDef[]>([])
+  const [removeBoxIds, setRemoveBoxIds] = useState<string[]>([])
+  const [eName, setEName] = useState('')
+  const [ePrice, setEPrice] = useState('')
+  const [eShip, setEShip] = useState('')
+  const [eImg, setEImg] = useState('')
+  const [eImgPreview, setEImgPreview] = useState('')
+  const [eImgUploading, setEImgUploading] = useState(false)
+  const [eQty, setEQty] = useState('1')
   const editLogoInputRef = useRef<HTMLInputElement>(null)
+  const editItemImgInputRef = useRef<HTMLInputElement>(null)
 
   async function uploadImage(file: File): Promise<string> {
     const formData = new FormData()
@@ -57,10 +72,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
     setLogoUploading(true); setError('')
-    try {
-      const url = await uploadImage(file)
-      setLogoUrl(url); setLogoPreview(url)
-    } catch (e: any) { setError('Logo upload failed: ' + e.message) }
+    try { const url = await uploadImage(file); setLogoUrl(url); setLogoPreview(url) }
+    catch (e: any) { setError('Logo upload failed: ' + e.message) }
     finally { setLogoUploading(false) }
   }
 
@@ -70,10 +83,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
     setIImgUploading(true); setError('')
-    try {
-      const url = await uploadImage(file)
-      setIImg(url); setIImgPreview(url)
-    } catch (e: any) { setError('Image upload failed: ' + e.message) }
+    try { const url = await uploadImage(file); setIImg(url); setIImgPreview(url) }
+    catch (e: any) { setError('Image upload failed: ' + e.message) }
     finally { setIImgUploading(false) }
   }
 
@@ -83,18 +94,55 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
     setEditLogoUploading(true); setEditError('')
-    try {
-      const url = await uploadImage(file)
-      setEditLogoUrl(url); setEditLogoPreview(url)
-    } catch (e: any) { setEditError('Logo upload failed: ' + e.message) }
+    try { const url = await uploadImage(file); setEditLogoUrl(url); setEditLogoPreview(url) }
+    catch (e: any) { setEditError('Logo upload failed: ' + e.message) }
     finally { setEditLogoUploading(false) }
   }
 
-  function openEdit(drop: DropSummary) {
+  async function handleEditItemImgUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
+    if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
+    setEImgUploading(true); setEditError('')
+    try { const url = await uploadImage(file); setEImg(url); setEImgPreview(url) }
+    catch (e: any) { setEditError('Image upload failed: ' + e.message) }
+    finally { setEImgUploading(false) }
+  }
+
+  async function openEdit(drop: DropSummary) {
     setEditingDrop(drop)
     setEditName(drop.name)
     setEditLogoUrl(drop.logoUrl ?? '')
     setEditLogoPreview(drop.logoUrl ?? '')
+    setEditSellBackPct(String(drop.sellBackPct))
+    setEditError('')
+    setNewBoxes([])
+    setRemoveBoxIds([])
+    setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
+    setEditBoxesLoading(true)
+    try {
+      const res = await fetch(`/api/drops/${drop.id}`)
+      const data = await res.json()
+      if (data.ok) setExistingBoxes(data.data.boxes)
+    } catch {}
+    finally { setEditBoxesLoading(false) }
+  }
+
+  function toggleRemoveBox(id: string) {
+    setRemoveBoxIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  function addEditBox() {
+    const price = parseFloat(ePrice)
+    if (!eName || isNaN(price) || price <= 0) { setEditError('Enter a valid item name and price.'); return }
+    setNewBoxes(prev => [...prev, {
+      itemName: eName, itemPrice: price, itemShippingCost: parseFloat(eShip) || 0,
+      itemImageUrl: eImg, qty: Math.max(1, parseInt(eQty) || 1), _id: Math.random().toString(36).slice(2),
+    }])
+    setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
     setEditError('')
   }
 
@@ -106,7 +154,13 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       const res = await fetch(`/api/drops/${editingDrop.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editName, logoUrl: editLogoUrl || null }),
+        body: JSON.stringify({
+          name: editName,
+          logoUrl: editLogoUrl || null,
+          sellBackPct: Math.min(100, Math.max(1, parseInt(editSellBackPct) || 90)),
+          addBoxes: newBoxes.length > 0 ? newBoxes : undefined,
+          removeBoxIds: removeBoxIds.length > 0 ? removeBoxIds : undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setEditError(data.error); return }
@@ -163,6 +217,15 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     finally { setPublishing(false) }
   }
 
+  // Group existing boxes by item for display
+  const existingItemMap: Record<string, { name: string; price: number; shipping: number; imageUrl: string | null; unsoldIds: string[]; soldCount: number }> = {}
+  existingBoxes.forEach(b => {
+    const k = `${b.itemName}|${b.itemPrice}`
+    if (!existingItemMap[k]) existingItemMap[k] = { name: b.itemName, price: b.itemPrice, shipping: b.itemShippingCost, imageUrl: b.itemImageUrl, unsoldIds: [], soldCount: 0 }
+    if (b.sold) existingItemMap[k].soldCount++
+    else existingItemMap[k].unsoldIds.push(b.id)
+  })
+
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
@@ -181,7 +244,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               {d.logoUrl && <img src={d.logoUrl} alt={d.name} className={styles.dropRowLogo} />}
               <div className={styles.dropRowInfo}>
                 <div className={styles.dropRowName}>{d.name}</div>
-                <div className={styles.dropRowMeta}>{d.soldBoxes} / {d.totalBoxes} sold · {d.isActive ? 'Active' : 'Inactive'}</div>
+                <div className={styles.dropRowMeta}>{d.soldBoxes} / {d.totalBoxes} sold · {d.isActive ? 'Active' : 'Inactive'} · {d.sellBackPct}% buyback</div>
               </div>
               <div className={styles.dropRowActions}>
                 <button className={styles.editBtn} onClick={() => openEdit(d)}>Edit</button>
@@ -198,22 +261,13 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <div>
           <div className={styles.panel}>
             <div className={styles.panelTitle}>New Drop</div>
-            <div className="field">
-              <label>Drop Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} />
-            </div>
+            <div className="field"><label>Drop Name</label><input value={name} onChange={e => setName(e.target.value)} /></div>
             <div className="field">
               <label>Drop Logo</label>
               <div className={styles.logoUploadArea} onClick={() => logoInputRef.current?.click()}>
-                {logoPreview ? (
-                  <img src={logoPreview} alt="Logo preview" className={styles.logoPreview} />
-                ) : (
+                {logoPreview ? <img src={logoPreview} alt="Logo preview" className={styles.logoPreview} /> : (
                   <div className={styles.logoPlaceholder}>
-                    {logoUploading ? (
-                      <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></>
-                    ) : (
-                      <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span><span className={styles.logoHint}>PNG, JPG or WebP · Max 5MB</span></>
-                    )}
+                    {logoUploading ? <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></> : <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span><span className={styles.logoHint}>PNG, JPG or WebP · Max 5MB</span></>}
                   </div>
                 )}
               </div>
@@ -222,13 +276,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             </div>
             <div className="field">
               <label>Buy Back Percentage</label>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={sellBackPct}
-                onChange={e => setSellBackPct(e.target.value)}
-              />
+              <input type="number" min="1" max="100" value={sellBackPct} onChange={e => setSellBackPct(e.target.value)} />
               <p className={styles.sellBackHint}>90%+ recommended</p>
             </div>
           </div>
@@ -245,12 +293,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(optional)</span></label>
               <div className={styles.itemImgRow}>
                 <div className={styles.itemImgUpload} onClick={() => itemImgInputRef.current?.click()}>
-                  {iImgPreview ? (
-                    <img src={iImgPreview} alt="Item preview" className={styles.itemImgPreview} />
-                  ) : (
-                    <div className={styles.itemImgPlaceholder}>
-                      {iImgUploading ? <span className="spin" style={{width:16,height:16}} /> : <span style={{fontSize:'1.2rem'}}>📷</span>}
-                    </div>
+                  {iImgPreview ? <img src={iImgPreview} alt="Item preview" className={styles.itemImgPreview} /> : (
+                    <div className={styles.itemImgPlaceholder}>{iImgUploading ? <span className="spin" style={{width:16,height:16}} /> : <span style={{fontSize:'1.2rem'}}>📷</span>}</div>
                   )}
                 </div>
                 {iImgPreview && <button className={styles.removeLogoBtn} onClick={() => { setIImg(''); setIImgPreview('') }}>Remove</button>}
@@ -285,9 +329,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 <div className={styles.previewRow}><span>Sell-back rate</span><span>{sellBackNum}%</span></div>
                 <div className={styles.previewRow}><span>Your revenue (90%)</span><span style={{color:'#3DD68C'}}>${(boxPrice * totalBoxes * 0.9).toFixed(2)}</span></div>
               </div>
-            ) : (
-              <p className={styles.previewEmpty}>Add items to preview…</p>
-            )}
+            ) : <p className={styles.previewEmpty}>Add items to preview…</p>}
             {error && <div className={styles.errBox}>{error}</div>}
             {success && <div className={styles.successBox}>{success}</div>}
             <button className={styles.publishBtn} onClick={publish} disabled={publishing}>
@@ -299,9 +341,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             <div className={styles.panelTitle}>Store Wallet</div>
             <div className={styles.storeBalance}>${user.storeBalance.toFixed(2)}</div>
             <p className={styles.storeBalanceSub}>Funded from box sales (90%). Covers buybacks.</p>
-            {transactions.length === 0 ? (
-              <p className={styles.txEmpty}>No transactions yet.</p>
-            ) : (
+            {transactions.length === 0 ? <p className={styles.txEmpty}>No transactions yet.</p> : (
               <div className={styles.txList}>
                 {transactions.map(t => (
                   <div key={t.id} className={styles.txRow}>
@@ -317,34 +357,89 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         </div>
       </div>
 
+      {/* Edit drop modal */}
       {editingDrop && (
         <div className={styles.editOverlay} onClick={() => setEditingDrop(null)}>
           <div className={styles.editBox} onClick={e => e.stopPropagation()}>
-            <h2 className={styles.editTitle}>Edit Drop</h2>
+            <h2 className={styles.editTitle}>Edit Drop: {editingDrop.name}</h2>
             {editError && <div className={styles.errBox}>{editError}</div>}
-            <div className="field">
-              <label>Drop Name</label>
-              <input value={editName} onChange={e => setEditName(e.target.value)} />
-            </div>
+
+            <div className={styles.editSection}>Basic Info</div>
+            <div className="field"><label>Drop Name</label><input value={editName} onChange={e => setEditName(e.target.value)} /></div>
             <div className="field">
               <label>Logo</label>
               <div className={styles.logoUploadArea} onClick={() => editLogoInputRef.current?.click()}>
-                {editLogoPreview ? (
-                  <img src={editLogoPreview} alt="Logo" className={styles.logoPreview} />
-                ) : (
+                {editLogoPreview ? <img src={editLogoPreview} alt="Logo" className={styles.logoPreview} /> : (
                   <div className={styles.logoPlaceholder}>
-                    {editLogoUploading ? (
-                      <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></>
-                    ) : (
-                      <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span></>
-                    )}
+                    {editLogoUploading ? <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></> : <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span></>}
                   </div>
                 )}
               </div>
               <input ref={editLogoInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleEditLogoUpload} />
               {editLogoPreview && <button className={styles.removeLogoBtn} onClick={() => { setEditLogoUrl(''); setEditLogoPreview('') }}>Remove logo</button>}
             </div>
-            <div style={{display:'flex',gap:'0.6rem',marginTop:'0.75rem'}}>
+            <div className="field">
+              <label>Buy Back Percentage</label>
+              <input type="number" min="1" max="100" value={editSellBackPct} onChange={e => setEditSellBackPct(e.target.value)} />
+              <p className={styles.sellBackHint}>90%+ recommended</p>
+            </div>
+
+            <div className={styles.editSection}>Items</div>
+            {editBoxesLoading ? <p style={{color:'var(--text2)',fontSize:'0.78rem'}}>Loading items…</p> : (
+              <div className={styles.itemList} style={{marginBottom:'0.75rem'}}>
+                {Object.values(existingItemMap).map((it, i) => {
+                  const allUnsoldMarked = it.unsoldIds.length > 0 && it.unsoldIds.every(id => removeBoxIds.includes(id))
+                  return (
+                    <div key={i} className={`${styles.itemRow} ${allUnsoldMarked ? styles.itemRowRemove : ''}`}>
+                      {it.imageUrl && <img src={it.imageUrl} alt={it.name} style={{width:28,height:28,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
+                      <span className={styles.itemName}>{it.name}</span>
+                      <span className={styles.itemPrice}>${it.price}</span>
+                      <span className={styles.itemShip}>{it.unsoldIds.length} avail · {it.soldCount} sold</span>
+                      {it.unsoldIds.length > 0 && (
+                        <button
+                          className={styles.removeBtn}
+                          onClick={() => it.unsoldIds.forEach(id => toggleRemoveBox(id))}
+                          title={allUnsoldMarked ? 'Undo remove' : 'Remove unsold boxes'}
+                        >
+                          {allUnsoldMarked ? '↩' : '✕'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                {newBoxes.map(b => (
+                  <div key={b._id} className={`${styles.itemRow} ${styles.itemRowNew}`}>
+                    {b.itemImageUrl && <img src={b.itemImageUrl} alt={b.itemName} style={{width:28,height:28,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
+                    <span className={styles.itemName}>{b.itemName}{b.qty > 1 ? ` ×${b.qty}` : ''} <span style={{color:'#5FFFA8',fontSize:'0.6rem'}}>NEW</span></span>
+                    <span className={styles.itemPrice}>${b.itemPrice}</span>
+                    <button className={styles.removeBtn} onClick={() => setNewBoxes(prev => prev.filter(x => x._id !== b._id))}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className={styles.editSection}>Add New Items</div>
+            <div className={styles.itemGrid}>
+              <div><label>Name</label><input value={eName} onChange={e => setEName(e.target.value)} /></div>
+              <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" /></div>
+              <div><label>Ship $</label><input type="number" value={eShip} onChange={e => setEShip(e.target.value)} min="0" /></div>
+              <div><label>Qty</label><input type="number" value={eQty} onChange={e => setEQty(e.target.value)} min="1" max="200" /></div>
+            </div>
+            <div className="field">
+              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(optional)</span></label>
+              <div className={styles.itemImgRow}>
+                <div className={styles.itemImgUpload} onClick={() => editItemImgInputRef.current?.click()}>
+                  {eImgPreview ? <img src={eImgPreview} alt="Item preview" className={styles.itemImgPreview} /> : (
+                    <div className={styles.itemImgPlaceholder}>{eImgUploading ? <span className="spin" style={{width:16,height:16}} /> : <span style={{fontSize:'1.2rem'}}>📷</span>}</div>
+                  )}
+                </div>
+                {eImgPreview && <button className={styles.removeLogoBtn} onClick={() => { setEImg(''); setEImgPreview('') }}>Remove</button>}
+              </div>
+              <input ref={editItemImgInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleEditItemImgUpload} />
+            </div>
+            <button className={styles.addBtn} onClick={addEditBox}>+ Add Item</button>
+
+            <div style={{display:'flex',gap:'0.6rem',marginTop:'1rem'}}>
               <button className={styles.cancelEditBtn} onClick={() => setEditingDrop(null)}>Cancel</button>
               <button className={styles.saveEditBtn} onClick={saveEdit} disabled={editSaving}>
                 {editSaving ? <span className="spin" /> : 'Save Changes'}
