@@ -7,6 +7,7 @@ type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; i
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
 type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
+type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string }
 
 export default function StoreOwnerClient({ user, transactions, drops }: {
   user: { id: string; name: string; email: string; company: string; storeBalance: number }
@@ -46,6 +47,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [editBoxesLoading, setEditBoxesLoading] = useState(false)
   const [newBoxes, setNewBoxes] = useState<BoxDef[]>([])
   const [removeBoxIds, setRemoveBoxIds] = useState<string[]>([])
+  const [itemEdits, setItemEdits] = useState<Record<string, ItemEdit>>({})
   const [eName, setEName] = useState('')
   const [ePrice, setEPrice] = useState('')
   const [eShip, setEShip] = useState('')
@@ -66,8 +68,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   }
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
     setLogoUploading(true); setError('')
@@ -77,8 +78,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   }
 
   async function handleItemImgUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
     setIImgUploading(true); setError('')
@@ -88,8 +88,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   }
 
   async function handleEditLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
     setEditLogoUploading(true); setEditError('')
@@ -99,8 +98,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   }
 
   async function handleEditItemImgUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
     setEImgUploading(true); setEditError('')
@@ -118,12 +116,28 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditError('')
     setNewBoxes([])
     setRemoveBoxIds([])
+    setItemEdits({})
     setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
     setEditBoxesLoading(true)
     try {
       const res = await fetch(`/api/drops/${drop.id}`)
       const data = await res.json()
-      if (data.ok) setExistingBoxes(data.data.boxes)
+      if (data.ok) {
+        setExistingBoxes(data.data.boxes)
+        const map: Record<string, ItemEdit> = {}
+        data.data.boxes.forEach((b: ExistingBox) => {
+          const k = `${b.itemName}|||${b.itemPrice}`
+          if (!map[k]) map[k] = {
+            oldName: b.itemName,
+            oldPrice: b.itemPrice,
+            oldShipping: b.itemShippingCost,
+            newName: b.itemName,
+            newPrice: String(b.itemPrice),
+            newShipping: String(b.itemShippingCost),
+          }
+        })
+        setItemEdits(map)
+      }
     } catch {}
     finally { setEditBoxesLoading(false) }
   }
@@ -143,6 +157,17 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!editingDrop) return
     if (!editName.trim()) { setEditError('Drop name is required.'); return }
     setEditSaving(true); setEditError('')
+
+    const updateItems = Object.values(itemEdits)
+      .filter(it => it.newName !== it.oldName || parseFloat(it.newPrice) !== it.oldPrice || parseFloat(it.newShipping) !== it.oldShipping)
+      .map(it => ({
+        oldName: it.oldName,
+        oldPrice: it.oldPrice,
+        newName: it.newName,
+        newPrice: parseFloat(it.newPrice) || it.oldPrice,
+        newShipping: parseFloat(it.newShipping) || 0,
+      }))
+
     try {
       const res = await fetch(`/api/drops/${editingDrop.id}`, {
         method: 'PATCH',
@@ -153,6 +178,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           sellBackPct: Math.min(100, Math.max(1, parseInt(editSellBackPct) || 90)),
           addBoxes: newBoxes.length > 0 ? newBoxes : undefined,
           removeBoxIds: removeBoxIds.length > 0 ? removeBoxIds : undefined,
+          updateItems: updateItems.length > 0 ? updateItems : undefined,
         }),
       })
       const data = await res.json()
@@ -212,7 +238,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
   const existingItemMap: Record<string, { name: string; price: number; shipping: number; imageUrl: string | null; unsoldIds: string[]; soldCount: number }> = {}
   existingBoxes.forEach(b => {
-    const k = `${b.itemName}|${b.itemPrice}`
+    const k = `${b.itemName}|||${b.itemPrice}`
     if (!existingItemMap[k]) existingItemMap[k] = { name: b.itemName, price: b.itemPrice, shipping: b.itemShippingCost, imageUrl: b.itemImageUrl, unsoldIds: [], soldCount: 0 }
     if (b.sold) existingItemMap[k].soldCount++
     else existingItemMap[k].unsoldIds.push(b.id)
@@ -377,42 +403,78 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
             <div className={styles.editSection}>Current Items</div>
             {editBoxesLoading ? <p style={{color:'var(--text2)',fontSize:'0.78rem'}}>Loading items…</p> : (
-              <div className={styles.itemList} style={{marginBottom:'0.75rem'}}>
-                {Object.values(existingItemMap).map((it, i) => {
+              <div style={{display:'flex',flexDirection:'column',gap:'0.5rem',marginBottom:'0.75rem'}}>
+                {Object.entries(existingItemMap).map(([k, it]) => {
+                  const edit = itemEdits[k]
                   const markedCount = it.unsoldIds.filter(id => removeBoxIds.includes(id)).length
                   const availableAfter = it.unsoldIds.length - markedCount
+                  if (!edit) return null
                   return (
-                    <div key={i} className={`${styles.itemRow} ${availableAfter === 0 && it.unsoldIds.length > 0 ? styles.itemRowRemove : ''}`}>
-                      {it.imageUrl && <img src={it.imageUrl} alt={it.name} style={{width:28,height:28,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
-                      <span className={styles.itemName}>{it.name}</span>
-                      <span className={styles.itemPrice}>${it.price}</span>
-                      <div className={styles.qtyControls}>
-                        <button
-                          className={styles.qtyBtn}
-                          disabled={availableAfter === 0}
-                          onClick={() => {
-                            const lastUnmarked = it.unsoldIds.find(id => !removeBoxIds.includes(id))
-                            if (lastUnmarked) setRemoveBoxIds(prev => [...prev, lastUnmarked])
-                          }}
-                        >−</button>
-                        <span className={styles.qtyVal}>{availableAfter}</span>
-                        <button
-                          className={styles.qtyBtn}
-                          onClick={() => {
-                            const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id))
-                            if (lastMarked) {
-                              setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked))
-                            } else {
-                              setNewBoxes(prev => [...prev, {
-                                itemName: it.name, itemPrice: it.price,
-                                itemShippingCost: it.shipping, itemImageUrl: it.imageUrl ?? '',
-                                qty: 1, _id: Math.random().toString(36).slice(2),
-                              }])
-                            }
-                          }}
-                        >+</button>
+                    <div key={k} className={`${styles.editItemBlock} ${availableAfter === 0 && it.unsoldIds.length > 0 ? styles.itemRowRemove : ''}`}>
+                      <div className={styles.editItemTop}>
+                        {it.imageUrl && <img src={it.imageUrl} alt={it.name} style={{width:32,height:32,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
+                        <div className={styles.editItemFields}>
+                          <input
+                            className={styles.editItemInput}
+                            value={edit.newName}
+                            onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newName: e.target.value } }))}
+                            placeholder="Item name"
+                          />
+                          <div style={{display:'flex',gap:4}}>
+                            <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                              <span style={{fontSize:'0.55rem',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Value $</span>
+                              <input
+                                className={styles.editItemInput}
+                                type="number"
+                                value={edit.newPrice}
+                                onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newPrice: e.target.value } }))}
+                                placeholder="Price"
+                                style={{width:70}}
+                              />
+                            </div>
+                            <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                              <span style={{fontSize:'0.55rem',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Ship $</span>
+                              <input
+                                className={styles.editItemInput}
+                                type="number"
+                                value={edit.newShipping}
+                                onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newShipping: e.target.value } }))}
+                                placeholder="Ship"
+                                style={{width:60}}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className={styles.qtyControls}>
+                          <button
+                            className={styles.qtyBtn}
+                            disabled={availableAfter === 0}
+                            onClick={() => {
+                              const lastUnmarked = it.unsoldIds.find(id => !removeBoxIds.includes(id))
+                              if (lastUnmarked) setRemoveBoxIds(prev => [...prev, lastUnmarked])
+                            }}
+                          >−</button>
+                          <span className={styles.qtyVal}>{availableAfter}</span>
+                          <button
+                            className={styles.qtyBtn}
+                            onClick={() => {
+                              const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id))
+                              if (lastMarked) {
+                                setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked))
+                              } else {
+                                setNewBoxes(prev => [...prev, {
+                                  itemName: edit.newName,
+                                  itemPrice: parseFloat(edit.newPrice) || it.price,
+                                  itemShippingCost: parseFloat(edit.newShipping) || it.shipping,
+                                  itemImageUrl: it.imageUrl ?? '',
+                                  qty: 1, _id: Math.random().toString(36).slice(2),
+                                }])
+                              }
+                            }}
+                          >+</button>
+                        </div>
                       </div>
-                      <span className={styles.itemShip}>{it.soldCount} sold</span>
+                      <div className={styles.editItemMeta}>{it.soldCount} sold · {availableAfter} available</div>
                     </div>
                   )
                 })}
