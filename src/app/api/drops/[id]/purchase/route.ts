@@ -88,23 +88,37 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (buyerBalance < boxPrice) return err('Insufficient wallet balance')
 
+  const platformFee = Math.round(boxPrice * 0.1 * 100) / 100
   const storeCredit = Math.round(boxPrice * 0.9 * 100) / 100
 
   const purchase = await prisma.$transaction(async tx => {
     await tx.box.update({ where: { id: box.id }, data: { sold: true } })
     await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: boxPrice } } })
     await tx.user.update({ where: { id: drop.ownerId }, data: { storeBalance: { increment: storeCredit } } })
+
     const p = await tx.purchase.upsert({
       where: { boxId: box.id },
       create: { buyerId: user.id, boxId: box.id, pricePaid: boxPrice },
       update: { buyerId: user.id, pricePaid: boxPrice, outcome: null, refundAmt: 0, resolvedAt: null },
     })
+
     await tx.transaction.createMany({
       data: [
         { userId: user.id, dropId, type: 'purchase', description: `Opened box: ${drop.name}`, amount: -boxPrice },
         { userId: drop.ownerId, dropId, type: 'sale', description: `Sale: ${drop.name}`, amount: storeCredit },
       ],
     })
+
+    // Record platform revenue
+    await tx.platformTransaction.create({
+      data: {
+        type: 'platform_fee',
+        description: `Platform fee: ${drop.name}`,
+        amount: platformFee,
+        dropId,
+      },
+    })
+
     return p
   })
 
