@@ -79,7 +79,6 @@ export default function DashboardNav({ user }: { user: User }) {
     { href: '/dashboard/history', label: 'History' },
     ...(isStore ? [
       { href: '/dashboard/store', label: 'Store Owner' },
-      { href: '/dashboard/fulfilment', label: 'Fulfilment' },
     ] : []),
     ...(isAdmin ? [{ href: '/dashboard/admin', label: 'Admin' }] : []),
   ]
@@ -101,7 +100,7 @@ export default function DashboardNav({ user }: { user: User }) {
           <circle cx="35" cy="15" r="1.2" fill="#0F0F14"/>
           <ellipse cx="40" cy="20" rx="1.5" ry="1" fill="#0F0F14"/>
         </svg>
-       <span className={styles.logoText}>
+        <span className={styles.logoText}>
           <span className={styles.logoWordmark}>York<em className={styles.em}>stores</em></span>
           <span className={styles.beta}>beta</span>
         </span>

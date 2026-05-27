@@ -141,7 +141,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const avgVal = boxes.length ? boxes.reduce((s, b) => s + b.itemPrice * b.qty, 0) / boxes.reduce((s, b) => s + b.qty, 0) : 0
   const boxPrice = Math.round(avgVal * 1.05)
   const totalBoxes = boxes.reduce((s, b) => s + b.qty, 0)
-  const sellBackNum = Math.min(100, Math.max(0, parseInt(sellBackPct) || 90))
+  const sellBackNum = Math.min(100, Math.max(1, parseInt(sellBackPct) || 90))
 
   async function publish() {
     if (!name) { setError('Give your drop a name.'); return }
@@ -166,8 +166,11 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Store Owner Dashboard</h1>
-        <p className={styles.sub}>Box price = average item value +5%, rounded to nearest dollar.</p>
+        <div>
+          <h1 className={styles.title}>Store Owner Dashboard</h1>
+          <p className={styles.sub}>Box price = average item value +5%, rounded to nearest dollar.</p>
+        </div>
+        <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}>📦 Fulfilment</a>
       </div>
 
       {drops.length > 0 && (
@@ -218,10 +221,10 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               {logoPreview && <button className={styles.removeLogoBtn} onClick={() => { setLogoUrl(''); setLogoPreview('') }}>Remove logo</button>}
             </div>
             <div className="field">
-              <label>Buy-Back Percentage</label>
+              <label>Buy Back Percentage</label>
               <input
                 type="number"
-                min="0"
+                min="1"
                 max="100"
                 value={sellBackPct}
                 onChange={e => setSellBackPct(e.target.value)}

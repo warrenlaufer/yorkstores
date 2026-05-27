@@ -123,14 +123,14 @@ export async function sendSellBackConfirmationEmail(to: string, buyerName: strin
   await resend.emails.send({
     from: FROM,
     to,
-    subject: `Sell-back confirmed — $${details.refundAmount.toFixed(2)} added to your wallet`,
+    subject: `Sell-back confirmed — $${details.refundAmount.toFixed(2)} credited to your account`,
     html: baseTemplate(`
       <h1 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 8px">Sell-back processed 💸</h1>
       <p style="color:#9898B0;font-size:15px;line-height:1.6;margin:0 0 20px">
         Hi ${buyerName}, your sell-back for <strong style="color:#fff">${details.itemName}</strong> has been processed.
       </p>
       <div style="background:#1D1D26;border-radius:10px;padding:20px;margin-bottom:24px">
-        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Refund added to wallet</p>
+        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Amount credited to your account</p>
         <p style="color:#3DD68C;font-weight:700;font-family:monospace;font-size:24px;margin:0">+$${details.refundAmount.toFixed(2)}</p>
       </div>
       <a href="${APP_URL}" style="display:inline-block;background:#FF6B85;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;font-size:15px">
