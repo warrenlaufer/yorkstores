@@ -12,11 +12,15 @@
   font-family: var(--font);
   font-size: 0.78rem;
   font-weight: 700;
-  padding: 0.4rem 0.85rem;
+  padding: 0.4rem 2rem 0.4rem 0.85rem;
   cursor: pointer;
   outline: none;
   flex-shrink: 0;
+  width: auto;
+  min-width: 0;
+  max-width: 160px;
   transition: border-color 0.15s;
+  appearance: auto;
 }
 .filterSelect:hover { border-color: #FF6B85; }
 
