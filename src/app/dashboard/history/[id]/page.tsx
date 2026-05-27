@@ -28,7 +28,7 @@ export default async function ActivityPage({ params }: { params: { id: string } 
   const itemPrice = Number(box.itemPrice)
   const itemShipping = Number(box.itemShippingCost)
 
-  const events = []
+  const events: { type: string; label: string; date: Date; amount: number; note: string }[] = []
 
   events.push({
     type: 'purchase',
@@ -59,10 +59,17 @@ export default async function ActivityPage({ params }: { params: { id: string } 
     if (purchase.order.trackingNumber) {
       events.push({
         type: 'shipped',
-        label: 'Shipped',
+        label: 'Tracking Number Added',
         date: purchase.order.updatedAt,
         amount: 0,
         note: `Tracking: ${purchase.order.trackingNumber}`,
+      })
+      events.push({
+        type: 'shipped',
+        label: 'Shipped',
+        date: purchase.order.updatedAt,
+        amount: 0,
+        note: `Your item is on its way`,
       })
     }
   }
