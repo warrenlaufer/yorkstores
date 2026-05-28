@@ -103,3 +103,8 @@
 .saveEditBtn { flex: 2; background: #FF6B85; color: #fff; border: none; border-radius: 9px; font-family: var(--font); font-size: 0.85rem; font-weight: 800; padding: 0.62rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
 .saveEditBtn:hover:not(:disabled) { background: #ff4d6d; }
 .saveEditBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pricingToggle { display: flex; gap: 4px; background: #16161D; border-radius: 8px; padding: 4px; margin-bottom: 0.4rem; }
+.pricingBtn { flex: 1; background: transparent; color: var(--text2); border: none; border-radius: 5px; font-family: var(--font); font-size: 0.75rem; font-weight: 700; padding: 0.35rem 0; cursor: pointer; transition: all 0.15s; }
+.pricingBtn:hover { color: #fff; }
+.pricingBtnActive { background: #FF6B85 !important; color: #fff !important; }

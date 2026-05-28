@@ -1,6 +1,6 @@
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { calcBoxPrice } from '@/lib/stripe'
+import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { redirect, notFound } from 'next/navigation'
 import DropDetailClient from '@/components/DropDetailClient'
 
@@ -23,6 +23,7 @@ export default async function DropPage({ params }: { params: { id: string } }) {
   if (!drop) notFound()
 
   const allPrices = drop.boxes.map(b => Number(b.itemPrice))
+  const unsoldPrices = drop.boxes.filter(b => !b.sold).map(b => Number(b.itemPrice))
 
   return (
     <DropDetailClient
@@ -32,8 +33,9 @@ export default async function DropPage({ params }: { params: { id: string } }) {
         emoji: drop.emoji,
         logoUrl: drop.logoUrl ?? undefined,
         owner: drop.owner.company ?? drop.owner.name,
-        boxPrice: calcBoxPrice(allPrices),
+        boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, drop.pricingType),
         sellBackPct: drop.sellBackPct,
+        pricingType: drop.pricingType,
         boxes: drop.boxes.map(b => ({
           id: b.id,
           itemName: b.itemName,

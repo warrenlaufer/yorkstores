@@ -5,7 +5,7 @@ import styles from './StoreOwnerClient.module.css'
 
 type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
-type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number }
+type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
 type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string }
 
@@ -21,6 +21,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [logoPreview, setLogoPreview] = useState('')
   const [logoUploading, setLogoUploading] = useState(false)
   const [sellBackPct, setSellBackPct] = useState('90')
+  const [pricingType, setPricingType] = useState<'fixed' | 'dynamic'>('fixed')
   const [boxes, setBoxes] = useState<BoxDef[]>([])
   const [iName, setIName] = useState('')
   const [iPrice, setIPrice] = useState('')
@@ -41,6 +42,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [editLogoPreview, setEditLogoPreview] = useState('')
   const [editLogoUploading, setEditLogoUploading] = useState(false)
   const [editSellBackPct, setEditSellBackPct] = useState('90')
+  const [editPricingType, setEditPricingType] = useState<'fixed' | 'dynamic'>('fixed')
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
   const [existingBoxes, setExistingBoxes] = useState<ExistingBox[]>([])
@@ -113,6 +115,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditLogoUrl(drop.logoUrl ?? '')
     setEditLogoPreview(drop.logoUrl ?? '')
     setEditSellBackPct(String(drop.sellBackPct))
+    setEditPricingType(drop.pricingType === 'dynamic' ? 'dynamic' : 'fixed')
     setEditError('')
     setNewBoxes([])
     setRemoveBoxIds([])
@@ -128,12 +131,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         data.data.boxes.forEach((b: ExistingBox) => {
           const k = `${b.itemName}|||${b.itemPrice}`
           if (!map[k]) map[k] = {
-            oldName: b.itemName,
-            oldPrice: b.itemPrice,
-            oldShipping: b.itemShippingCost,
-            newName: b.itemName,
-            newPrice: String(b.itemPrice),
-            newShipping: String(b.itemShippingCost),
+            oldName: b.itemName, oldPrice: b.itemPrice, oldShipping: b.itemShippingCost,
+            newName: b.itemName, newPrice: String(b.itemPrice), newShipping: String(b.itemShippingCost),
           }
         })
         setItemEdits(map)
@@ -161,10 +160,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     const updateItems = Object.values(itemEdits)
       .filter(it => it.newName !== it.oldName || parseFloat(it.newPrice) !== it.oldPrice || parseFloat(it.newShipping) !== it.oldShipping)
       .map(it => ({
-        oldName: it.oldName,
-        oldPrice: it.oldPrice,
-        newName: it.newName,
-        newPrice: parseFloat(it.newPrice) || it.oldPrice,
+        oldName: it.oldName, oldPrice: it.oldPrice,
+        newName: it.newName, newPrice: parseFloat(it.newPrice) || it.oldPrice,
         newShipping: parseFloat(it.newShipping) || 0,
       }))
 
@@ -176,6 +173,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           name: editName,
           logoUrl: editLogoUrl || null,
           sellBackPct: Math.min(100, Math.max(1, parseInt(editSellBackPct) || 90)),
+          pricingType: editPricingType,
           addBoxes: newBoxes.length > 0 ? newBoxes : undefined,
           removeBoxIds: removeBoxIds.length > 0 ? removeBoxIds : undefined,
           updateItems: updateItems.length > 0 ? updateItems : undefined,
@@ -225,12 +223,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       const res = await fetch('/api/drops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, boxes }),
+        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, pricingType, boxes }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setSuccess('Drop published!')
-      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setBoxes([])
+      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setBoxes([])
       setTimeout(() => { setSuccess(''); router.refresh() }, 1500)
     } catch { setError('Something went wrong.') }
     finally { setPublishing(false) }
@@ -254,7 +252,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}>📦 Fulfilment</a>
       </div>
 
-      {/* Store Wallet — moved to top */}
+      {/* Store Wallet */}
       <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.5rem'}}>
           <div className={styles.panelTitle} style={{margin:0}}>Store Wallet</div>
@@ -273,7 +271,9 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               {d.logoUrl && <img src={d.logoUrl} alt={d.name} className={styles.dropRowLogo} />}
               <div className={styles.dropRowInfo}>
                 <div className={styles.dropRowName}>{d.name}</div>
-                <div className={styles.dropRowMeta}>{d.soldBoxes} / {d.totalBoxes} sold · {d.isActive ? 'Active' : 'Inactive'} · {d.sellBackPct}% buyback</div>
+                <div className={styles.dropRowMeta}>
+                  {d.soldBoxes} / {d.totalBoxes} sold · {d.isActive ? 'Active' : 'Inactive'} · {d.sellBackPct}% buyback · {d.pricingType}
+                </div>
               </div>
               <div className={styles.dropRowActions}>
                 <button className={styles.editBtn} onClick={() => openEdit(d)}>Edit</button>
@@ -307,6 +307,14 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <label>Buy Back Percentage</label>
               <input type="number" min="1" max="100" value={sellBackPct} onChange={e => setSellBackPct(e.target.value)} />
               <p className={styles.sellBackHint}>90%+ recommended</p>
+            </div>
+            <div className="field">
+              <label>Pricing Type</label>
+              <div className={styles.pricingToggle}>
+                <button type="button" className={`${styles.pricingBtn} ${pricingType === 'fixed' ? styles.pricingBtnActive : ''}`} onClick={() => setPricingType('fixed')}>Fixed</button>
+                <button type="button" className={`${styles.pricingBtn} ${pricingType === 'dynamic' ? styles.pricingBtnActive : ''}`} onClick={() => setPricingType('dynamic')}>Dynamic</button>
+              </div>
+              <p className={styles.sellBackHint}>{pricingType === 'fixed' ? 'Price stays the same as boxes are opened.' : 'Price updates based on remaining unsold boxes.'}</p>
             </div>
           </div>
 
@@ -356,7 +364,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 <div className={styles.previewRow}><span>Avg value</span><span>${avgVal.toFixed(2)}</span></div>
                 <div className={styles.previewRow}><span>Box price (avg +5%)</span><span style={{color:'#F5C842'}}>${boxPrice}</span></div>
                 <div className={styles.previewRow}><span>Sell-back rate</span><span>{sellBackNum}%</span></div>
-                <div className={styles.previewRow}><span>Your revenue (90%)</span><span style={{color:'#3DD68C'}}>${(boxPrice * totalBoxes * 0.9).toFixed(2)}</span></div>
+                <div className={styles.previewRow}><span>Pricing</span><span>{pricingType}</span></div>
+                <div className={styles.previewRow}><span>Your revenue (95%)</span><span style={{color:'#3DD68C'}}>${(boxPrice * totalBoxes * 0.95).toFixed(2)}</span></div>
               </div>
             ) : <p className={styles.previewEmpty}>Add items to preview…</p>}
             {error && <div className={styles.errBox}>{error}</div>}
@@ -393,6 +402,14 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <input type="number" min="1" max="100" value={editSellBackPct} onChange={e => setEditSellBackPct(e.target.value)} />
               <p className={styles.sellBackHint}>90%+ recommended</p>
             </div>
+            <div className="field">
+              <label>Pricing Type</label>
+              <div className={styles.pricingToggle}>
+                <button type="button" className={`${styles.pricingBtn} ${editPricingType === 'fixed' ? styles.pricingBtnActive : ''}`} onClick={() => setEditPricingType('fixed')}>Fixed</button>
+                <button type="button" className={`${styles.pricingBtn} ${editPricingType === 'dynamic' ? styles.pricingBtnActive : ''}`} onClick={() => setEditPricingType('dynamic')}>Dynamic</button>
+              </div>
+              <p className={styles.sellBackHint}>{editPricingType === 'fixed' ? 'Price stays the same as boxes are opened.' : 'Price updates based on remaining unsold boxes.'}</p>
+            </div>
 
             <div className={styles.editSection}>Current Items</div>
             {editBoxesLoading ? <p style={{color:'var(--text2)',fontSize:'0.78rem'}}>Loading items…</p> : (
@@ -407,64 +424,22 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                       <div className={styles.editItemTop}>
                         {it.imageUrl && <img src={it.imageUrl} alt={it.name} style={{width:32,height:32,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
                         <div className={styles.editItemFields}>
-                          <input
-                            className={styles.editItemInput}
-                            value={edit.newName}
-                            onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newName: e.target.value } }))}
-                            placeholder="Item name"
-                          />
+                          <input className={styles.editItemInput} value={edit.newName} onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newName: e.target.value } }))} placeholder="Item name" />
                           <div style={{display:'flex',gap:4}}>
                             <div style={{display:'flex',flexDirection:'column',gap:2}}>
                               <span style={{fontSize:'0.55rem',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Value $</span>
-                              <input
-                                className={styles.editItemInput}
-                                type="number"
-                                value={edit.newPrice}
-                                onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newPrice: e.target.value } }))}
-                                placeholder="Price"
-                                style={{width:70}}
-                              />
+                              <input className={styles.editItemInput} type="number" value={edit.newPrice} onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newPrice: e.target.value } }))} style={{width:70}} />
                             </div>
                             <div style={{display:'flex',flexDirection:'column',gap:2}}>
                               <span style={{fontSize:'0.55rem',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Ship $</span>
-                              <input
-                                className={styles.editItemInput}
-                                type="number"
-                                value={edit.newShipping}
-                                onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newShipping: e.target.value } }))}
-                                placeholder="Ship"
-                                style={{width:60}}
-                              />
+                              <input className={styles.editItemInput} type="number" value={edit.newShipping} onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newShipping: e.target.value } }))} style={{width:60}} />
                             </div>
                           </div>
                         </div>
                         <div className={styles.qtyControls}>
-                          <button
-                            className={styles.qtyBtn}
-                            disabled={availableAfter === 0}
-                            onClick={() => {
-                              const lastUnmarked = it.unsoldIds.find(id => !removeBoxIds.includes(id))
-                              if (lastUnmarked) setRemoveBoxIds(prev => [...prev, lastUnmarked])
-                            }}
-                          >−</button>
+                          <button className={styles.qtyBtn} disabled={availableAfter === 0} onClick={() => { const last = it.unsoldIds.find(id => !removeBoxIds.includes(id)); if (last) setRemoveBoxIds(prev => [...prev, last]) }}>−</button>
                           <span className={styles.qtyVal}>{availableAfter}</span>
-                          <button
-                            className={styles.qtyBtn}
-                            onClick={() => {
-                              const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id))
-                              if (lastMarked) {
-                                setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked))
-                              } else {
-                                setNewBoxes(prev => [...prev, {
-                                  itemName: edit.newName,
-                                  itemPrice: parseFloat(edit.newPrice) || it.price,
-                                  itemShippingCost: parseFloat(edit.newShipping) || it.shipping,
-                                  itemImageUrl: it.imageUrl ?? '',
-                                  qty: 1, _id: Math.random().toString(36).slice(2),
-                                }])
-                              }
-                            }}
-                          >+</button>
+                          <button className={styles.qtyBtn} onClick={() => { const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id)); if (lastMarked) { setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked)) } else { setNewBoxes(prev => [...prev, { itemName: edit.newName, itemPrice: parseFloat(edit.newPrice) || it.price, itemShippingCost: parseFloat(edit.newShipping) || it.shipping, itemImageUrl: it.imageUrl ?? '', qty: 1, _id: Math.random().toString(36).slice(2) }]) } }}>+</button>
                         </div>
                       </div>
                       <div className={styles.editItemMeta}>{it.soldCount} sold · {availableAfter} available</div>

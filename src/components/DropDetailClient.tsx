@@ -5,7 +5,7 @@ import Link from 'next/link'
 import styles from './DropDetailClient.module.css'
 
 type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl?: string; sold: boolean }
-type Drop = { id: string; name: string; emoji: string; logoUrl?: string; owner: string; boxPrice: number; sellBackPct: number; boxes: Box[] }
+type Drop = { id: string; name: string; emoji: string; logoUrl?: string; owner: string; boxPrice: number; sellBackPct: number; pricingType: string; boxes: Box[] }
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
 export default function DropDetailClient({ drop, user }: { drop: Drop; user: User }) {
@@ -17,9 +17,13 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
 
   const available = drop.boxes.filter(b => !b.sold)
+  const isDynamic = drop.pricingType === 'dynamic'
+
+  // For odds: dynamic uses unsold boxes only, fixed uses all boxes
+  const oddsBoxes = isDynamic ? available : drop.boxes
 
   const itemMap: Record<string, { name: string; price: number; count: number; imageUrl?: string }> = {}
-  drop.boxes.forEach(b => {
+  oddsBoxes.forEach(b => {
     const k = `${b.itemName}|${b.itemPrice}`
     if (!itemMap[k]) itemMap[k] = { name: b.itemName, price: b.itemPrice, count: 0, imageUrl: b.itemImageUrl }
     itemMap[k].count++
@@ -34,26 +38,21 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
     setConfirmBoxId(null)
     setConfirmRandom(false)
 
-    // Start the API call
     const purchasePromise = fetch(`/api/drops/${drop.id}/purchase`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ boxId: boxToOpen }),
     })
 
-    // Redirect immediately to reveal page with a pending state
     router.push(`/dashboard/reveal?pending=1&dropId=${drop.id}&boxId=${boxToOpen}`)
 
-    // API call completes in background — reveal page polls for the result
     try {
       const res = await purchasePromise
       const data = await res.json()
       if (!res.ok) {
-        // If purchase failed, go back with error
         router.push(`/dashboard/drop/${drop.id}?error=${encodeURIComponent(data.error)}`)
         return
       }
-      // Push the purchaseId into the URL so reveal page can fetch the item
       router.replace(`/dashboard/reveal?purchaseId=${data.data.purchaseId}&dropId=${drop.id}`)
     } catch {
       router.push(`/dashboard/drop/${drop.id}?error=Something+went+wrong`)
@@ -95,7 +94,10 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
           )}
           <div>
             <h1 className={styles.title}>{drop.name}</h1>
-            <p className={styles.sub}>{available.length} of {drop.boxes.length} available · by {drop.owner}</p>
+            <p className={styles.sub}>
+              {available.length} of {drop.boxes.length} available · by {drop.owner}
+              {isDynamic && <span className={styles.dynamicBadge}>Dynamic Pricing</span>}
+            </p>
           </div>
         </div>
         <div className={styles.priceGroup}>
@@ -117,12 +119,15 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
       {error && <div className={styles.errBox}>{error}</div>}
 
       <div className={styles.sectionRow}>
-        <span className={styles.section}>Possible items &amp; odds</span>
+        <span className={styles.section}>
+          Possible items &amp; odds
+          {isDynamic && <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0,marginLeft:6,fontSize:'0.6rem'}}>(updates as boxes are opened)</span>}
+        </span>
       </div>
 
       <div className={styles.itemGrid}>
         {sortedItems.map((it, i) => {
-          const raw = (it.count / drop.boxes.length) * 100
+          const raw = (it.count / oddsBoxes.length) * 100
           const pct = raw < 1 ? Math.round(raw * 100) / 100 : Math.round(raw)
           const key = `${it.name}|${it.price}`
           const isHovered = hoveredItem === key
@@ -188,12 +193,8 @@ export default function DropDetailClient({ drop, user }: { drop: Drop; user: Use
                 : `You're about to open a mystery box.`}
             </p>
             <div className={styles.confirmPrice}>${drop.boxPrice}</div>
-            <p className={styles.confirmBalance}>
-              Your balance: ${user.walletBalance.toFixed(2)}
-            </p>
-            <p className={styles.confirmSellBack}>
-              Sell back value: {drop.sellBackPct}% of item value
-            </p>
+            <p className={styles.confirmBalance}>Your balance: ${user.walletBalance.toFixed(2)}</p>
+            <p className={styles.confirmSellBack}>Sell back value: {drop.sellBackPct}% of item value</p>
             <div className={styles.confirmActions}>
               <button className={styles.confirmBtn} onClick={confirmPurchase}>
                 Confirm Purchase — ${drop.boxPrice}

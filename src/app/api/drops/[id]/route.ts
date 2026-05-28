@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
-import { calcBoxPrice } from '@/lib/stripe'
+import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -22,6 +22,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (!drop) return err('Drop not found', 404)
 
   const allPrices = drop.boxes.map(b => Number(b.itemPrice))
+  const unsoldPrices = drop.boxes.filter(b => !b.sold).map(b => Number(b.itemPrice))
 
   return ok({
     id: drop.id,
@@ -29,8 +30,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     emoji: drop.emoji,
     logoUrl: drop.logoUrl,
     sellBackPct: drop.sellBackPct,
+    pricingType: drop.pricingType,
     owner: drop.owner.company ?? drop.owner.name,
-    boxPrice: calcBoxPrice(allPrices),
+    boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, drop.pricingType),
     boxes: drop.boxes.map(b => ({
       id: b.id,
       itemName: b.itemName,
@@ -56,7 +58,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json().catch(() => null)
   if (!body) return err('Invalid request')
 
-  // Update drop fields
   const updated = await prisma.drop.update({
     where: { id: params.id },
     data: {
@@ -64,10 +65,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
       ...(body.isActive !== undefined && { isActive: body.isActive }),
       ...(body.sellBackPct !== undefined && { sellBackPct: Math.min(100, Math.max(1, body.sellBackPct)) }),
+      ...(body.pricingType !== undefined && { pricingType: body.pricingType === 'dynamic' ? 'dynamic' : 'fixed' }),
     },
   })
 
-  // Add new boxes
   if (body.addBoxes && Array.isArray(body.addBoxes) && body.addBoxes.length > 0) {
     const newBoxRecords = body.addBoxes.flatMap((b: any) =>
       Array.from({ length: b.qty || 1 }, () => ({
@@ -81,7 +82,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await prisma.box.createMany({ data: newBoxRecords })
   }
 
-  // Remove unsold boxes
   if (body.removeBoxIds && Array.isArray(body.removeBoxIds) && body.removeBoxIds.length > 0) {
     await prisma.box.deleteMany({
       where: {
@@ -92,7 +92,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     })
   }
 
-  // Update prices — update all unsold boxes matching old name+price
   if (body.updateItems && Array.isArray(body.updateItems) && body.updateItems.length > 0) {
     for (const item of body.updateItems) {
       await prisma.box.updateMany({

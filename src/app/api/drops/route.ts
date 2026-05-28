@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
-import { calcBoxPrice } from '@/lib/stripe'
+import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
 import { createDropSchema } from '@/lib/schemas'
 
@@ -18,6 +18,7 @@ export async function GET() {
 
   return ok(drops.map(d => {
     const allPrices = d.boxes.map(b => Number(b.itemPrice))
+    const unsoldPrices = d.boxes.filter(b => !b.sold).map(b => Number(b.itemPrice))
     const available = d.boxes.filter(b => !b.sold).length
     return {
       id: d.id,
@@ -25,12 +26,13 @@ export async function GET() {
       emoji: d.emoji,
       logoUrl: d.logoUrl,
       sellBackPct: d.sellBackPct,
+      pricingType: d.pricingType,
       owner: d.owner.company ?? d.owner.name,
-      boxPrice: calcBoxPrice(allPrices),
+      boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, d.pricingType),
       totalBoxes: d.boxes.length,
       availableBoxes: available,
-      minPrice: Math.min(...allPrices),
-      maxPrice: Math.max(...allPrices),
+      minPrice: allPrices.length ? Math.min(...allPrices) : 0,
+      maxPrice: allPrices.length ? Math.max(...allPrices) : 0,
     }
   }))
 }
@@ -49,6 +51,7 @@ export async function POST(req: NextRequest) {
   const sellBackPct = typeof body?.sellBackPct === 'number'
     ? Math.min(100, Math.max(1, Math.round(body.sellBackPct)))
     : 90
+  const pricingType = body?.pricingType === 'dynamic' ? 'dynamic' : 'fixed'
 
   const boxRecords = boxDefs.flatMap(b =>
     Array.from({ length: b.qty }, () => ({
@@ -70,6 +73,7 @@ export async function POST(req: NextRequest) {
       emoji,
       logoUrl,
       sellBackPct,
+      pricingType,
       ownerId: user.id,
       boxes: { create: boxRecords },
     },

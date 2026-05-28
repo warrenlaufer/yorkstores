@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
-import { calcBoxPrice } from '@/lib/stripe'
+import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -66,29 +66,34 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const { dropId, boxId } = parsed.data
 
-  const [drop, allPrices] = await Promise.all([
-    prisma.drop.findUnique({
-      where: { id: dropId },
-      include: { boxes: { where: { sold: false } }, owner: true },
-    }),
-    prisma.box.findMany({ where: { dropId }, select: { itemPrice: true } }),
-  ])
+  const drop = await prisma.drop.findUnique({
+    where: { id: dropId },
+    include: {
+      boxes: true,
+      owner: true,
+    },
+  })
 
   if (!drop || !drop.isActive) return err('Drop not found or inactive')
-  if (!drop.boxes.length) return err('No boxes available')
+
+  const unsoldBoxes = drop.boxes.filter(b => !b.sold)
+  if (!unsoldBoxes.length) return err('No boxes available')
 
   const box = boxId
-    ? drop.boxes.find(b => b.id === boxId)
-    : drop.boxes[Math.floor(Math.random() * drop.boxes.length)]
+    ? unsoldBoxes.find(b => b.id === boxId)
+    : unsoldBoxes[Math.floor(Math.random() * unsoldBoxes.length)]
 
   if (!box) return err('Box not available')
 
-  const boxPrice = calcBoxPrice(allPrices.map(b => Number(b.itemPrice)))
+  const allPrices = drop.boxes.map(b => Number(b.itemPrice))
+  const unsoldPrices = unsoldBoxes.map(b => Number(b.itemPrice))
+
+  const boxPrice = calcBoxPriceForDrop(allPrices, unsoldPrices, drop.pricingType)
   const buyerBalance = Number(user.walletBalance)
 
   if (buyerBalance < boxPrice) return err('Insufficient wallet balance')
 
- const platformFee = Math.round(boxPrice * 0.05 * 100) / 100
+  const platformFee = Math.round(boxPrice * 0.05 * 100) / 100
   const storeCredit = Math.round(boxPrice * 0.95 * 100) / 100
 
   const purchase = await prisma.$transaction(async tx => {
@@ -109,7 +114,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       ],
     })
 
-    // Record platform revenue
     await tx.platformTransaction.create({
       data: {
         type: 'platform_fee',
