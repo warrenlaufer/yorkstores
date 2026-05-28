@@ -13,12 +13,13 @@ export default async function StoreHistoryPage() {
   if (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) redirect('/dashboard')
 
   const transactions = await prisma.transaction.findMany({
-    where: { userId: user.id },
+    where: {
+      userId: user.id,
+      type: { in: ['sale', 'buyback'] },
+    },
     orderBy: { createdAt: 'desc' },
   })
 
-  // For sales: store receives 95% of box price, so gross = net / 0.95, fee = gross * 0.05
-  // For buybacks: store pays gross, buyer receives 95%, fee = gross * 0.05
   function getGross(t: { type: string; amount: unknown }) {
     const amt = Math.abs(Number(t.amount))
     if (t.type === 'sale') return Math.round((amt / 0.95) * 100) / 100
@@ -35,7 +36,7 @@ export default async function StoreHistoryPage() {
 
   const totalGrossSales = saleTxs.reduce((s, t) => s + getGross(t), 0)
   const totalGrossBuybacks = buybackTxs.reduce((s, t) => s + getGross(t), 0)
-  const totalPlatformFees = transactions.filter(t => t.type === 'sale' || t.type === 'buyback').reduce((s, t) => s + getFee(t), 0)
+  const totalPlatformFees = transactions.reduce((s, t) => s + getFee(t), 0)
   const netRevenue = saleTxs.reduce((s, t) => s + Number(t.amount), 0) - totalGrossBuybacks
 
   return (
@@ -69,7 +70,7 @@ export default async function StoreHistoryPage() {
       {transactions.length === 0 ? (
         <div className={styles.empty}>
           <div className={styles.emptyIcon}>📊</div>
-          <p>No transactions yet.</p>
+          <p>No store transactions yet.</p>
         </div>
       ) : (
         <div className={styles.tableWrap}>
