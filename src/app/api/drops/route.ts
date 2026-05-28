@@ -4,90 +4,80 @@ import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
 import { calcBoxPrice } from '@/lib/stripe'
 import { Role } from '@prisma/client'
+import { createDropSchema } from '@/lib/schemas'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const drop = await prisma.drop.findUnique({
-    where: { id: params.id },
+export async function GET() {
+  const drops = await prisma.drop.findMany({
+    where: { isActive: true },
     include: {
       owner: { select: { name: true, company: true } },
-      boxes: {
-        select: {
-          id: true, itemName: true, itemPrice: true,
-          itemShippingCost: true, itemImageUrl: true, sold: true,
-        },
-      },
+      boxes: { select: { id: true, itemPrice: true, sold: true, itemName: true } },
     },
+    orderBy: { createdAt: 'desc' },
   })
 
-  if (!drop) return err('Drop not found', 404)
-
-  const allPrices = drop.boxes.map(b => Number(b.itemPrice))
-
-  return ok({
-    id: drop.id,
-    name: drop.name,
-    emoji: drop.emoji,
-    logoUrl: drop.logoUrl,
-    sellBackPct: drop.sellBackPct,
-    owner: drop.owner.company ?? drop.owner.name,
-    boxPrice: calcBoxPrice(allPrices),
-    boxes: drop.boxes.map(b => ({
-      id: b.id,
-      itemName: b.itemName,
-      itemPrice: Number(b.itemPrice),
-      itemShippingCost: Number(b.itemShippingCost),
-      itemImageUrl: b.itemImageUrl,
-      sold: b.sold,
-    })),
-  })
+  return ok(drops.map(d => {
+    const allPrices = d.boxes.map(b => Number(b.itemPrice))
+    const available = d.boxes.filter(b => !b.sold).length
+    return {
+      id: d.id,
+      name: d.name,
+      emoji: d.emoji,
+      logoUrl: d.logoUrl,
+      sellBackPct: d.sellBackPct,
+      owner: d.owner.company ?? d.owner.name,
+      boxPrice: calcBoxPrice(allPrices),
+      totalBoxes: d.boxes.length,
+      availableBoxes: available,
+      minPrice: Math.min(...allPrices),
+      maxPrice: Math.max(...allPrices),
+    }
+  }))
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
-
-  const drop = await prisma.drop.findUnique({
-    where: { id: params.id },
-    include: { boxes: true },
-  })
-  if (!drop) return err('Drop not found', 404)
-  if (drop.ownerId !== user.id && user.role !== Role.ADMIN) return err('Forbidden', 403)
+  if (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) return err('Forbidden', 403)
 
   const body = await req.json().catch(() => null)
-  if (!body) return err('Invalid request')
+  const parsed = createDropSchema.safeParse(body)
+  if (!parsed.success) return err(parsed.error.errors[0].message)
 
-  const updated = await prisma.drop.update({
-    where: { id: params.id },
+  const { name, emoji, boxes: boxDefs } = parsed.data
+  const logoUrl = body?.logoUrl ?? null
+  const sellBackPct = typeof body?.sellBackPct === 'number'
+    ? Math.min(100, Math.max(1, Math.round(body.sellBackPct)))
+    : 90
+
+  const boxRecords = boxDefs.flatMap(b =>
+    Array.from({ length: b.qty }, () => ({
+      itemName: b.itemName,
+      itemPrice: b.itemPrice,
+      itemShippingCost: b.itemShippingCost,
+      itemImageUrl: b.itemImageUrl || null,
+    }))
+  )
+
+  for (let i = boxRecords.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[boxRecords[i], boxRecords[j]] = [boxRecords[j], boxRecords[i]]
+  }
+
+  const drop = await prisma.drop.create({
     data: {
-      ...(body.name !== undefined && { name: body.name }),
-      ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
-      ...(body.isActive !== undefined && { isActive: body.isActive }),
-      ...(body.sellBackPct !== undefined && { sellBackPct: Math.min(100, Math.max(1, body.sellBackPct)) }),
+      name,
+      emoji,
+      logoUrl,
+      sellBackPct,
+      ownerId: user.id,
+      boxes: { create: boxRecords },
+    },
+    include: {
+      boxes: true,
+      owner: { select: { name: true, company: true } },
     },
   })
 
-  if (body.addBoxes && Array.isArray(body.addBoxes) && body.addBoxes.length > 0) {
-    const newBoxRecords = body.addBoxes.flatMap((b: any) =>
-      Array.from({ length: b.qty || 1 }, () => ({
-        dropId: params.id,
-        itemName: b.itemName,
-        itemPrice: b.itemPrice,
-        itemShippingCost: b.itemShippingCost || 0,
-        itemImageUrl: b.itemImageUrl || null,
-      }))
-    )
-    await prisma.box.createMany({ data: newBoxRecords })
-  }
-
-  if (body.removeBoxIds && Array.isArray(body.removeBoxIds) && body.removeBoxIds.length > 0) {
-    await prisma.box.deleteMany({
-      where: {
-        id: { in: body.removeBoxIds },
-        dropId: params.id,
-        sold: false,
-      },
-    })
-  }
-
-  return ok(updated)
+  return ok(drop, 201)
 }
