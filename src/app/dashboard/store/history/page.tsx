@@ -19,6 +19,22 @@ export default async function StoreHistoryPage() {
 
   const totalSales = transactions.filter(t => t.type === 'sale').reduce((s, t) => s + Number(t.amount), 0)
   const totalBuybacks = transactions.filter(t => t.type === 'buyback').reduce((s, t) => s + Number(t.amount), 0)
+  const totalPlatformFees = totalSales * (5 / 95) + Math.abs(totalBuybacks) * (5 / 95)
+  const netRevenue = totalSales + totalBuybacks
+
+  function getPlatformFee(t: { type: string; amount: unknown }) {
+    const amt = Number(t.amount)
+    if (t.type === 'sale') return Math.round(amt * (5 / 95) * 100) / 100
+    if (t.type === 'buyback') return Math.round(Math.abs(amt) * (5 / 95) * 100) / 100
+    return 0
+  }
+
+  function getGrossPrice(t: { type: string; amount: unknown }) {
+    const amt = Number(t.amount)
+    if (t.type === 'sale') return Math.round((amt + amt * (5 / 95)) * 100) / 100
+    if (t.type === 'buyback') return Math.round((Math.abs(amt) + Math.abs(amt) * (5 / 95)) * 100) / 100
+    return Math.abs(amt)
+  }
 
   return (
     <div className={styles.wrap}>
@@ -32,14 +48,18 @@ export default async function StoreHistoryPage() {
       <div className={styles.stats}>
         <div className={styles.stat}>
           <div className={styles.statVal} style={{color:'#3DD68C'}}>${totalSales.toFixed(2)}</div>
-          <div className={styles.statLbl}>Total Sales</div>
+          <div className={styles.statLbl}>Total Sales (net)</div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statVal} style={{color:'#FF8FA3'}}>${Math.abs(totalBuybacks).toFixed(2)}</div>
           <div className={styles.statLbl}>Total Buybacks</div>
         </div>
         <div className={styles.stat}>
-          <div className={styles.statVal} style={{color:'#F5C842'}}>${(totalSales + totalBuybacks).toFixed(2)}</div>
+          <div className={styles.statVal} style={{color:'#FF6B85'}}>${totalPlatformFees.toFixed(2)}</div>
+          <div className={styles.statLbl}>Platform Fees (5%)</div>
+        </div>
+        <div className={styles.stat}>
+          <div className={styles.statVal} style={{color:'#F5C842'}}>${netRevenue.toFixed(2)}</div>
           <div className={styles.statLbl}>Net Revenue</div>
         </div>
       </div>
@@ -55,28 +75,38 @@ export default async function StoreHistoryPage() {
             <span>Date</span>
             <span>Description</span>
             <span>Type</span>
-            <span>Amount</span>
+            <span>Price</span>
+            <span>Platform Fee</span>
+            <span>Net</span>
           </div>
-          {transactions.map(t => (
-            <div key={t.id} className={styles.tableRow}>
-              <span className={styles.cellMuted}>
-                {new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
-              <span className={styles.cellDesc}>{t.description}</span>
-              <span>
-                <span className={`${styles.badge} ${
-                  t.type === 'sale' ? styles.badgeSale :
-                  t.type === 'buyback' ? styles.badgeBuyback :
-                  styles.badgeOther
-                }`}>
-                  {t.type === 'sale' ? 'Sale' : t.type === 'buyback' ? 'Buyback' : t.type}
+          {transactions.map(t => {
+            const gross = getGrossPrice(t)
+            const fee = getPlatformFee(t)
+            const net = Number(t.amount)
+            const isNeg = net < 0
+            return (
+              <div key={t.id} className={styles.tableRow}>
+                <span className={styles.cellMuted}>
+                  {new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </span>
-              </span>
-              <span className={`${styles.cellAmount} ${Number(t.amount) >= 0 ? styles.amtPos : styles.amtNeg}`}>
-                {Number(t.amount) >= 0 ? '+' : ''}${Math.abs(Number(t.amount)).toFixed(2)}
-              </span>
-            </div>
-          ))}
+                <span className={styles.cellDesc}>{t.description}</span>
+                <span>
+                  <span className={`${styles.badge} ${
+                    t.type === 'sale' ? styles.badgeSale :
+                    t.type === 'buyback' ? styles.badgeBuyback :
+                    styles.badgeOther
+                  }`}>
+                    {t.type === 'sale' ? 'Sale' : t.type === 'buyback' ? 'Buyback' : t.type}
+                  </span>
+                </span>
+                <span className={styles.cellMono}>${gross.toFixed(2)}</span>
+                <span className={`${styles.cellMono} ${styles.amtNeg}`}>−${fee.toFixed(2)}</span>
+                <span className={`${styles.cellMono} ${isNeg ? styles.amtNeg : styles.amtPos}`}>
+                  {isNeg ? '−' : '+'}${Math.abs(net).toFixed(2)}
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
