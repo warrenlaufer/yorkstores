@@ -27,14 +27,18 @@ export async function POST(req: NextRequest) {
 
   const itemValue = Number(purchase.box.itemPrice)
   const sellBackPct = purchase.box.drop.sellBackPct
-  const buyerRefund = Math.round(itemValue * (sellBackPct / 100) * 100) / 100
   const owner = purchase.box.drop.owner
 
-  if (Number(owner.storeBalance) < itemValue) return err('Store wallet insufficient for buyback')
+  // Calculate refund: item value × sellBackPct%, minus 5% platform fee
+  const grossRefund = Math.round(itemValue * (sellBackPct / 100) * 100) / 100
+  const sellBackPlatformFee = Math.round(grossRefund * 0.05 * 100) / 100
+  const buyerRefund = Math.round((grossRefund - sellBackPlatformFee) * 100) / 100
+
+  if (Number(owner.storeBalance) < grossRefund) return err('Store wallet insufficient for buyback')
 
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { walletBalance: { increment: buyerRefund } } }),
-    prisma.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: itemValue } } }),
+    prisma.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: grossRefund } } }),
     prisma.box.update({ where: { id: purchase.box.id }, data: { sold: false } }),
     prisma.purchase.update({
       where: { id: purchase.id },
@@ -44,7 +48,15 @@ export async function POST(req: NextRequest) {
       data: { userId: user.id, dropId: purchase.box.dropId, type: 'sellback', description: `Sold back: ${purchase.box.itemName}`, amount: buyerRefund },
     }),
     prisma.transaction.create({
-      data: { userId: owner.id, dropId: purchase.box.dropId, type: 'buyback', description: `Buyback: ${purchase.box.itemName}`, amount: -itemValue },
+      data: { userId: owner.id, dropId: purchase.box.dropId, type: 'buyback', description: `Buyback: ${purchase.box.itemName}`, amount: -grossRefund },
+    }),
+    prisma.platformTransaction.create({
+      data: {
+        type: 'platform_fee_buyback',
+        description: `Platform fee (buyback): ${purchase.box.itemName}`,
+        amount: sellBackPlatformFee,
+        dropId: purchase.box.dropId,
+      },
     }),
   ])
 

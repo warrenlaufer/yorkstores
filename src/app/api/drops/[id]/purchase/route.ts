@@ -88,8 +88,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (buyerBalance < boxPrice) return err('Insufficient wallet balance')
 
-  const platformFee = Math.round(boxPrice * 0.1 * 100) / 100
-  const storeCredit = Math.round(boxPrice * 0.9 * 100) / 100
+ const platformFee = Math.round(boxPrice * 0.05 * 100) / 100
+  const storeCredit = Math.round(boxPrice * 0.95 * 100) / 100
 
   const purchase = await prisma.$transaction(async tx => {
     await tx.box.update({ where: { id: box.id }, data: { sold: true } })
