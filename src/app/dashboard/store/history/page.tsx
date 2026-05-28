@@ -17,24 +17,26 @@ export default async function StoreHistoryPage() {
     orderBy: { createdAt: 'desc' },
   })
 
-  const totalSales = transactions.filter(t => t.type === 'sale').reduce((s, t) => s + Number(t.amount), 0)
-  const totalBuybacks = transactions.filter(t => t.type === 'buyback').reduce((s, t) => s + Number(t.amount), 0)
-  const totalPlatformFees = totalSales * (5 / 95) + Math.abs(totalBuybacks) * (5 / 95)
-  const netRevenue = totalSales + totalBuybacks
-
-  function getPlatformFee(t: { type: string; amount: unknown }) {
-    const amt = Number(t.amount)
-    if (t.type === 'sale') return Math.round(amt * (5 / 95) * 100) / 100
-    if (t.type === 'buyback') return Math.round(Math.abs(amt) * (5 / 95) * 100) / 100
-    return 0
+  // For sales: store receives 95% of box price, so gross = net / 0.95, fee = gross * 0.05
+  // For buybacks: store pays gross, buyer receives 95%, fee = gross * 0.05
+  function getGross(t: { type: string; amount: unknown }) {
+    const amt = Math.abs(Number(t.amount))
+    if (t.type === 'sale') return Math.round((amt / 0.95) * 100) / 100
+    if (t.type === 'buyback') return amt
+    return amt
   }
 
-  function getGrossPrice(t: { type: string; amount: unknown }) {
-    const amt = Number(t.amount)
-    if (t.type === 'sale') return Math.round((amt + amt * (5 / 95)) * 100) / 100
-    if (t.type === 'buyback') return Math.round((Math.abs(amt) + Math.abs(amt) * (5 / 95)) * 100) / 100
-    return Math.abs(amt)
+  function getFee(t: { type: string; amount: unknown }) {
+    return Math.round(getGross(t) * 0.05 * 100) / 100
   }
+
+  const saleTxs = transactions.filter(t => t.type === 'sale')
+  const buybackTxs = transactions.filter(t => t.type === 'buyback')
+
+  const totalGrossSales = saleTxs.reduce((s, t) => s + getGross(t), 0)
+  const totalGrossBuybacks = buybackTxs.reduce((s, t) => s + getGross(t), 0)
+  const totalPlatformFees = transactions.filter(t => t.type === 'sale' || t.type === 'buyback').reduce((s, t) => s + getFee(t), 0)
+  const netRevenue = saleTxs.reduce((s, t) => s + Number(t.amount), 0) - totalGrossBuybacks
 
   return (
     <div className={styles.wrap}>
@@ -47,11 +49,11 @@ export default async function StoreHistoryPage() {
 
       <div className={styles.stats}>
         <div className={styles.stat}>
-          <div className={styles.statVal} style={{color:'#3DD68C'}}>${totalSales.toFixed(2)}</div>
-          <div className={styles.statLbl}>Total Sales (net)</div>
+          <div className={styles.statVal} style={{color:'#3DD68C'}}>${totalGrossSales.toFixed(2)}</div>
+          <div className={styles.statLbl}>Gross Sales</div>
         </div>
         <div className={styles.stat}>
-          <div className={styles.statVal} style={{color:'#FF8FA3'}}>${Math.abs(totalBuybacks).toFixed(2)}</div>
+          <div className={styles.statVal} style={{color:'#FF8FA3'}}>${totalGrossBuybacks.toFixed(2)}</div>
           <div className={styles.statLbl}>Total Buybacks</div>
         </div>
         <div className={styles.stat}>
@@ -80,8 +82,8 @@ export default async function StoreHistoryPage() {
             <span>Net</span>
           </div>
           {transactions.map(t => {
-            const gross = getGrossPrice(t)
-            const fee = getPlatformFee(t)
+            const gross = getGross(t)
+            const fee = getFee(t)
             const net = Number(t.amount)
             const isNeg = net < 0
             return (
