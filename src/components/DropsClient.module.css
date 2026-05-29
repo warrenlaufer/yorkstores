@@ -30,6 +30,7 @@
 .sidebarItemActive:hover { background: rgba(255,107,133,0.18); }
 .sidebarCheck { width: 14px; height: 14px; border: 1.5px solid rgba(255,255,255,0.2); border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 900; color: #FF6B85; flex-shrink: 0; background: transparent; transition: all 0.15s; }
 .sidebarItemActive .sidebarCheck { border-color: #FF6B85; background: rgba(255,107,133,0.15); }
+.sidebarDivider { height: 1px; background: rgba(255,255,255,0.08); margin: 0.85rem 0; }
 
 /* Grid */
 .grid { flex: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }

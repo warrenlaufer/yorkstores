@@ -36,13 +36,17 @@ type User = { id: string; name: string; email: string; role: string; walletBalan
 
 export default function DropsClient({ drops, user }: { drops: Drop[]; user: User }) {
   const router = useRouter()
-  const [selected, setSelected] = useState<Set<string>>(new Set(CATEGORIES))
+  const [selectedCats, setSelectedCats] = useState<Set<string>>(new Set(CATEGORIES))
+  const [selectedStores, setSelectedStores] = useState<Set<string>>(new Set())
 
-  const allSelected = selected.size === CATEGORIES.length
-  const noneSelected = selected.size === 0
+  const stores = Array.from(new Set(drops.map(d => d.owner))).sort()
 
-  function toggleCategory(cat: string) {
-    setSelected(prev => {
+  const allCatsSelected = selectedCats.size === CATEGORIES.length
+  const noCatsSelected = selectedCats.size === 0
+  const allStoresSelected = selectedStores.size === 0 // empty = all stores
+
+  function toggleCat(cat: string) {
+    setSelectedCats(prev => {
       const next = new Set(prev)
       if (next.has(cat)) next.delete(cat)
       else next.add(cat)
@@ -50,10 +54,24 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
     })
   }
 
-  function selectAll() { setSelected(new Set(CATEGORIES)) }
-  function selectNone() { setSelected(new Set()) }
+  function toggleStore(store: string) {
+    setSelectedStores(prev => {
+      const next = new Set(prev)
+      if (next.has(store)) next.delete(store)
+      else next.add(store)
+      return next
+    })
+  }
 
-  const filtered = drops.filter(d => selected.has(d.category))
+  function selectAllCats() { setSelectedCats(new Set(CATEGORIES)) }
+  function clearCats() { setSelectedCats(new Set()) }
+  function clearStores() { setSelectedStores(new Set()) }
+
+  const filtered = drops.filter(d => {
+    const catMatch = selectedCats.has(d.category)
+    const storeMatch = selectedStores.size === 0 || selectedStores.has(d.owner)
+    return catMatch && storeMatch
+  })
 
   function getBadges(d: Drop) {
     const badges: { label: string; cls: string }[] = []
@@ -76,23 +94,48 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
 
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
+
           <div className={styles.sidebarTitle}>Categories</div>
           <div className={styles.sidebarActions}>
-            <button className={styles.sidebarAction} onClick={selectAll} disabled={allSelected}>All</button>
-            <button className={styles.sidebarAction} onClick={selectNone} disabled={noneSelected}>None</button>
+            <button className={styles.sidebarAction} onClick={selectAllCats} disabled={allCatsSelected}>All</button>
+            <button className={styles.sidebarAction} onClick={clearCats} disabled={noCatsSelected}>None</button>
           </div>
           <div className={styles.sidebarList}>
             {CATEGORIES.map(cat => (
               <button
                 key={cat}
-                className={`${styles.sidebarItem} ${selected.has(cat) ? styles.sidebarItemActive : ''}`}
-                onClick={() => toggleCategory(cat)}
+                className={`${styles.sidebarItem} ${selectedCats.has(cat) ? styles.sidebarItemActive : ''}`}
+                onClick={() => toggleCat(cat)}
               >
-                <span className={styles.sidebarCheck}>{selected.has(cat) ? '✓' : ''}</span>
+                <span className={styles.sidebarCheck}>{selectedCats.has(cat) ? '✓' : ''}</span>
                 {cat}
               </button>
             ))}
           </div>
+
+          {stores.length > 1 && (
+            <>
+              <div className={styles.sidebarDivider} />
+              <div className={styles.sidebarTitle}>Stores</div>
+              <div className={styles.sidebarActions}>
+                <button className={styles.sidebarAction} onClick={clearStores} disabled={allStoresSelected}>All</button>
+                <button className={styles.sidebarAction} onClick={() => setSelectedStores(new Set(stores))} disabled={selectedStores.size === stores.length}>None</button>
+              </div>
+              <div className={styles.sidebarList}>
+                {stores.map(store => (
+                  <button
+                    key={store}
+                    className={`${styles.sidebarItem} ${selectedStores.has(store) ? styles.sidebarItemActive : ''}`}
+                    onClick={() => toggleStore(store)}
+                  >
+                    <span className={styles.sidebarCheck}>{selectedStores.has(store) ? '✓' : ''}</span>
+                    {store}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
         </aside>
 
         <div className={styles.grid}>
