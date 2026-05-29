@@ -27,6 +27,9 @@ type Drop = {
   maxPrice: number
   category: string
   pricingType: string
+  sellBackPct: number
+  createdAt: string
+  recentPurchases: number
 }
 
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
@@ -52,6 +55,18 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
 
   const filtered = drops.filter(d => selected.has(d.category))
 
+  function getBadges(d: Drop) {
+    const badges: { label: string; cls: string }[] = []
+    const now = Date.now()
+    const created = new Date(d.createdAt).getTime()
+    const dayMs = 24 * 60 * 60 * 1000
+    if (now - created < 24 * dayMs) badges.push({ label: 'New', cls: styles.badgeNew })
+    if (d.recentPurchases >= 10) badges.push({ label: '🔥 Hot', cls: styles.badgeHot })
+    if (d.sellBackPct > 94) badges.push({ label: 'High Buyback %', cls: styles.badgeHighBuyback })
+    if (d.availableBoxes === 0) badges.push({ label: 'Sold Out', cls: styles.badgeOff })
+    return badges
+  }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.hero}>
@@ -60,7 +75,6 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
       </div>
 
       <div className={styles.layout}>
-        {/* Sidebar */}
         <aside className={styles.sidebar}>
           <div className={styles.sidebarTitle}>Categories</div>
           <div className={styles.sidebarActions}>
@@ -81,7 +95,6 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
           </div>
         </aside>
 
-        {/* Grid */}
         <div className={styles.grid}>
           {filtered.length === 0 ? (
             <div className={styles.empty}>
@@ -91,12 +104,13 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
           ) : filtered.map(d => {
             const soldOut = d.availableBoxes === 0
             const pct = Math.round((d.availableBoxes / d.totalBoxes) * 100)
+            const badges = getBadges(d)
             return (
               <div key={d.id} className={styles.card}>
                 <div className={styles.badgeRow}>
-                  <span className={`${styles.badge} ${soldOut ? styles.badgeOff : styles.badgeOn}`}>
-                    {soldOut ? 'Sold Out' : '● Live'}
-                  </span>
+                  {badges.map(b => (
+                    <span key={b.label} className={`${styles.badge} ${b.cls}`}>{b.label}</span>
+                  ))}
                   <span className={styles.badgeCat}>{d.category}</span>
                 </div>
                 <div className={styles.cardBanner}>

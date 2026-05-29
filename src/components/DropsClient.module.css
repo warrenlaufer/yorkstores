@@ -24,14 +24,7 @@
 .sidebarAction:hover:not(:disabled) { color: #fff; border-color: rgba(255,255,255,0.3); }
 .sidebarAction:disabled { opacity: 0.3; cursor: not-allowed; }
 .sidebarList { display: flex; flex-direction: column; gap: 2px; }
-.sidebarItem {
-  display: flex; align-items: center; gap: 6px;
-  background: transparent; color: var(--text2);
-  border: none; border-radius: 6px;
-  font-family: var(--font); font-size: 0.72rem; font-weight: 600;
-  padding: 0.38rem 0.5rem; cursor: pointer;
-  transition: all 0.15s; text-align: left; width: 100%;
-}
+.sidebarItem { display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text2); border: none; border-radius: 6px; font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.38rem 0.5rem; cursor: pointer; transition: all 0.15s; text-align: left; width: 100%; }
 .sidebarItem:hover { background: rgba(255,255,255,0.05); color: #fff; }
 .sidebarItemActive { background: rgba(255,107,133,0.1); color: #FF8FA3; }
 .sidebarItemActive:hover { background: rgba(255,107,133,0.18); }
@@ -48,9 +41,11 @@
 .card { background: #000; border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
 .card:hover { border-color: #FF6B85; transform: translateY(-3px); box-shadow: 0 12px 40px rgba(255,107,133,0.2); }
 
-.badgeRow { padding: 0.6rem 0.75rem 0; display: flex; gap: 0.4rem; flex-wrap: wrap; }
-.badge { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.05em; text-transform: uppercase; }
-.badgeOn { background: rgba(61,214,140,0.15); color: #3DD68C; border: 1px solid rgba(61,214,140,0.3); }
+.badgeRow { padding: 0.6rem 0.75rem 0; display: flex; gap: 0.4rem; flex-wrap: wrap; min-height: 28px; }
+.badge { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+.badgeNew { background: rgba(96,165,250,0.15); color: #7EC8FF; border: 1px solid rgba(96,165,250,0.3); }
+.badgeHot { background: rgba(251,146,60,0.15); color: #FB923C; border: 1px solid rgba(251,146,60,0.3); }
+.badgeHighBuyback { background: rgba(61,214,140,0.15); color: #3DD68C; border: 1px solid rgba(61,214,140,0.3); }
 .badgeOff { background: rgba(255,255,255,0.06); color: var(--text3); border: 1px solid rgba(255,255,255,0.1); }
 .badgeCat { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; background: rgba(245,200,66,0.1); color: var(--gold); border: 1px solid rgba(245,200,66,0.25); }
 

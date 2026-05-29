@@ -1,54 +1,148 @@
-import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { calcBoxPriceForDrop } from '@/lib/stripe'
-import { redirect } from 'next/navigation'
-import DropsClient from '@/components/DropsClient'
+'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import styles from './DropsClient.module.css'
 
-export const dynamic = 'force-dynamic'
+const CATEGORIES = [
+  'Bullion',
+  'Collectible Coins',
+  'Jewelry',
+  'Luxury Brands',
+  'Other Collectibles',
+  'Sporting Goods',
+  'Trading Cards',
+  'Watches',
+]
 
-export default async function DashboardPage() {
-  const user = await getSession()
-  if (!user) redirect('/signin')
+type Drop = {
+  id: string
+  name: string
+  emoji: string
+  logoUrl?: string
+  owner: string
+  boxPrice: number
+  totalBoxes: number
+  availableBoxes: number
+  minPrice: number
+  maxPrice: number
+  category: string
+  pricingType: string
+  sellBackPct: number
+  createdAt: string
+  recentPurchases: number
+}
 
-  const drops = await prisma.drop.findMany({
-    where: { isActive: true },
-    include: {
-      owner: { select: { name: true, company: true } },
-      boxes: { select: { id: true, itemPrice: true, sold: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
+type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
-  const dropsData = drops.map(d => {
-    const allPrices = d.boxes.map(b => Number(b.itemPrice))
-    const unsoldPrices = d.boxes.filter(b => !b.sold).map(b => Number(b.itemPrice))
-    const available = d.boxes.filter(b => !b.sold).length
-    return {
-      id: d.id,
-      name: d.name,
-      emoji: d.emoji,
-      logoUrl: d.logoUrl ?? undefined,
-      owner: d.owner.company ?? d.owner.name,
-      boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, d.pricingType),
-      totalBoxes: d.boxes.length,
-      availableBoxes: available,
-      minPrice: allPrices.length ? Math.min(...allPrices) : 0,
-      maxPrice: allPrices.length ? Math.max(...allPrices) : 0,
-      category: d.category,
-      pricingType: d.pricingType,
-    }
-  })
+export default function DropsClient({ drops, user }: { drops: Drop[]; user: User }) {
+  const router = useRouter()
+  const [selected, setSelected] = useState<Set<string>>(new Set(CATEGORIES))
+
+  const allSelected = selected.size === CATEGORIES.length
+  const noneSelected = selected.size === 0
+
+  function toggleCategory(cat: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      return next
+    })
+  }
+
+  function selectAll() { setSelected(new Set(CATEGORIES)) }
+  function selectNone() { setSelected(new Set()) }
+
+  const filtered = drops.filter(d => selected.has(d.category))
+
+  function getBadges(d: Drop) {
+    const badges: { label: string; cls: string }[] = []
+    const now = Date.now()
+    const created = new Date(d.createdAt).getTime()
+    const dayMs = 24 * 60 * 60 * 1000
+    if (now - created < 24 * dayMs) badges.push({ label: 'New', cls: styles.badgeNew })
+    if (d.recentPurchases >= 10) badges.push({ label: '🔥 Hot', cls: styles.badgeHot })
+    if (d.sellBackPct > 94) badges.push({ label: 'High Buyback %', cls: styles.badgeHighBuyback })
+    if (d.availableBoxes === 0) badges.push({ label: 'Sold Out', cls: styles.badgeOff })
+    return badges
+  }
 
   return (
-    <DropsClient
-      drops={dropsData}
-      user={{
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        walletBalance: Number(user.walletBalance),
-      }}
-    />
+    <div className={styles.wrap}>
+      <div className={styles.hero}>
+        <h1 className={styles.heroTitle}>Drops</h1>
+        <p className={styles.heroSub}>Choose delivery or sell your item back.</p>
+      </div>
+
+      <div className={styles.layout}>
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarTitle}>Categories</div>
+          <div className={styles.sidebarActions}>
+            <button className={styles.sidebarAction} onClick={selectAll} disabled={allSelected}>All</button>
+            <button className={styles.sidebarAction} onClick={selectNone} disabled={noneSelected}>None</button>
+          </div>
+          <div className={styles.sidebarList}>
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat}
+                className={`${styles.sidebarItem} ${selected.has(cat) ? styles.sidebarItemActive : ''}`}
+                onClick={() => toggleCategory(cat)}
+              >
+                <span className={styles.sidebarCheck}>{selected.has(cat) ? '✓' : ''}</span>
+                {cat}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <div className={styles.grid}>
+          {filtered.length === 0 ? (
+            <div className={styles.empty}>
+              <div className={styles.emptyIcon}>🎁</div>
+              <p>No drops match your filters.</p>
+            </div>
+          ) : filtered.map(d => {
+            const soldOut = d.availableBoxes === 0
+            const pct = Math.round((d.availableBoxes / d.totalBoxes) * 100)
+            const badges = getBadges(d)
+            return (
+              <div key={d.id} className={styles.card}>
+                <div className={styles.badgeRow}>
+                  {badges.map(b => (
+                    <span key={b.label} className={`${styles.badge} ${b.cls}`}>{b.label}</span>
+                  ))}
+                  <span className={styles.badgeCat}>{d.category}</span>
+                </div>
+                <div className={styles.cardBanner}>
+                  {d.logoUrl ? (
+                    <img src={d.logoUrl} alt={d.name} className={styles.cardLogo} />
+                  ) : (
+                    <span className={styles.cardEmoji}>{d.emoji || '🎁'}</span>
+                  )}
+                </div>
+                <div className={styles.cardBody}>
+                  <div className={styles.cardName}>{d.name}</div>
+                  <div className={styles.cardOwner}>by {d.owner}</div>
+                  <div className={styles.stats}>
+                    <div className={styles.stat}><div className={styles.statVal}>${d.boxPrice}</div><div className={styles.statLbl}>Price</div></div>
+                    <div className={styles.stat}><div className={styles.statVal}>${d.minPrice}–${d.maxPrice}</div><div className={styles.statLbl}>Range</div></div>
+                    <div className={styles.stat}><div className={styles.statVal}>{d.totalBoxes}</div><div className={styles.statLbl}>Boxes</div></div>
+                  </div>
+                  <div className={styles.progBar}><div className={styles.progFill} style={{ width: `${pct}%` }} /></div>
+                  <p className={styles.avail}><strong>{d.availableBoxes}</strong> of {d.totalBoxes} remaining</p>
+                  <button
+                    className={styles.openBtn}
+                    disabled={soldOut}
+                    onClick={() => !soldOut && router.push(`/dashboard/drop/${d.id}`)}
+                  >
+                    {soldOut ? 'Sold Out' : `Explore Drop — $${d.boxPrice}`}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
   )
 }
