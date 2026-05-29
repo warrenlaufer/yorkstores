@@ -1,6 +1,18 @@
 'use client'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './DropsClient.module.css'
+
+const CATEGORIES = [
+  'Bullion',
+  'Collectible Coins',
+  'Jewelry',
+  'Luxury Brands',
+  'Other Collectibles',
+  'Sporting Goods',
+  'Trading Cards',
+  'Watches',
+]
 
 type Drop = {
   id: string
@@ -13,12 +25,32 @@ type Drop = {
   availableBoxes: number
   minPrice: number
   maxPrice: number
+  category: string
+  pricingType: string
 }
 
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
 export default function DropsClient({ drops, user }: { drops: Drop[]; user: User }) {
   const router = useRouter()
+  const [selected, setSelected] = useState<Set<string>>(new Set(CATEGORIES))
+
+  const allSelected = selected.size === CATEGORIES.length
+  const noneSelected = selected.size === 0
+
+  function toggleCategory(cat: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      return next
+    })
+  }
+
+  function selectAll() { setSelected(new Set(CATEGORIES)) }
+  function selectNone() { setSelected(new Set()) }
+
+  const filtered = drops.filter(d => selected.has(d.category))
 
   return (
     <div className={styles.wrap}>
@@ -27,13 +59,32 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
         <p className={styles.heroSub}>Choose delivery or sell your item back.</p>
       </div>
 
+      <div className={styles.filterBar}>
+        <div className={styles.filterActions}>
+          <button className={styles.filterAction} onClick={selectAll} disabled={allSelected}>Select All</button>
+          <button className={styles.filterAction} onClick={selectNone} disabled={noneSelected}>Clear All</button>
+        </div>
+        <div className={styles.filterChips}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              className={`${styles.filterChip} ${selected.has(cat) ? styles.filterChipActive : ''}`}
+              onClick={() => toggleCategory(cat)}
+            >
+              {selected.has(cat) && <span className={styles.chipCheck}>✓</span>}
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className={styles.grid}>
-        {drops.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>🎁</div>
-            <p>No drops yet.</p>
+            <p>No drops match your filters.</p>
           </div>
-        ) : drops.map(d => {
+        ) : filtered.map(d => {
           const soldOut = d.availableBoxes === 0
           const pct = Math.round((d.availableBoxes / d.totalBoxes) * 100)
           return (
@@ -42,6 +93,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                 <span className={`${styles.badge} ${soldOut ? styles.badgeOff : styles.badgeOn}`}>
                   {soldOut ? 'Sold Out' : '● Live'}
                 </span>
+                <span className={styles.badgeCat}>{d.category}</span>
               </div>
               <div className={styles.cardBanner}>
                 {d.logoUrl ? (

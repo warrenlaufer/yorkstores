@@ -69,6 +69,7 @@ model Drop {
   logoUrl     String?
   sellBackPct Int      @default(90)
   pricingType String   @default("fixed")
+  category    String   @default("Other Collectibles")
   ownerId     String
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())

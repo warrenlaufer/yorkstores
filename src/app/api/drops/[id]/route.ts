@@ -31,6 +31,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     logoUrl: drop.logoUrl,
     sellBackPct: drop.sellBackPct,
     pricingType: drop.pricingType,
+    category: drop.category,
     owner: drop.owner.company ?? drop.owner.name,
     boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, drop.pricingType),
     boxes: drop.boxes.map(b => ({
@@ -66,6 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(body.isActive !== undefined && { isActive: body.isActive }),
       ...(body.sellBackPct !== undefined && { sellBackPct: Math.min(100, Math.max(1, body.sellBackPct)) }),
       ...(body.pricingType !== undefined && { pricingType: body.pricingType === 'dynamic' ? 'dynamic' : 'fixed' }),
+      ...(body.category !== undefined && { category: body.category }),
     },
   })
 

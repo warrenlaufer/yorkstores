@@ -1,50 +1,39 @@
 .wrap { max-width: 900px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
 
-.hero { margin-bottom: 1.5rem; }
+.hero { margin-bottom: 1.25rem; }
 .heroTitle { font-size: 1.15rem; font-weight: 800; color: #fff; margin-bottom: 0.2rem; }
 .heroSub { font-size: 0.78rem; color: var(--text2); }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1rem;
-}
+/* Filter bar */
+.filterBar { background: #0F0F14; border: 1px solid rgba(255,255,255,0.09); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; }
+.filterActions { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+.filterAction { background: transparent; color: var(--text2); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; font-family: var(--font); font-size: 0.68rem; font-weight: 700; padding: 0.25rem 0.65rem; cursor: pointer; transition: all 0.15s; }
+.filterAction:hover:not(:disabled) { color: #fff; border-color: rgba(255,255,255,0.3); }
+.filterAction:disabled { opacity: 0.3; cursor: not-allowed; }
+.filterChips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.filterChip { background: #1D1D26; color: var(--text2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; font-family: var(--font); font-size: 0.7rem; font-weight: 600; padding: 0.28rem 0.65rem; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 4px; }
+.filterChip:hover { border-color: rgba(255,255,255,0.25); color: #fff; }
+.filterChipActive { background: rgba(255,107,133,0.12); color: #FF8FA3; border-color: rgba(255,107,133,0.35); }
+.filterChipActive:hover { background: rgba(255,107,133,0.2); }
+.chipCheck { font-size: 0.6rem; color: #FF6B85; font-weight: 900; }
+
+/* Grid */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
 
 .empty { grid-column: 1/-1; text-align: center; padding: 4rem 1rem; color: var(--text2); }
 .emptyIcon { font-size: 3rem; opacity: 0.2; margin-bottom: 1rem; }
 .empty p { font-size: 0.9rem; }
 
-.card {
-  background: #000;
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-  display: flex;
-  flex-direction: column;
-}
-.card:hover {
-  border-color: #FF6B85;
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(255,107,133,0.2);
-}
+.card { background: #000; border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
+.card:hover { border-color: #FF6B85; transform: translateY(-3px); box-shadow: 0 12px 40px rgba(255,107,133,0.2); }
 
-.badgeRow { padding: 0.6rem 0.75rem 0; display: flex; gap: 0.4rem; }
+.badgeRow { padding: 0.6rem 0.75rem 0; display: flex; gap: 0.4rem; flex-wrap: wrap; }
 .badge { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.05em; text-transform: uppercase; }
 .badgeOn { background: rgba(61,214,140,0.15); color: #3DD68C; border: 1px solid rgba(61,214,140,0.3); }
 .badgeOff { background: rgba(255,255,255,0.06); color: var(--text3); border: 1px solid rgba(255,255,255,0.1); }
+.badgeCat { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; background: rgba(245,200,66,0.1); color: var(--gold); border: 1px solid rgba(245,200,66,0.25); }
 
-.cardBanner {
-  width: 100%;
-  height: 200px;
-  background: #111;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  flex-shrink: 0;
-}
+.cardBanner { width: 100%; height: 200px; background: #111; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
 .cardLogo { width: 100%; height: 100%; object-fit: contain; padding: 1rem; }
 .cardEmoji { font-size: 4rem; }
 
@@ -63,19 +52,6 @@
 .avail { font-size: 0.65rem; color: var(--text2); margin-bottom: 0.75rem; }
 .avail strong { color: #fff; }
 
-.openBtn {
-  margin-top: auto;
-  width: 100%;
-  background: #FF6B85;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-family: var(--font);
-  font-size: 0.8rem;
-  font-weight: 800;
-  padding: 0.55rem;
-  cursor: pointer;
-  transition: background 0.15s;
-}
+.openBtn { margin-top: auto; width: 100%; background: #FF6B85; color: #fff; border: none; border-radius: 8px; font-family: var(--font); font-size: 0.8rem; font-weight: 800; padding: 0.55rem; cursor: pointer; transition: background 0.15s; }
 .openBtn:hover:not(:disabled) { background: #ff4d6d; }
 .openBtn:disabled { background: #2a2a35; color: rgba(255,255,255,0.3); cursor: not-allowed; }

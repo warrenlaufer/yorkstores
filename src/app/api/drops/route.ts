@@ -6,6 +6,17 @@ import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
 import { createDropSchema } from '@/lib/schemas'
 
+export const CATEGORIES = [
+  'Bullion',
+  'Collectible Coins',
+  'Jewelry',
+  'Luxury Brands',
+  'Other Collectibles',
+  'Sporting Goods',
+  'Trading Cards',
+  'Watches',
+]
+
 export async function GET() {
   const drops = await prisma.drop.findMany({
     where: { isActive: true },
@@ -27,6 +38,7 @@ export async function GET() {
       logoUrl: d.logoUrl,
       sellBackPct: d.sellBackPct,
       pricingType: d.pricingType,
+      category: d.category,
       owner: d.owner.company ?? d.owner.name,
       boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, d.pricingType),
       totalBoxes: d.boxes.length,
@@ -52,6 +64,7 @@ export async function POST(req: NextRequest) {
     ? Math.min(100, Math.max(1, Math.round(body.sellBackPct)))
     : 90
   const pricingType = body?.pricingType === 'dynamic' ? 'dynamic' : 'fixed'
+  const category = CATEGORIES.includes(body?.category) ? body.category : 'Other Collectibles'
 
   const boxRecords = boxDefs.flatMap(b =>
     Array.from({ length: b.qty }, () => ({
@@ -69,11 +82,7 @@ export async function POST(req: NextRequest) {
 
   const drop = await prisma.drop.create({
     data: {
-      name,
-      emoji,
-      logoUrl,
-      sellBackPct,
-      pricingType,
+      name, emoji, logoUrl, sellBackPct, pricingType, category,
       ownerId: user.id,
       boxes: { create: boxRecords },
     },

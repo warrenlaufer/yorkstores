@@ -3,9 +3,11 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './StoreOwnerClient.module.css'
 
+const CATEGORIES = ['Bullion','Collectible Coins','Jewelry','Luxury Brands','Other Collectibles','Sporting Goods','Trading Cards','Watches']
+
 type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
-type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string }
+type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
 type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string }
 
@@ -22,6 +24,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [logoUploading, setLogoUploading] = useState(false)
   const [sellBackPct, setSellBackPct] = useState('90')
   const [pricingType, setPricingType] = useState<'fixed' | 'dynamic'>('fixed')
+  const [category, setCategory] = useState('Other Collectibles')
   const [boxes, setBoxes] = useState<BoxDef[]>([])
   const [iName, setIName] = useState('')
   const [iPrice, setIPrice] = useState('')
@@ -43,6 +46,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [editLogoUploading, setEditLogoUploading] = useState(false)
   const [editSellBackPct, setEditSellBackPct] = useState('90')
   const [editPricingType, setEditPricingType] = useState<'fixed' | 'dynamic'>('fixed')
+  const [editCategory, setEditCategory] = useState('Other Collectibles')
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
   const [existingBoxes, setExistingBoxes] = useState<ExistingBox[]>([])
@@ -116,6 +120,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditLogoPreview(drop.logoUrl ?? '')
     setEditSellBackPct(String(drop.sellBackPct))
     setEditPricingType(drop.pricingType === 'dynamic' ? 'dynamic' : 'fixed')
+    setEditCategory(drop.category ?? 'Other Collectibles')
     setEditError('')
     setNewBoxes([])
     setRemoveBoxIds([])
@@ -174,6 +179,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           logoUrl: editLogoUrl || null,
           sellBackPct: Math.min(100, Math.max(1, parseInt(editSellBackPct) || 90)),
           pricingType: editPricingType,
+          category: editCategory,
           addBoxes: newBoxes.length > 0 ? newBoxes : undefined,
           removeBoxIds: removeBoxIds.length > 0 ? removeBoxIds : undefined,
           updateItems: updateItems.length > 0 ? updateItems : undefined,
@@ -223,12 +229,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       const res = await fetch('/api/drops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, pricingType, boxes }),
+        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, pricingType, category, boxes }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setSuccess('Drop published!')
-      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setBoxes([])
+      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setCategory('Other Collectibles'); setBoxes([])
       setTimeout(() => { setSuccess(''); router.refresh() }, 1500)
     } catch { setError('Something went wrong.') }
     finally { setPublishing(false) }
@@ -252,7 +258,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}>📦 Fulfilment</a>
       </div>
 
-      {/* Store Wallet */}
       <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.5rem'}}>
           <div className={styles.panelTitle} style={{margin:0}}>Store Wallet</div>
@@ -262,7 +267,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <p className={styles.storeBalanceSub}>Funded from box sales. Covers buybacks.</p>
       </div>
 
-      {/* Your Drops */}
       {drops.length > 0 && (
         <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
           <div className={styles.panelTitle}>Your Drops</div>
@@ -272,7 +276,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.dropRowInfo}>
                 <div className={styles.dropRowName}>{d.name}</div>
                 <div className={styles.dropRowMeta}>
-                  {d.soldBoxes} / {d.totalBoxes} sold · {d.isActive ? 'Active' : 'Inactive'} · {d.sellBackPct}% buyback · {d.pricingType}
+                  {d.soldBoxes} / {d.totalBoxes} sold · {d.isActive ? 'Active' : 'Inactive'} · {d.sellBackPct}% buyback · {d.pricingType} · {d.category}
                 </div>
               </div>
               <div className={styles.dropRowActions}>
@@ -315,6 +319,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 <button type="button" className={`${styles.pricingBtn} ${pricingType === 'dynamic' ? styles.pricingBtnActive : ''}`} onClick={() => setPricingType('dynamic')}>Dynamic</button>
               </div>
               <p className={styles.sellBackHint}>{pricingType === 'fixed' ? 'Price stays the same as boxes are opened.' : 'Price updates based on remaining unsold boxes.'}</p>
+            </div>
+            <div className="field">
+              <label>Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value)}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
           </div>
 
@@ -360,6 +370,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.preview}>
                 <div className={styles.previewRow}><span>Drop</span><span>{name || 'Unnamed Drop'}</span></div>
                 <div className={styles.previewRow}><span>Owner</span><span>{user.company}</span></div>
+                <div className={styles.previewRow}><span>Category</span><span>{category}</span></div>
                 <div className={styles.previewRow}><span>Boxes</span><span>{totalBoxes}</span></div>
                 <div className={styles.previewRow}><span>Avg value</span><span>${avgVal.toFixed(2)}</span></div>
                 <div className={styles.previewRow}><span>Box price (avg +5%)</span><span style={{color:'#F5C842'}}>${boxPrice}</span></div>
@@ -409,6 +420,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 <button type="button" className={`${styles.pricingBtn} ${editPricingType === 'dynamic' ? styles.pricingBtnActive : ''}`} onClick={() => setEditPricingType('dynamic')}>Dynamic</button>
               </div>
               <p className={styles.sellBackHint}>{editPricingType === 'fixed' ? 'Price stays the same as boxes are opened.' : 'Price updates based on remaining unsold boxes.'}</p>
+            </div>
+            <div className="field">
+              <label>Category</label>
+              <select value={editCategory} onChange={e => setEditCategory(e.target.value)}>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
 
             <div className={styles.editSection}>Current Items</div>

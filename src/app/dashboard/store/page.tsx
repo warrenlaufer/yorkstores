@@ -51,6 +51,7 @@ export default async function StorePage() {
         soldBoxes: d.boxes.filter(b => b.sold).length,
         sellBackPct: d.sellBackPct,
         pricingType: d.pricingType,
+        category: d.category,
       }))}
     />
   )
