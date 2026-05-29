@@ -64,7 +64,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
     if (d.recentPurchases >= 10) badges.push({ label: '🔥 Hot', cls: styles.badgeHot })
     if (d.sellBackPct > 94) badges.push({ label: 'High Buyback %', cls: styles.badgeHighBuyback })
     if (d.availableBoxes === 0) badges.push({ label: 'Sold Out', cls: styles.badgeOff })
-    return badges
+    return badges.slice(0, 3)
   }
 
   return (
@@ -107,11 +107,15 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
             const badges = getBadges(d)
             return (
               <div key={d.id} className={styles.card}>
-                <div className={styles.badgeRow}>
-                  {badges.map(b => (
-                    <span key={b.label} className={`${styles.badge} ${b.cls}`}>{b.label}</span>
-                  ))}
-                  <span className={styles.badgeCat}>{d.category}</span>
+                <div className={styles.badgeRows}>
+                  <div className={styles.badgeRowTop}>
+                    <span className={styles.badgeCat}>{d.category}</span>
+                  </div>
+                  <div className={styles.badgeRowBottom}>
+                    {badges.map(b => (
+                      <span key={b.label} className={`${styles.badge} ${b.cls}`}>{b.label}</span>
+                    ))}
+                  </div>
                 </div>
                 <div className={styles.cardBanner}>
                   {d.logoUrl ? (

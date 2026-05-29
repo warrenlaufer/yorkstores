@@ -41,7 +41,11 @@
 .card { background: #000; border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
 .card:hover { border-color: #FF6B85; transform: translateY(-3px); box-shadow: 0 12px 40px rgba(255,107,133,0.2); }
 
-.badgeRow { padding: 0.6rem 0.75rem 0; display: flex; gap: 0.4rem; flex-wrap: wrap; min-height: 28px; }
+/* Badge rows */
+.badgeRows { padding: 0.6rem 0.75rem 0; display: flex; flex-direction: column; gap: 0.3rem; min-height: 52px; }
+.badgeRowTop { display: flex; }
+.badgeRowBottom { display: flex; gap: 0.4rem; min-height: 22px; }
+
 .badge { font-size: 0.6rem; font-weight: 700; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
 .badgeNew { background: rgba(96,165,250,0.15); color: #7EC8FF; border: 1px solid rgba(96,165,250,0.3); }
 .badgeHot { background: rgba(251,146,60,0.15); color: #FB923C; border: 1px solid rgba(251,146,60,0.3); }
