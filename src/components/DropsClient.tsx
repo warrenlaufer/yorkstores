@@ -113,7 +113,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
             ))}
           </div>
 
-          {stores.length > 1 && (
+          {stores.length > 0 && (
             <>
               <div className={styles.sidebarDivider} />
               <div className={styles.sidebarTitle}>Stores</div>
