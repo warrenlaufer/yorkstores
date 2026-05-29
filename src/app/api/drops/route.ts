@@ -6,7 +6,7 @@ import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
 import { createDropSchema } from '@/lib/schemas'
 
-export const CATEGORIES = [
+const CATEGORIES = [
   'Bullion',
   'Collectible Coins',
   'Jewelry',
