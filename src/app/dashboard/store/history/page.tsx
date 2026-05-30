@@ -62,7 +62,10 @@ export default async function StoreHistoryPage() {
 
   return (
     <div className={styles.wrap}>
-      <Link href="/dashboard/store" className={styles.back}>← Back to Store</Link>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
+        <Link href="/dashboard/store" className={styles.back}>← Back to Store</Link>
+        <a href="/api/export/store" className={styles.exportBtn}>⬇ Download CSV</a>
+      </div>
 
       <div className={styles.header}>
         <h1 className={styles.title}>Store History</h1>
