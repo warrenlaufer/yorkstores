@@ -26,6 +26,10 @@ export async function POST(req: NextRequest) {
     if (purchase.buyerId !== user.id) throw new Error('Forbidden')
     if (purchase.outcome) throw new Error('Already resolved')
 
+    const shippingCost = Number(purchase.box.itemShippingCost)
+    const platformFee = Math.round(shippingCost * 0.05 * 100) / 100
+    const storeShippingNet = Math.round((shippingCost - platformFee) * 100) / 100
+
     const order = await tx.order.create({
       data: {
         purchaseId,
@@ -39,6 +43,47 @@ export async function POST(req: NextRequest) {
       where: { id: purchaseId },
       data: { outcome: OutcomeType.DELIVERY, resolvedAt: new Date() },
     })
+
+    // Deduct shipping from buyer wallet
+    if (shippingCost > 0) {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { walletBalance: { decrement: shippingCost } },
+      })
+      // Credit net shipping to store (95%)
+      await tx.user.update({
+        where: { id: purchase.box.drop.ownerId },
+        data: { storeBalance: { increment: storeShippingNet } },
+      })
+      // Record transactions
+      await tx.transaction.create({
+        data: {
+          userId: user.id,
+          dropId: purchase.box.dropId,
+          type: 'shipping',
+          description: `Shipping: ${purchase.box.itemName}`,
+          amount: -shippingCost,
+        },
+      })
+      await tx.transaction.create({
+        data: {
+          userId: purchase.box.drop.ownerId,
+          dropId: purchase.box.dropId,
+          type: 'shipping_credit',
+          description: `Shipping credit: ${purchase.box.itemName}`,
+          amount: storeShippingNet,
+        },
+      })
+      // Record platform fee on shipping
+      await tx.platformTransaction.create({
+        data: {
+          type: 'platform_fee_shipping',
+          description: `Platform fee (shipping): ${purchase.box.itemName}`,
+          amount: platformFee,
+          dropId: purchase.box.dropId,
+        },
+      })
+    }
 
     return { order, purchase }
   })
@@ -73,13 +118,18 @@ export async function POST(req: NextRequest) {
   return ok({ orderId: order.order.id }, 201)
 }
 
-// GET /api/orders - buyer's order history
-export async function GET() {
+export async function GET(req: NextRequest) {
   const user = await getSession()
   if (!user) return err('Unauthorized', 401)
 
+  const { searchParams } = new URL(req.url)
+  const purchaseId = searchParams.get('purchaseId')
+
   const purchases = await prisma.purchase.findMany({
-    where: { buyerId: user.id },
+    where: {
+      buyerId: user.id,
+      ...(purchaseId ? { id: purchaseId } : {}),
+    },
     include: {
       box: { include: { drop: { select: { name: true, emoji: true } } } },
       order: true,
