@@ -15,7 +15,7 @@ export default async function StoreHistoryPage() {
   const transactions = await prisma.transaction.findMany({
     where: {
       userId: user.id,
-      type: { in: ['sale', 'buyback'] },
+      type: { in: ['sale', 'buyback', 'shipping_credit'] },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -24,20 +24,41 @@ export default async function StoreHistoryPage() {
     const amt = Math.abs(Number(t.amount))
     if (t.type === 'sale') return Math.round((amt / 0.95) * 100) / 100
     if (t.type === 'buyback') return amt
+    if (t.type === 'shipping_credit') return Math.round((amt / 0.95) * 100) / 100
     return amt
   }
 
   function getFee(t: { type: string; amount: unknown }) {
-    return Math.round(getGross(t) * 0.05 * 100) / 100
+    const gross = getGross(t)
+    if (t.type === 'sale' || t.type === 'shipping_credit') return Math.round(gross * 0.05 * 100) / 100
+    return 0
   }
 
   const saleTxs = transactions.filter(t => t.type === 'sale')
   const buybackTxs = transactions.filter(t => t.type === 'buyback')
+  const shippingTxs = transactions.filter(t => t.type === 'shipping_credit')
 
   const totalGrossSales = saleTxs.reduce((s, t) => s + getGross(t), 0)
   const totalGrossBuybacks = buybackTxs.reduce((s, t) => s + getGross(t), 0)
+  const totalGrossShipping = shippingTxs.reduce((s, t) => s + getGross(t), 0)
   const totalPlatformFees = transactions.reduce((s, t) => s + getFee(t), 0)
-  const netRevenue = saleTxs.reduce((s, t) => s + Number(t.amount), 0) - totalGrossBuybacks
+  const netRevenue = saleTxs.reduce((s, t) => s + Number(t.amount), 0)
+    - totalGrossBuybacks
+    + shippingTxs.reduce((s, t) => s + Number(t.amount), 0)
+
+  function getTypeLabel(type: string) {
+    if (type === 'sale') return 'Sale'
+    if (type === 'buyback') return 'Buyback'
+    if (type === 'shipping_credit') return 'Shipping'
+    return type
+  }
+
+  function getTypeCls(type: string) {
+    if (type === 'sale') return styles.badgeSale
+    if (type === 'buyback') return styles.badgeBuyback
+    if (type === 'shipping_credit') return styles.badgeShipping
+    return styles.badgeOther
+  }
 
   return (
     <div className={styles.wrap}>
@@ -52,6 +73,10 @@ export default async function StoreHistoryPage() {
         <div className={styles.stat}>
           <div className={styles.statVal} style={{color:'#3DD68C'}}>${totalGrossSales.toFixed(2)}</div>
           <div className={styles.statLbl}>Gross Sales</div>
+        </div>
+        <div className={styles.stat}>
+          <div className={styles.statVal} style={{color:'#7EC8FF'}}>${totalGrossShipping.toFixed(2)}</div>
+          <div className={styles.statLbl}>Gross Shipping</div>
         </div>
         <div className={styles.stat}>
           <div className={styles.statVal} style={{color:'#FF8FA3'}}>${totalGrossBuybacks.toFixed(2)}</div>
@@ -78,7 +103,7 @@ export default async function StoreHistoryPage() {
             <span>Date</span>
             <span>Description</span>
             <span>Type</span>
-            <span>Price</span>
+            <span>Gross</span>
             <span>Platform Fee</span>
             <span>Net</span>
           </div>
@@ -94,16 +119,14 @@ export default async function StoreHistoryPage() {
                 </span>
                 <span className={styles.cellDesc}>{t.description}</span>
                 <span>
-                  <span className={`${styles.badge} ${
-                    t.type === 'sale' ? styles.badgeSale :
-                    t.type === 'buyback' ? styles.badgeBuyback :
-                    styles.badgeOther
-                  }`}>
-                    {t.type === 'sale' ? 'Sale' : t.type === 'buyback' ? 'Buyback' : t.type}
+                  <span className={`${styles.badge} ${getTypeCls(t.type)}`}>
+                    {getTypeLabel(t.type)}
                   </span>
                 </span>
                 <span className={styles.cellMono}>${gross.toFixed(2)}</span>
-                <span className={`${styles.cellMono} ${styles.amtNeg}`}>−${fee.toFixed(2)}</span>
+                <span className={`${styles.cellMono} ${fee > 0 ? styles.amtNeg : ''}`}>
+                  {fee > 0 ? `−$${fee.toFixed(2)}` : '—'}
+                </span>
                 <span className={`${styles.cellMono} ${isNeg ? styles.amtNeg : styles.amtPos}`}>
                   {isNeg ? '−' : '+'}${Math.abs(net).toFixed(2)}
                 </span>
