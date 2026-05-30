@@ -9,7 +9,7 @@ type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; i
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
 type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
-type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string }
+type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; addQty: number }
 
 export default function StoreOwnerClient({ user, transactions, drops }: {
   user: { id: string; name: string; email: string; company: string; storeBalance: number }
@@ -51,7 +51,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [editError, setEditError] = useState('')
   const [existingBoxes, setExistingBoxes] = useState<ExistingBox[]>([])
   const [editBoxesLoading, setEditBoxesLoading] = useState(false)
-  const [newBoxes, setNewBoxes] = useState<BoxDef[]>([])
   const [removeBoxIds, setRemoveBoxIds] = useState<string[]>([])
   const [itemEdits, setItemEdits] = useState<Record<string, ItemEdit>>({})
   const [eName, setEName] = useState('')
@@ -122,7 +121,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditPricingType(drop.pricingType === 'dynamic' ? 'dynamic' : 'fixed')
     setEditCategory(drop.category ?? 'Other Collectibles')
     setEditError('')
-    setNewBoxes([])
     setRemoveBoxIds([])
     setItemEdits({})
     setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
@@ -138,6 +136,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           if (!map[k]) map[k] = {
             oldName: b.itemName, oldPrice: b.itemPrice, oldShipping: b.itemShippingCost,
             newName: b.itemName, newPrice: String(b.itemPrice), newShipping: String(b.itemShippingCost),
+            addQty: 0,
           }
         })
         setItemEdits(map)
@@ -149,10 +148,29 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   function addEditBox() {
     const price = parseFloat(ePrice)
     if (!eName || isNaN(price) || price <= 0) { setEditError('Enter a valid item name and price.'); return }
-    setNewBoxes(prev => [...prev, {
-      itemName: eName, itemPrice: price, itemShippingCost: parseFloat(eShip) || 0,
-      itemImageUrl: eImg, qty: Math.max(1, parseInt(eQty) || 1), _id: Math.random().toString(36).slice(2),
-    }])
+    // Check if item already exists in existing boxes
+    const existingKey = Object.keys(itemEdits).find(k => {
+      const edit = itemEdits[k]
+      return edit.newName === eName && parseFloat(edit.newPrice) === price
+    })
+    if (existingKey) {
+      setItemEdits(prev => ({ ...prev, [existingKey]: { ...prev[existingKey], addQty: prev[existingKey].addQty + (parseInt(eQty) || 1) } }))
+    } else {
+      // Add as new item key
+      const k = `${eName}|||${price}_new_${Date.now()}`
+      setItemEdits(prev => ({
+        ...prev,
+        [k]: {
+          oldName: eName, oldPrice: price, oldShipping: parseFloat(eShip) || 0,
+          newName: eName, newPrice: String(price), newShipping: String(parseFloat(eShip) || 0),
+          addQty: parseInt(eQty) || 1,
+        }
+      }))
+      setExistingBoxes(prev => [...prev, {
+        id: k, itemName: eName, itemPrice: price,
+        itemShippingCost: parseFloat(eShip) || 0, itemImageUrl: eImg || null, sold: false,
+      }])
+    }
     setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
     setEditError('')
   }
@@ -163,11 +181,22 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditSaving(true); setEditError('')
 
     const updateItems = Object.values(itemEdits)
-      .filter(it => it.newName !== it.oldName || parseFloat(it.newPrice) !== it.oldPrice || parseFloat(it.newShipping) !== it.oldShipping)
+      .filter(it => !it.oldName.includes('_new_') && (it.newName !== it.oldName || parseFloat(it.newPrice) !== it.oldPrice || parseFloat(it.newShipping) !== it.oldShipping))
       .map(it => ({
         oldName: it.oldName, oldPrice: it.oldPrice,
         newName: it.newName, newPrice: parseFloat(it.newPrice) || it.oldPrice,
         newShipping: parseFloat(it.newShipping) || 0,
+      }))
+
+    // Build addBoxes from addQty > 0
+    const addBoxes = Object.values(itemEdits)
+      .filter(it => it.addQty > 0)
+      .map(it => ({
+        itemName: it.newName,
+        itemPrice: parseFloat(it.newPrice) || it.oldPrice,
+        itemShippingCost: parseFloat(it.newShipping) || 0,
+        itemImageUrl: null,
+        qty: it.addQty,
       }))
 
     try {
@@ -180,7 +209,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           sellBackPct: Math.min(100, Math.max(1, parseInt(editSellBackPct) || 90)),
           pricingType: editPricingType,
           category: editCategory,
-          addBoxes: newBoxes.length > 0 ? newBoxes : undefined,
+          addBoxes: addBoxes.length > 0 ? addBoxes : undefined,
           removeBoxIds: removeBoxIds.length > 0 ? removeBoxIds : undefined,
           updateItems: updateItems.length > 0 ? updateItems : undefined,
         }),
@@ -434,7 +463,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 {Object.entries(existingItemMap).map(([k, it]) => {
                   const edit = itemEdits[k]
                   const markedCount = it.unsoldIds.filter(id => removeBoxIds.includes(id)).length
-                  const availableAfter = it.unsoldIds.length - markedCount
+                  const availableAfter = it.unsoldIds.length - markedCount + (edit?.addQty ?? 0)
                   if (!edit) return null
                   return (
                     <div key={k} className={`${styles.editItemBlock} ${availableAfter === 0 && it.unsoldIds.length > 0 ? styles.itemRowRemove : ''}`}>
@@ -454,27 +483,43 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                           </div>
                         </div>
                         <div className={styles.qtyControls}>
-                          <button className={styles.qtyBtn} disabled={availableAfter === 0} onClick={() => { const last = it.unsoldIds.find(id => !removeBoxIds.includes(id)); if (last) setRemoveBoxIds(prev => [...prev, last]) }}>−</button>
+                          <button
+                            className={styles.qtyBtn}
+                            disabled={availableAfter === 0}
+                            onClick={() => {
+                              if ((edit.addQty ?? 0) > 0) {
+                                setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: prev[k].addQty - 1 } }))
+                              } else {
+                                const lastUnmarked = it.unsoldIds.find(id => !removeBoxIds.includes(id))
+                                if (lastUnmarked) setRemoveBoxIds(prev => [...prev, lastUnmarked])
+                              }
+                            }}
+                          >−</button>
                           <span className={styles.qtyVal}>{availableAfter}</span>
-                          <button className={styles.qtyBtn} onClick={() => { const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id)); if (lastMarked) { setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked)) } else { setNewBoxes(prev => [...prev, { itemName: edit.newName, itemPrice: parseFloat(edit.newPrice) || it.price, itemShippingCost: parseFloat(edit.newShipping) || it.shipping, itemImageUrl: it.imageUrl ?? '', qty: 1, _id: Math.random().toString(36).slice(2) }]) } }}>+</button>
+                          <button
+                            className={styles.qtyBtn}
+                            onClick={() => {
+                              const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id))
+                              if (lastMarked) {
+                                setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked))
+                              } else {
+                                setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: (prev[k].addQty ?? 0) + 1 } }))
+                              }
+                            }}
+                          >+</button>
                         </div>
                       </div>
-                      <div className={styles.editItemMeta}>{it.soldCount} sold · {availableAfter} available</div>
+                      <div className={styles.editItemMeta}>
+                        {it.soldCount} sold · {it.unsoldIds.length - it.unsoldIds.filter(id => removeBoxIds.includes(id)).length} current
+                        {(edit.addQty ?? 0) > 0 && <span style={{color:'#5FFFA8'}}> +{edit.addQty} adding</span>}
+                      </div>
                     </div>
                   )
                 })}
-                {newBoxes.map(b => (
-                  <div key={b._id} className={`${styles.itemRow} ${styles.itemRowNew}`}>
-                    {b.itemImageUrl && <img src={b.itemImageUrl} alt={b.itemName} style={{width:28,height:28,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
-                    <span className={styles.itemName}>{b.itemName}{b.qty > 1 ? ` ×${b.qty}` : ''} <span style={{color:'#5FFFA8',fontSize:'0.6rem'}}>NEW</span></span>
-                    <span className={styles.itemPrice}>${b.itemPrice}</span>
-                    <button className={styles.removeBtn} onClick={() => setNewBoxes(prev => prev.filter(x => x._id !== b._id))}>✕</button>
-                  </div>
-                ))}
               </div>
             )}
 
-            <div className={styles.editSection}>Add New Items</div>
+            <div className={styles.editSection}>Add New Item Type</div>
             <div className={styles.itemGrid}>
               <div><label>Name</label><input value={eName} onChange={e => setEName(e.target.value)} /></div>
               <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" /></div>
