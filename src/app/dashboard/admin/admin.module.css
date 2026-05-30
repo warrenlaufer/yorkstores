@@ -22,3 +22,6 @@
 .role_BUYER { background: rgba(255,107,133,0.12); color: #FF8FA3; }
 .role_STORE_OWNER { background: rgba(61,214,140,0.12); color: #5FFFA8; }
 .role_ADMIN { background: rgba(245,200,66,0.15); color: #F5C842; }
+
+.exportBtn { background: #1D1D26; color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 7px; font-family: var(--font); font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.85rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+.exportBtn:hover { border-color: #FF6B85; color: #FF8FA3; }

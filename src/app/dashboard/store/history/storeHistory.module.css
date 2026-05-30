@@ -54,3 +54,6 @@
 .badgeBuyback { background: rgba(255,107,133,0.12); color: #FF8FA3; }
 .badgeShipping { background: rgba(96,165,250,0.15); color: #7EC8FF; }
 .badgeOther { background: rgba(255,255,255,0.08); color: var(--text2); }
+
+.exportBtn { background: #1D1D26; color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 7px; font-family: var(--font); font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.85rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+.exportBtn:hover { border-color: #FF6B85; color: #FF8FA3; }

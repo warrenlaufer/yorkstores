@@ -102,16 +102,19 @@ export default function HistoryClient({ purchases, stats }: { purchases: Purchas
           <h1 className={styles.title}>History</h1>
           <p className={styles.sub}>All boxes you've opened and their outcomes.</p>
         </div>
-        <select
-          className={styles.filterSelect}
-          value={filter}
-          onChange={e => setFilter(e.target.value as any)}
-        >
-          <option value="all">All Activity</option>
-          <option value="purchase">Purchases</option>
-          <option value="soldback">Sold Back</option>
-          <option value="shipped">Shipped</option>
-        </select>
+        <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
+          <select
+            className={styles.filterSelect}
+            value={filter}
+            onChange={e => setFilter(e.target.value as any)}
+          >
+            <option value="all">All Activity</option>
+            <option value="purchase">Purchases</option>
+            <option value="soldback">Sold Back</option>
+            <option value="shipped">Shipped</option>
+          </select>
+          <a href="/api/export/buyer" className={styles.exportBtn}>⬇ CSV</a>
+        </div>
       </div>
 
       <div className={styles.stats}>

@@ -41,9 +41,12 @@ export default async function AdminPage() {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Admin Dashboard</h1>
-        <p className={styles.sub}>Platform overview and user management.</p>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Admin Dashboard</h1>
+          <p className={styles.sub}>Platform overview and user management.</p>
+        </div>
+        <a href="/api/export/admin" className={styles.exportBtn}>⬇ Download CSV</a>
       </div>
 
       <div className={styles.statsGrid}>
@@ -51,7 +54,7 @@ export default async function AdminPage() {
         <div className={styles.statCard}><div className={styles.statVal}>{dropCount}</div><div className={styles.statLbl}>Total Drops</div></div>
         <div className={styles.statCard}><div className={styles.statVal}>{purchaseCount}</div><div className={styles.statLbl}>Total Purchases</div></div>
         <div className={styles.statCard}><div className={styles.statVal} style={{color:'#F5C842'}}>${totalRevenue.toFixed(2)}</div><div className={styles.statLbl}>Gross Revenue</div></div>
-        <div className={styles.statCard}><div className={styles.statVal} style={{color:'#3DD68C'}}>${totalPlatformRevenue.toFixed(2)}</div><div className={styles.statLbl}>Platform Revenue (10%)</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color:'#3DD68C'}}>${totalPlatformRevenue.toFixed(2)}</div><div className={styles.statLbl}>Platform Revenue (5%)</div></div>
       </div>
 
       <div className={styles.section}>Platform Revenue</div>
@@ -64,7 +67,7 @@ export default async function AdminPage() {
             <span className={styles.cellMuted}>{new Date(t.createdAt).toLocaleDateString()}</span>
             <span>{t.description}</span>
             <span className={styles.cellMuted}>{t.drop?.name ?? '—'}</span>
-            <span><span className={styles.roleBadge}>{t.type.replace('_', ' ')}</span></span>
+            <span><span className={styles.roleBadge}>{t.type.replace(/_/g, ' ')}</span></span>
             <span style={{fontFamily:'var(--mono)',color:'#3DD68C'}}>+${Number(t.amount).toFixed(2)}</span>
           </div>
         ))}

@@ -77,3 +77,6 @@
 .outcome_AUTO_SOLD { background: rgba(255,255,255,0.08); color: var(--text2); }
 .outcome_AUTO_FAILED { background: rgba(255,107,133,0.12); color: #FF8FA3; }
 .outcome_BUY { background: rgba(245,200,66,0.15); color: var(--gold); }
+
+.exportBtn { background: #1D1D26; color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 7px; font-family: var(--font); font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.85rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
+.exportBtn:hover { border-color: #FF6B85; color: #FF8FA3; }
