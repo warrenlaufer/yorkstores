@@ -29,16 +29,14 @@ export async function POST(req: NextRequest) {
   const sellBackPct = purchase.box.drop.sellBackPct
   const owner = purchase.box.drop.owner
 
-  // Calculate refund: item value × sellBackPct%, minus 5% platform fee
-  const grossRefund = Math.round(itemValue * (sellBackPct / 100) * 100) / 100
-  const sellBackPlatformFee = Math.round(grossRefund * 0.05 * 100) / 100
-  const buyerRefund = Math.round((grossRefund - sellBackPlatformFee) * 100) / 100
+  // Buyer gets the full sellBackPct% of item value — no platform fee on buybacks
+  const buyerRefund = Math.round(itemValue * (sellBackPct / 100) * 100) / 100
 
-  if (Number(owner.storeBalance) < grossRefund) return err('Store wallet insufficient for buyback')
+  if (Number(owner.storeBalance) < buyerRefund) return err('Store wallet insufficient for buyback')
 
   await prisma.$transaction([
     prisma.user.update({ where: { id: user.id }, data: { walletBalance: { increment: buyerRefund } } }),
-    prisma.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: grossRefund } } }),
+    prisma.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: buyerRefund } } }),
     prisma.box.update({ where: { id: purchase.box.id }, data: { sold: false } }),
     prisma.purchase.update({
       where: { id: purchase.id },
@@ -48,15 +46,7 @@ export async function POST(req: NextRequest) {
       data: { userId: user.id, dropId: purchase.box.dropId, type: 'sellback', description: `Sold back: ${purchase.box.itemName}`, amount: buyerRefund },
     }),
     prisma.transaction.create({
-      data: { userId: owner.id, dropId: purchase.box.dropId, type: 'buyback', description: `Buyback: ${purchase.box.itemName}`, amount: -grossRefund },
-    }),
-    prisma.platformTransaction.create({
-      data: {
-        type: 'platform_fee_buyback',
-        description: `Platform fee (buyback): ${purchase.box.itemName}`,
-        amount: sellBackPlatformFee,
-        dropId: purchase.box.dropId,
-      },
+      data: { userId: owner.id, dropId: purchase.box.dropId, type: 'buyback', description: `Buyback: ${purchase.box.itemName}`, amount: -buyerRefund },
     }),
   ])
 
