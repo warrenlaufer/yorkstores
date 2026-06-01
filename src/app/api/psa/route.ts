@@ -10,36 +10,38 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const certNumber = searchParams.get('cert')
+  const debug = searchParams.get('debug')
   if (!certNumber) return err('Cert number required')
 
   const token = process.env.PSA_API_TOKEN
   if (!token) return err('PSA API not configured')
 
   try {
-    const res = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNumber.trim()}`, {
+    const url = `https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNumber.trim()}`
+    const res = await fetch(url, {
       headers: {
         'Authorization': `bearer ${token}`,
         'Content-Type': 'application/json',
       },
     })
 
-    const data = await res.json()
-    console.log('PSA API response:', JSON.stringify(data).slice(0, 500))
+    const text = await res.text()
+    let data: any
+    try { data = JSON.parse(text) } catch { return err(`PSA returned non-JSON: ${text.slice(0, 200)}`) }
+
+    // Return raw response in debug mode
+    if (debug === '1') return ok({ status: res.status, data })
 
     if (!data.IsValidRequest) {
-      return err(data.ServerMessage || 'Invalid cert number')
+      return err(data.ServerMessage || `Invalid request (status ${res.status})`)
     }
 
     if (data.ServerMessage === 'No data found') {
       return err('No card found for this cert number')
     }
 
-    // The cert data can be in different keys depending on the item type
     const cert = data.PSACert ?? data.PSACard ?? data.Cert ?? data
 
-    if (!cert) return err('Could not parse PSA response')
-
-    // Build item name from available fields
     const parts = [
       cert.Year ?? cert.year,
       cert.Brand ?? cert.brand,
@@ -49,11 +51,7 @@ export async function GET(req: NextRequest) {
     ].filter(Boolean)
 
     const itemName = parts.join(' ') || `PSA Cert #${certNumber}`
-
-    // Try multiple image URL formats
-    const imageUrl = cert.CertImageFront
-      ? `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNumber}/large/${certNumber}_f.jpg`
-      : cert.ImageURL ?? null
+    const imageUrl = `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNumber}/large/${certNumber}_f.jpg`
 
     return ok({
       certNumber,
@@ -66,10 +64,8 @@ export async function GET(req: NextRequest) {
       cardNumber: cert.CardNumber,
       sport: cert.Sport ?? cert.Category,
       imageUrl,
-      rawCert: cert,
     })
-  } catch (e) {
-    console.error('PSA lookup error:', e)
-    return err('Failed to lookup PSA cert')
+  } catch (e: any) {
+    return err('Failed to lookup PSA cert: ' + e.message)
   }
 }
