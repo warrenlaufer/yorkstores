@@ -16,46 +16,55 @@ export async function GET(req: NextRequest) {
   if (!token) return err('PSA API not configured')
 
   try {
-    const res = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNumber}`, {
+    const res = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNumber.trim()}`, {
       headers: {
         'Authorization': `bearer ${token}`,
         'Content-Type': 'application/json',
       },
     })
 
-    if (!res.ok) return err('PSA cert not found', 404)
-
     const data = await res.json()
-    const cert = data.PSACert
+    console.log('PSA API response:', JSON.stringify(data).slice(0, 500))
 
-    if (!cert || !data.IsValidRequest) return err('Invalid PSA cert number')
+    if (!data.IsValidRequest) {
+      return err(data.ServerMessage || 'Invalid cert number')
+    }
 
-    // Build item name from card details
+    if (data.ServerMessage === 'No data found') {
+      return err('No card found for this cert number')
+    }
+
+    // The cert data can be in different keys depending on the item type
+    const cert = data.PSACert ?? data.PSACard ?? data.Cert ?? data
+
+    if (!cert) return err('Could not parse PSA response')
+
+    // Build item name from available fields
     const parts = [
-      cert.Year,
-      cert.Brand,
-      cert.Subject,
+      cert.Year ?? cert.year,
+      cert.Brand ?? cert.brand,
+      cert.Subject ?? cert.subject ?? cert.PlayerName,
       cert.CardNumber ? `#${cert.CardNumber}` : null,
-      cert.GradeDescription ? `PSA ${cert.GradeDescription}` : cert.PSAGrade ? `PSA ${cert.PSAGrade}` : null,
+      cert.PSAGrade ? `PSA ${cert.PSAGrade}` : null,
     ].filter(Boolean)
 
-    const itemName = parts.join(' ')
+    const itemName = parts.join(' ') || `PSA Cert #${certNumber}`
 
-    // Get front image URL
+    // Try multiple image URL formats
     const imageUrl = cert.CertImageFront
       ? `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNumber}/large/${certNumber}_f.jpg`
-      : null
+      : cert.ImageURL ?? null
 
     return ok({
       certNumber,
       itemName,
-      grade: cert.PSAGrade,
+      grade: cert.PSAGrade ?? cert.Grade,
       gradeDescription: cert.GradeDescription,
-      year: cert.Year,
-      brand: cert.Brand,
-      subject: cert.Subject,
+      year: cert.Year ?? cert.year,
+      brand: cert.Brand ?? cert.brand,
+      subject: cert.Subject ?? cert.subject ?? cert.PlayerName,
       cardNumber: cert.CardNumber,
-      sport: cert.Sport,
+      sport: cert.Sport ?? cert.Category,
       imageUrl,
       rawCert: cert,
     })
