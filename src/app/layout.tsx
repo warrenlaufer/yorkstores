@@ -6,7 +6,7 @@ const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' })
 const spaceMono = Space_Mono({ subsets: ['latin'], weight: ['400', '700'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
-  title: 'Yorkstores — Mystery Box Platform',
+  title: 'Yorkstores',
   description: 'Open mystery boxes. Choose delivery or sell back within 5 minutes.',
   icons: {
     icon: '/favicon.svg',
