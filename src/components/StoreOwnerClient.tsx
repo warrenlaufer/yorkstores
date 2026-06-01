@@ -25,6 +25,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [sellBackPct, setSellBackPct] = useState('90')
   const [pricingType, setPricingType] = useState<'fixed' | 'dynamic'>('fixed')
   const [category, setCategory] = useState('Other Collectibles')
+  const [shippingMode, setShippingMode] = useState<'flat' | 'per_item'>('per_item')
+  const [flatShipping, setFlatShipping] = useState('')
   const [boxes, setBoxes] = useState<BoxDef[]>([])
   const [iName, setIName] = useState('')
   const [iPrice, setIPrice] = useState('')
@@ -74,6 +76,9 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [eQty, setEQty] = useState('1')
   const editLogoInputRef = useRef<HTMLInputElement>(null)
   const editItemImgInputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-populate shipping when flat mode
+  const effectiveShip = shippingMode === 'flat' ? flatShipping : iShip
 
   async function uploadImage(file: File): Promise<string> {
     const formData = new FormData()
@@ -274,12 +279,14 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
   function addBox() {
     const price = parseFloat(iPrice)
+    const shipPrice = parseFloat(effectiveShip) || 0
     if (!iName || isNaN(price) || price <= 0) { setError('Enter a valid item name and price.'); return }
     setBoxes(prev => [...prev, {
-      itemName: iName, itemPrice: price, itemShippingCost: parseFloat(iShip) || 0,
+      itemName: iName, itemPrice: price, itemShippingCost: shipPrice,
       itemImageUrl: iImg, qty: Math.max(1, parseInt(iQty) || 1), _id: Math.random().toString(36).slice(2),
     }])
-    setIName(''); setIPrice(''); setIShip(''); setIImg(''); setIImgPreview(''); setIQty('1')
+    setIName(''); setIPrice(''); setIImg(''); setIImgPreview(''); setIQty('1')
+    if (shippingMode === 'per_item') setIShip('')
     setPsaCert(''); setPsaResult(null); setPsaError('')
     setPcgsCert(''); setPcgsResult(null); setPcgsError('')
     setError('')
@@ -306,7 +313,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setSuccess('Drop published!')
-      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setCategory('Other Collectibles'); setBoxes([])
+      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setCategory('Other Collectibles')
+      setShippingMode('per_item'); setFlatShipping(''); setBoxes([])
       setTimeout(() => { setSuccess(''); router.refresh() }, 1500)
     } catch { setError('Something went wrong.') }
     finally { setPublishing(false) }
@@ -403,18 +411,34 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           <div className={styles.panel} style={{marginTop:'0.75rem'}}>
             <div className={styles.panelTitle}>Add Items</div>
 
+            {/* Shipping mode toggle */}
+            <div className="field">
+              <label>Shipping</label>
+              <div className={styles.pricingToggle}>
+                <button type="button" className={`${styles.pricingBtn} ${shippingMode === 'flat' ? styles.pricingBtnActive : ''}`} onClick={() => setShippingMode('flat')}>Flat Rate</button>
+                <button type="button" className={`${styles.pricingBtn} ${shippingMode === 'per_item' ? styles.pricingBtnActive : ''}`} onClick={() => setShippingMode('per_item')}>Per Item</button>
+              </div>
+              {shippingMode === 'flat' && (
+                <div style={{marginTop:'0.4rem',display:'flex',alignItems:'center',gap:'0.5rem'}}>
+                  <span style={{fontSize:'0.72rem',color:'var(--text2)',flexShrink:0}}>Flat rate $</span>
+                  <input
+                    type="number"
+                    value={flatShipping}
+                    onChange={e => setFlatShipping(e.target.value)}
+                    min="0"
+                    placeholder="0.00"
+                    style={{width:90}}
+                  />
+                </div>
+              )}
+              <p className={styles.sellBackHint}>{shippingMode === 'flat' ? 'Same shipping cost applied to all items.' : 'Enter shipping cost for each item individually.'}</p>
+            </div>
+
             {category === 'Trading Cards' && (
               <div className={styles.psaSection}>
                 <div className={styles.psaLabel}>PSA Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
                 <div className={styles.psaRow}>
-                  <input
-                    className={styles.psaInput}
-                    type="text"
-                    value={psaCert}
-                    onChange={e => { setPsaCert(e.target.value); setPsaResult(null); setPsaError('') }}
-                    onKeyDown={e => e.key === 'Enter' && lookupPSA()}
-                    placeholder="Enter PSA cert number…"
-                  />
+                  <input className={styles.psaInput} type="text" value={psaCert} onChange={e => { setPsaCert(e.target.value); setPsaResult(null); setPsaError('') }} onKeyDown={e => e.key === 'Enter' && lookupPSA()} placeholder="Enter PSA cert number…" />
                   <button className={styles.psaBtn} onClick={lookupPSA} disabled={psaLoading || !psaCert.trim()}>
                     {psaLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
                   </button>
@@ -425,10 +449,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                     {psaResult.imageUrl && <img src={psaResult.imageUrl} alt={psaResult.itemName} className={styles.psaImage} />}
                     <div className={styles.psaResultInfo}>
                       <div className={styles.psaResultName}>{psaResult.itemName}</div>
-                      <div className={styles.psaResultMeta}>
-                        {psaResult.grade && <span>PSA {psaResult.grade}</span>}
-                        {psaResult.category && <span> · {psaResult.category}</span>}
-                      </div>
+                      <div className={styles.psaResultMeta}>{psaResult.grade && <span>PSA {psaResult.grade}</span>}{psaResult.category && <span> · {psaResult.category}</span>}</div>
                       <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
                     </div>
                   </div>
@@ -440,14 +461,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.psaSection}>
                 <div className={styles.psaLabel} style={{color:'#F5C842'}}>PCGS Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
                 <div className={styles.psaRow}>
-                  <input
-                    className={styles.psaInput}
-                    type="text"
-                    value={pcgsCert}
-                    onChange={e => { setPcgsCert(e.target.value); setPcgsResult(null); setPcgsError('') }}
-                    onKeyDown={e => e.key === 'Enter' && lookupPCGS()}
-                    placeholder="Enter PCGS cert number…"
-                  />
+                  <input className={styles.psaInput} type="text" value={pcgsCert} onChange={e => { setPcgsCert(e.target.value); setPcgsResult(null); setPcgsError('') }} onKeyDown={e => e.key === 'Enter' && lookupPCGS()} placeholder="Enter PCGS cert number…" />
                   <button className={styles.pcgsBtn} onClick={lookupPCGS} disabled={pcgsLoading || !pcgsCert.trim()}>
                     {pcgsLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
                   </button>
@@ -458,10 +472,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                     {pcgsResult.imageUrl && <img src={pcgsResult.imageUrl} alt={pcgsResult.itemName} className={styles.psaImage} />}
                     <div className={styles.psaResultInfo}>
                       <div className={styles.psaResultName}>{pcgsResult.itemName}</div>
-                      <div className={styles.psaResultMeta}>
-                        {pcgsResult.grade && <span>PCGS {pcgsResult.grade}</span>}
-                        {pcgsResult.denomination && <span> · {pcgsResult.denomination}</span>}
-                      </div>
+                      <div className={styles.psaResultMeta}>{pcgsResult.grade && <span>PCGS {pcgsResult.grade}</span>}{pcgsResult.denomination && <span> · {pcgsResult.denomination}</span>}</div>
                       {pcgsResult.priceGuideValue ? (
                         <p className={styles.psaResultHint} style={{color:'#F5C842'}}>Price guide: ${pcgsResult.priceGuideValue} — pre-filled below, adjust as needed.</p>
                       ) : (
@@ -473,10 +484,10 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               </div>
             )}
 
-            <div className={styles.itemGrid}>
+            <div className={shippingMode === 'flat' ? styles.itemGridNoShip : styles.itemGrid}>
               <div><label>Name</label><input value={iName} onChange={e => setIName(e.target.value)} onKeyDown={e => e.key==='Enter'&&addBox()} /></div>
               <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" /></div>
-              <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} min="0" /></div>
+              {shippingMode === 'per_item' && <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} min="0" /></div>}
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
             </div>
             <div className="field">
@@ -519,6 +530,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 <div className={styles.previewRow}><span>Box price (avg +5%)</span><span style={{color:'#F5C842'}}>${boxPrice}</span></div>
                 <div className={styles.previewRow}><span>Sell-back rate</span><span>{sellBackNum}%</span></div>
                 <div className={styles.previewRow}><span>Pricing</span><span>{pricingType}</span></div>
+                <div className={styles.previewRow}><span>Shipping</span><span>{shippingMode === 'flat' ? `$${parseFloat(flatShipping||'0').toFixed(2)} flat` : 'Per item'}</span></div>
                 <div className={styles.previewRow}><span>Your revenue (95%)</span><span style={{color:'#3DD68C'}}>${(boxPrice * totalBoxes * 0.95).toFixed(2)}</span></div>
               </div>
             ) : <p className={styles.previewEmpty}>Add items to preview…</p>}
