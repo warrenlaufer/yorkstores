@@ -129,7 +129,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       setIName(data.data.itemName)
       setIImg(data.data.imageUrl ?? '')
       setIImgPreview(data.data.imageUrl ?? '')
-      setIPrice('')  // Store owner fills in value
+      setIPrice('')
     } catch { setPsaError('Failed to lookup cert') }
     finally { setPsaLoading(false) }
   }
@@ -380,37 +380,38 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           <div className={styles.panel} style={{marginTop:'0.75rem'}}>
             <div className={styles.panelTitle}>Add Items</div>
 
-            {/* PSA Lookup */}
-            <div className={styles.psaSection}>
-              <div className={styles.psaLabel}>PSA Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
-              <div className={styles.psaRow}>
-                <input
-                  className={styles.psaInput}
-                  type="text"
-                  value={psaCert}
-                  onChange={e => { setPsaCert(e.target.value); setPsaResult(null); setPsaError('') }}
-                  onKeyDown={e => e.key === 'Enter' && lookupPSA()}
-                  placeholder="Enter PSA cert number…"
-                />
-                <button className={styles.psaBtn} onClick={lookupPSA} disabled={psaLoading || !psaCert.trim()}>
-                  {psaLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
-                </button>
-              </div>
-              {psaError && <p className={styles.psaError}>{psaError}</p>}
-              {psaResult && (
-                <div className={styles.psaResult}>
-                  {psaResult.imageUrl && <img src={psaResult.imageUrl} alt={psaResult.itemName} className={styles.psaImage} />}
-                  <div className={styles.psaResultInfo}>
-                    <div className={styles.psaResultName}>{psaResult.itemName}</div>
-                    <div className={styles.psaResultMeta}>
-                      {psaResult.grade && <span>PSA {psaResult.grade}</span>}
-                      {psaResult.sport && <span> · {psaResult.sport}</span>}
-                    </div>
-                    <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
-                  </div>
+            {category === 'Trading Cards' && (
+              <div className={styles.psaSection}>
+                <div className={styles.psaLabel}>PSA Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
+                <div className={styles.psaRow}>
+                  <input
+                    className={styles.psaInput}
+                    type="text"
+                    value={psaCert}
+                    onChange={e => { setPsaCert(e.target.value); setPsaResult(null); setPsaError('') }}
+                    onKeyDown={e => e.key === 'Enter' && lookupPSA()}
+                    placeholder="Enter PSA cert number…"
+                  />
+                  <button className={styles.psaBtn} onClick={lookupPSA} disabled={psaLoading || !psaCert.trim()}>
+                    {psaLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
+                  </button>
                 </div>
-              )}
-            </div>
+                {psaError && <p className={styles.psaError}>{psaError}</p>}
+                {psaResult && (
+                  <div className={styles.psaResult}>
+                    {psaResult.imageUrl && <img src={psaResult.imageUrl} alt={psaResult.itemName} className={styles.psaImage} />}
+                    <div className={styles.psaResultInfo}>
+                      <div className={styles.psaResultName}>{psaResult.itemName}</div>
+                      <div className={styles.psaResultMeta}>
+                        {psaResult.grade && <span>PSA {psaResult.grade}</span>}
+                        {psaResult.category && <span> · {psaResult.category}</span>}
+                      </div>
+                      <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className={styles.itemGrid}>
               <div><label>Name</label><input value={iName} onChange={e => setIName(e.target.value)} onKeyDown={e => e.key==='Enter'&&addBox()} /></div>
@@ -419,7 +420,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
             </div>
             <div className="field">
-              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(optional — auto-filled from PSA)</span></label>
+              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>{category === 'Trading Cards' ? '(auto-filled from PSA)' : '(optional)'}</span></label>
               <div className={styles.itemImgRow}>
                 <div className={styles.itemImgUpload} onClick={() => itemImgInputRef.current?.click()}>
                   {iImgPreview ? <img src={iImgPreview} alt="Item preview" className={styles.itemImgPreview} /> : (
