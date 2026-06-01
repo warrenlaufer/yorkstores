@@ -39,6 +39,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const itemImgInputRef = useRef<HTMLInputElement>(null)
 
+  // PSA lookup state
+  const [psaCert, setPsaCert] = useState('')
+  const [psaLoading, setPsaLoading] = useState(false)
+  const [psaError, setPsaError] = useState('')
+  const [psaResult, setPsaResult] = useState<any>(null)
+
   const [editingDrop, setEditingDrop] = useState<DropSummary | null>(null)
   const [editName, setEditName] = useState('')
   const [editLogoUrl, setEditLogoUrl] = useState('')
@@ -112,6 +118,22 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     finally { setEImgUploading(false) }
   }
 
+  async function lookupPSA() {
+    if (!psaCert.trim()) return
+    setPsaLoading(true); setPsaError(''); setPsaResult(null)
+    try {
+      const res = await fetch(`/api/psa?cert=${psaCert.trim()}`)
+      const data = await res.json()
+      if (!res.ok) { setPsaError(data.error || 'Cert not found'); return }
+      setPsaResult(data.data)
+      setIName(data.data.itemName)
+      setIImg(data.data.imageUrl ?? '')
+      setIImgPreview(data.data.imageUrl ?? '')
+      setIPrice('')  // Store owner fills in value
+    } catch { setPsaError('Failed to lookup cert') }
+    finally { setPsaLoading(false) }
+  }
+
   async function openEdit(drop: DropSummary) {
     setEditingDrop(drop)
     setEditName(drop.name)
@@ -148,7 +170,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   function addEditBox() {
     const price = parseFloat(ePrice)
     if (!eName || isNaN(price) || price <= 0) { setEditError('Enter a valid item name and price.'); return }
-    // Check if item already exists in existing boxes
     const existingKey = Object.keys(itemEdits).find(k => {
       const edit = itemEdits[k]
       return edit.newName === eName && parseFloat(edit.newPrice) === price
@@ -156,7 +177,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (existingKey) {
       setItemEdits(prev => ({ ...prev, [existingKey]: { ...prev[existingKey], addQty: prev[existingKey].addQty + (parseInt(eQty) || 1) } }))
     } else {
-      // Add as new item key
       const k = `${eName}|||${price}_new_${Date.now()}`
       setItemEdits(prev => ({
         ...prev,
@@ -188,7 +208,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         newShipping: parseFloat(it.newShipping) || 0,
       }))
 
-    // Build addBoxes from addQty > 0
     const addBoxes = Object.values(itemEdits)
       .filter(it => it.addQty > 0)
       .map(it => ({
@@ -239,6 +258,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       itemImageUrl: iImg, qty: Math.max(1, parseInt(iQty) || 1), _id: Math.random().toString(36).slice(2),
     }])
     setIName(''); setIPrice(''); setIShip(''); setIImg(''); setIImgPreview(''); setIQty('1')
+    setPsaCert(''); setPsaResult(null); setPsaError('')
     setError('')
   }
 
@@ -359,6 +379,39 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
           <div className={styles.panel} style={{marginTop:'0.75rem'}}>
             <div className={styles.panelTitle}>Add Items</div>
+
+            {/* PSA Lookup */}
+            <div className={styles.psaSection}>
+              <div className={styles.psaLabel}>PSA Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
+              <div className={styles.psaRow}>
+                <input
+                  className={styles.psaInput}
+                  type="text"
+                  value={psaCert}
+                  onChange={e => { setPsaCert(e.target.value); setPsaResult(null); setPsaError('') }}
+                  onKeyDown={e => e.key === 'Enter' && lookupPSA()}
+                  placeholder="Enter PSA cert number…"
+                />
+                <button className={styles.psaBtn} onClick={lookupPSA} disabled={psaLoading || !psaCert.trim()}>
+                  {psaLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
+                </button>
+              </div>
+              {psaError && <p className={styles.psaError}>{psaError}</p>}
+              {psaResult && (
+                <div className={styles.psaResult}>
+                  {psaResult.imageUrl && <img src={psaResult.imageUrl} alt={psaResult.itemName} className={styles.psaImage} />}
+                  <div className={styles.psaResultInfo}>
+                    <div className={styles.psaResultName}>{psaResult.itemName}</div>
+                    <div className={styles.psaResultMeta}>
+                      {psaResult.grade && <span>PSA {psaResult.grade}</span>}
+                      {psaResult.sport && <span> · {psaResult.sport}</span>}
+                    </div>
+                    <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className={styles.itemGrid}>
               <div><label>Name</label><input value={iName} onChange={e => setIName(e.target.value)} onKeyDown={e => e.key==='Enter'&&addBox()} /></div>
               <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" /></div>
@@ -366,7 +419,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
             </div>
             <div className="field">
-              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(optional)</span></label>
+              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(optional — auto-filled from PSA)</span></label>
               <div className={styles.itemImgRow}>
                 <div className={styles.itemImgUpload} onClick={() => itemImgInputRef.current?.click()}>
                   {iImgPreview ? <img src={iImgPreview} alt="Item preview" className={styles.itemImgPreview} /> : (
@@ -483,30 +536,23 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                           </div>
                         </div>
                         <div className={styles.qtyControls}>
-                          <button
-                            className={styles.qtyBtn}
-                            disabled={availableAfter === 0}
-                            onClick={() => {
-                              if ((edit.addQty ?? 0) > 0) {
-                                setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: prev[k].addQty - 1 } }))
-                              } else {
-                                const lastUnmarked = it.unsoldIds.find(id => !removeBoxIds.includes(id))
-                                if (lastUnmarked) setRemoveBoxIds(prev => [...prev, lastUnmarked])
-                              }
-                            }}
-                          >−</button>
+                          <button className={styles.qtyBtn} disabled={availableAfter === 0} onClick={() => {
+                            if ((edit.addQty ?? 0) > 0) {
+                              setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: prev[k].addQty - 1 } }))
+                            } else {
+                              const last = it.unsoldIds.find(id => !removeBoxIds.includes(id))
+                              if (last) setRemoveBoxIds(prev => [...prev, last])
+                            }
+                          }}>−</button>
                           <span className={styles.qtyVal}>{availableAfter}</span>
-                          <button
-                            className={styles.qtyBtn}
-                            onClick={() => {
-                              const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id))
-                              if (lastMarked) {
-                                setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked))
-                              } else {
-                                setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: (prev[k].addQty ?? 0) + 1 } }))
-                              }
-                            }}
-                          >+</button>
+                          <button className={styles.qtyBtn} onClick={() => {
+                            const lastMarked = [...it.unsoldIds].reverse().find(id => removeBoxIds.includes(id))
+                            if (lastMarked) {
+                              setRemoveBoxIds(prev => prev.filter(x => x !== lastMarked))
+                            } else {
+                              setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: (prev[k].addQty ?? 0) + 1 } }))
+                            }
+                          }}>+</button>
                         </div>
                       </div>
                       <div className={styles.editItemMeta}>
