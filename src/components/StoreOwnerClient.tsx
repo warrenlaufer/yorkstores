@@ -45,6 +45,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [psaError, setPsaError] = useState('')
   const [psaResult, setPsaResult] = useState<any>(null)
 
+  // PCGS lookup state
+  const [pcgsCert, setPcgsCert] = useState('')
+  const [pcgsLoading, setPcgsLoading] = useState(false)
+  const [pcgsError, setPcgsError] = useState('')
+  const [pcgsResult, setPcgsResult] = useState<any>(null)
+
   const [editingDrop, setEditingDrop] = useState<DropSummary | null>(null)
   const [editName, setEditName] = useState('')
   const [editLogoUrl, setEditLogoUrl] = useState('')
@@ -132,6 +138,22 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       setIPrice('')
     } catch { setPsaError('Failed to lookup cert') }
     finally { setPsaLoading(false) }
+  }
+
+  async function lookupPCGS() {
+    if (!pcgsCert.trim()) return
+    setPcgsLoading(true); setPcgsError(''); setPcgsResult(null)
+    try {
+      const res = await fetch(`/api/pcgs?cert=${pcgsCert.trim()}`)
+      const data = await res.json()
+      if (!res.ok) { setPcgsError(data.error || 'Cert not found'); return }
+      setPcgsResult(data.data)
+      setIName(data.data.itemName)
+      setIImg(data.data.imageUrl ?? '')
+      setIImgPreview(data.data.imageUrl ?? '')
+      if (data.data.priceGuideValue) setIPrice(String(data.data.priceGuideValue))
+    } catch { setPcgsError('Failed to lookup cert') }
+    finally { setPcgsLoading(false) }
   }
 
   async function openEdit(drop: DropSummary) {
@@ -259,6 +281,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     }])
     setIName(''); setIPrice(''); setIShip(''); setIImg(''); setIImgPreview(''); setIQty('1')
     setPsaCert(''); setPsaResult(null); setPsaError('')
+    setPcgsCert(''); setPcgsResult(null); setPcgsError('')
     setError('')
   }
 
@@ -413,6 +436,43 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               </div>
             )}
 
+            {category === 'Certified Coins' && (
+              <div className={styles.psaSection}>
+                <div className={styles.psaLabel} style={{color:'#F5C842'}}>PCGS Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
+                <div className={styles.psaRow}>
+                  <input
+                    className={styles.psaInput}
+                    type="text"
+                    value={pcgsCert}
+                    onChange={e => { setPcgsCert(e.target.value); setPcgsResult(null); setPcgsError('') }}
+                    onKeyDown={e => e.key === 'Enter' && lookupPCGS()}
+                    placeholder="Enter PCGS cert number…"
+                  />
+                  <button className={styles.pcgsBtn} onClick={lookupPCGS} disabled={pcgsLoading || !pcgsCert.trim()}>
+                    {pcgsLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
+                  </button>
+                </div>
+                {pcgsError && <p className={styles.psaError}>{pcgsError}</p>}
+                {pcgsResult && (
+                  <div className={styles.psaResult}>
+                    {pcgsResult.imageUrl && <img src={pcgsResult.imageUrl} alt={pcgsResult.itemName} className={styles.psaImage} />}
+                    <div className={styles.psaResultInfo}>
+                      <div className={styles.psaResultName}>{pcgsResult.itemName}</div>
+                      <div className={styles.psaResultMeta}>
+                        {pcgsResult.grade && <span>PCGS {pcgsResult.grade}</span>}
+                        {pcgsResult.denomination && <span> · {pcgsResult.denomination}</span>}
+                      </div>
+                      {pcgsResult.priceGuideValue ? (
+                        <p className={styles.psaResultHint} style={{color:'#F5C842'}}>Price guide: ${pcgsResult.priceGuideValue} — pre-filled below, adjust as needed.</p>
+                      ) : (
+                        <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className={styles.itemGrid}>
               <div><label>Name</label><input value={iName} onChange={e => setIName(e.target.value)} onKeyDown={e => e.key==='Enter'&&addBox()} /></div>
               <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" /></div>
@@ -420,7 +480,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
             </div>
             <div className="field">
-              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>{category === 'Trading Cards' ? '(auto-filled from PSA)' : '(optional)'}</span></label>
+              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>{category === 'Trading Cards' || category === 'Certified Coins' ? '(auto-filled from lookup)' : '(optional)'}</span></label>
               <div className={styles.itemImgRow}>
                 <div className={styles.itemImgUpload} onClick={() => itemImgInputRef.current?.click()}>
                   {iImgPreview ? <img src={iImgPreview} alt="Item preview" className={styles.itemImgPreview} /> : (
