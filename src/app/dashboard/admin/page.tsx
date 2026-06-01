@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { Role } from '@prisma/client'
 import styles from './admin.module.css'
+import PromoClient from './PromoClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +11,7 @@ export default async function AdminPage() {
   const user = await getSession()
   if (!user || user.role !== Role.ADMIN) redirect('/dashboard')
 
-  const [userCount, dropCount, purchaseCount, revenue, platformRevenue, recentPurchases, users, recentPlatformTx] = await Promise.all([
+  const [userCount, dropCount, purchaseCount, revenue, platformRevenue, recentPurchases, users, recentPlatformTx, promoCodes] = await Promise.all([
     prisma.user.count(),
     prisma.drop.count(),
     prisma.purchase.count(),
@@ -33,6 +34,9 @@ export default async function AdminPage() {
       take: 20,
       orderBy: { createdAt: 'desc' },
       include: { drop: { select: { name: true } } },
+    }),
+    prisma.promoCode.findMany({
+      orderBy: { createdAt: 'desc' },
     }),
   ])
 
@@ -109,6 +113,19 @@ export default async function AdminPage() {
           </div>
         ))}
       </div>
+
+      <div className={styles.section} style={{marginTop:'2rem'}}>Promo Codes</div>
+      <PromoClient initial={promoCodes.map(c => ({
+        id: c.id,
+        code: c.code,
+        amount: Number(c.amount),
+        description: c.description,
+        maxUses: c.maxUses,
+        usedCount: c.usedCount,
+        isActive: c.isActive,
+        createdAt: c.createdAt.toISOString(),
+      }))} />
+
     </div>
   )
 }
