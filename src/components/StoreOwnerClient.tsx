@@ -3,7 +3,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './StoreOwnerClient.module.css'
 
-const CATEGORIES = ['Bullion','Collectible Coins','Jewelry','Luxury Brands','Other Collectibles','Sporting Goods','Trading Cards','Watches']
+const CATEGORIES = ['Bullion','Certified Coins','Collectible Coins','Jewelry','Luxury Brands','Other Collectibles','Sporting Goods','Trading Cards','Watches']
 
 type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }

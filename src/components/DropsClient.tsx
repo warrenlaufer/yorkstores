@@ -5,6 +5,7 @@ import styles from './DropsClient.module.css'
 
 const CATEGORIES = [
   'Bullion',
+  'Certified Coins'
   'Collectible Coins',
   'Jewelry',
   'Luxury Brands',

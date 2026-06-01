@@ -8,6 +8,7 @@ import { createDropSchema } from '@/lib/schemas'
 
 const CATEGORIES = [
   'Bullion',
+  'Certified Coins',
   'Collectible Coins',
   'Jewelry',
   'Luxury Brands',
