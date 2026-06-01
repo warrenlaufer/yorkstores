@@ -16,8 +16,10 @@ export async function GET(req: NextRequest) {
   if (!token) return err('PSA API not configured')
 
   try {
+    const certNum = certNumber.trim()
+
     // Fetch cert data from PSA API
-    const apiRes = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNumber.trim()}`, {
+    const apiRes = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNum}`, {
       headers: {
         'Authorization': `bearer ${token}`,
         'Content-Type': 'application/json',
@@ -45,34 +47,25 @@ export async function GET(req: NextRequest) {
       grade ? `PSA ${grade}` : null,
     ].filter(Boolean)
 
-    const itemName = parts.join(' ') || `PSA Cert #${certNumber}`
+    const itemName = parts.join(' ') || `PSA Cert #${certNum}`
 
-    // Scrape PSA cert page for image URL
+    // Try known PSA image URL formats
     let imageUrl: string | null = null
-    try {
-      const pageRes = await fetch(`https://www.psacard.com/cert/${certNumber.trim()}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-      })
-      const html = await pageRes.text()
-
-      // Extract image URL from cloudfront
-      const match = html.match(/https:\/\/d1htnxwo4o0jhw\.cloudfront\.net\/cert\/[^"'\s]+\.jpg/)
-      if (match) imageUrl = match[0]
-
-      // Fallback: look for cert-images pattern
-      if (!imageUrl) {
-        const match2 = html.match(/https:\/\/[^"'\s]*psacard[^"'\s]*\.(?:jpg|png|webp)/)
-        if (match2) imageUrl = match2[0]
-      }
-    } catch (e) {
-      console.error('PSA image scrape failed:', e)
+    const candidateUrls = [
+      `https://cert-images.psa.com/${certNum}/large/${certNum}_f.jpg`,
+      `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNum}/large/${certNum}_f.jpg`,
+      `https://i.psacard.com/cert/${certNum}/${certNum}_f.jpg`,
+      `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNum}/${certNum}_f.jpg`,
+    ]
+    for (const url of candidateUrls) {
+      try {
+        const imgRes = await fetch(url, { method: 'HEAD' })
+        if (imgRes.ok) { imageUrl = url; break }
+      } catch {}
     }
 
     return ok({
-      certNumber,
+      certNumber: certNum,
       itemName,
       grade,
       gradeDescription: cert.GradeDescription,
