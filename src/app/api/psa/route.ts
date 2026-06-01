@@ -10,15 +10,13 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const certNumber = searchParams.get('cert')
-  const debug = searchParams.get('debug')
   if (!certNumber) return err('Cert number required')
 
   const token = process.env.PSA_API_TOKEN
   if (!token) return err('PSA API not configured')
 
   try {
-    const url = `https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNumber.trim()}`
-    const res = await fetch(url, {
+    const res = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNumber.trim()}`, {
       headers: {
         'Authorization': `bearer ${token}`,
         'Content-Type': 'application/json',
@@ -27,42 +25,51 @@ export async function GET(req: NextRequest) {
 
     const text = await res.text()
     let data: any
-    try { data = JSON.parse(text) } catch { return err(`PSA returned non-JSON: ${text.slice(0, 200)}`) }
+    try { data = JSON.parse(text) } catch { return err(`PSA returned unexpected response`) }
 
-    // Return raw response in debug mode
-    if (debug === '1') return ok({ status: res.status, data })
-
-    if (!data.IsValidRequest) {
-      return err(data.ServerMessage || `Invalid request (status ${res.status})`)
+    // Handle explicit invalid request
+    if (data.IsValidRequest === false) {
+      return err(data.ServerMessage || 'Invalid cert number')
     }
 
+    // Handle no data found
     if (data.ServerMessage === 'No data found') {
       return err('No card found for this cert number')
     }
 
-    const cert = data.PSACert ?? data.PSACard ?? data.Cert ?? data
+    // Extract cert — could be PSACert, PSACard, or direct
+    const cert = data.PSACert ?? data.PSACard ?? data.Cert
+    if (!cert) return err('No card data found for this cert number')
 
+    // Grade is in CardGrade or GradeDescription
+    const grade = cert.CardGrade ?? cert.GradeDescription ?? cert.PSAGrade
+
+    // Build item name
     const parts = [
-      cert.Year ?? cert.year,
-      cert.Brand ?? cert.brand,
-      cert.Subject ?? cert.subject ?? cert.PlayerName,
+      cert.Year,
+      cert.Brand,
+      cert.Subject,
+      cert.Variety,
       cert.CardNumber ? `#${cert.CardNumber}` : null,
-      cert.PSAGrade ? `PSA ${cert.PSAGrade}` : null,
+      grade ? `PSA ${grade}` : null,
     ].filter(Boolean)
 
     const itemName = parts.join(' ') || `PSA Cert #${certNumber}`
-    const imageUrl = `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNumber}/large/${certNumber}_f.jpg`
+
+    // Image URL
+    const imageUrl = `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNumber.trim()}/large/${certNumber.trim()}_f.jpg`
 
     return ok({
       certNumber,
       itemName,
-      grade: cert.PSAGrade ?? cert.Grade,
+      grade,
       gradeDescription: cert.GradeDescription,
-      year: cert.Year ?? cert.year,
-      brand: cert.Brand ?? cert.brand,
-      subject: cert.Subject ?? cert.subject ?? cert.PlayerName,
+      year: cert.Year,
+      brand: cert.Brand,
+      subject: cert.Subject,
+      variety: cert.Variety,
       cardNumber: cert.CardNumber,
-      sport: cert.Sport ?? cert.Category,
+      category: cert.Category,
       imageUrl,
     })
   } catch (e: any) {
