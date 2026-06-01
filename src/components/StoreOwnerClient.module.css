@@ -66,9 +66,8 @@
 .psaResultMeta { font-size: 0.65rem; color: #7EC8FF; margin-bottom: 0.3rem; }
 .psaResultHint { font-size: 0.62rem; color: var(--text3); }
 
-.itemGrid { display: grid; grid-template-columns: 1fr 70px 60px 55px; gap: 0.4rem; margin-bottom: 0.5rem; }
-.itemGridNoShip { display: grid; grid-template-columns: 1fr 70px 55px; gap: 0.4rem; margin-bottom: 0.5rem; }.addBtn { width: 100%; background: #FF6B85; color: #fff; border: none; border-radius: 8px; font-family: var(--font); font-size: 0.78rem; font-weight: 800; padding: 0.5rem; cursor: pointer; margin-bottom: 0.6rem; transition: background 0.15s; }
-.addBtn:hover { background: #ff4d6d; }
+.itemGrid { display: grid; grid-template-columns: 1fr 90px 60px 55px; gap: 0.4rem; margin-bottom: 0.5rem; }
+.itemGridNoShip { display: grid; grid-template-columns: 1fr 90px 55px; gap: 0.4rem; margin-bottom: 0.5rem; }
 .itemList { display: flex; flex-direction: column; gap: 0.35rem; }
 .itemRow { display: flex; align-items: center; gap: 6px; padding: 0.4rem 0.6rem; background: #1D1D26; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); transition: all 0.15s; }
 .itemRowRemove { opacity: 0.4; border-color: rgba(255,107,133,0.4); background: rgba(255,107,133,0.05); }
