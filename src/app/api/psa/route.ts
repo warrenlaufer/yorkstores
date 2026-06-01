@@ -15,20 +15,22 @@ export async function GET(req: NextRequest) {
   const token = process.env.PSA_API_TOKEN
   if (!token) return err('PSA API not configured')
 
+  const certNum = certNumber.trim()
+  const headers = {
+    'Authorization': `bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
+
   try {
-    const certNum = certNumber.trim()
+    // Fetch cert details and images in parallel
+    const [certRes, imgRes] = await Promise.all([
+      fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNum}`, { headers }),
+      fetch(`https://api.psacard.com/publicapi/cert/GetImagesByCertNumber/${certNum}`, { headers }),
+    ])
 
-    // Fetch cert data from PSA API
-    const apiRes = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNum}`, {
-      headers: {
-        'Authorization': `bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    const text = await apiRes.text()
+    const certText = await certRes.text()
     let data: any
-    try { data = JSON.parse(text) } catch { return err('PSA returned unexpected response') }
+    try { data = JSON.parse(certText) } catch { return err('PSA returned unexpected response') }
 
     if (data.IsValidRequest === false) return err(data.ServerMessage || 'Invalid cert number')
     if (data.ServerMessage === 'No data found') return err('No card found for this cert number')
@@ -49,19 +51,18 @@ export async function GET(req: NextRequest) {
 
     const itemName = parts.join(' ') || `PSA Cert #${certNum}`
 
-    // Try known PSA image URL formats
+    // Get front image from images endpoint
     let imageUrl: string | null = null
-    const candidateUrls = [
-      `https://cert-images.psa.com/${certNum}/large/${certNum}_f.jpg`,
-      `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNum}/large/${certNum}_f.jpg`,
-      `https://i.psacard.com/cert/${certNum}/${certNum}_f.jpg`,
-      `https://d1htnxwo4o0jhw.cloudfront.net/cert/${certNum}/${certNum}_f.jpg`,
-    ]
-    for (const url of candidateUrls) {
-      try {
-        const imgRes = await fetch(url, { method: 'HEAD' })
-        if (imgRes.ok) { imageUrl = url; break }
-      } catch {}
+    try {
+      if (imgRes.ok) {
+        const imgData = await imgRes.json()
+        if (Array.isArray(imgData) && imgData.length > 0) {
+          const front = imgData.find((i: any) => i.IsFrontImage === true) ?? imgData[0]
+          imageUrl = front?.ImageURL ?? null
+        }
+      }
+    } catch (e) {
+      console.error('PSA image fetch failed:', e)
     }
 
     return ok({
