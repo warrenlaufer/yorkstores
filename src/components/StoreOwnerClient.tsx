@@ -77,7 +77,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const editLogoInputRef = useRef<HTMLInputElement>(null)
   const editItemImgInputRef = useRef<HTMLInputElement>(null)
 
-  // Auto-populate shipping when flat mode
   const effectiveShip = shippingMode === 'flat' ? flatShipping : iShip
 
   async function uploadImage(file: File): Promise<string> {
@@ -421,14 +420,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               {shippingMode === 'flat' && (
                 <div style={{marginTop:'0.4rem',display:'flex',alignItems:'center',gap:'0.5rem'}}>
                   <span style={{fontSize:'0.72rem',color:'var(--text2)',flexShrink:0}}>Flat rate $</span>
-                  <input
-                    type="number"
-                    value={flatShipping}
-                    onChange={e => setFlatShipping(e.target.value)}
-                    min="0"
-                    placeholder="0.00"
-                    style={{width:90}}
-                  />
+                  <input type="number" value={flatShipping} onChange={e => setFlatShipping(e.target.value)} min="0" placeholder="0.00" style={{width:90}} />
                 </div>
               )}
               <p className={styles.sellBackHint}>{shippingMode === 'flat' ? 'Same shipping cost applied to all items.' : 'Enter shipping cost for each item individually.'}</p>
@@ -485,7 +477,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             )}
 
             <div className={shippingMode === 'flat' ? styles.itemGridNoShip : styles.itemGrid}>
-              <div><label>Name</label><input value={iName} onChange={e => setIName(e.target.value)} onKeyDown={e => e.key==='Enter'&&addBox()} /></div>
+              <div><label>Name</label><textarea value={iName} onChange={e => setIName(e.target.value)} rows={2} style={{resize:'vertical',minHeight:38}} /></div>
               <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" /></div>
               {shippingMode === 'per_item' && <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} min="0" /></div>}
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
@@ -596,7 +588,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                       <div className={styles.editItemTop}>
                         {it.imageUrl && <img src={it.imageUrl} alt={it.name} style={{width:32,height:32,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
                         <div className={styles.editItemFields}>
-                          <input className={styles.editItemInput} value={edit.newName} onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newName: e.target.value } }))} placeholder="Item name" />
+                          <textarea className={styles.editItemInput} value={edit.newName} onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newName: e.target.value } }))} placeholder="Item name" rows={2} style={{resize:'vertical',minHeight:38}} />
                           <div style={{display:'flex',gap:4}}>
                             <div style={{display:'flex',flexDirection:'column',gap:2}}>
                               <span style={{fontSize:'0.55rem',color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Value $</span>
@@ -640,7 +632,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
             <div className={styles.editSection}>Add New Item Type</div>
             <div className={styles.itemGrid}>
-              <div><label>Name</label><input value={eName} onChange={e => setEName(e.target.value)} /></div>
+              <div><label>Name</label><textarea value={eName} onChange={e => setEName(e.target.value)} rows={2} style={{resize:'vertical',minHeight:38}} /></div>
               <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" /></div>
               <div><label>Ship $</label><input type="number" value={eShip} onChange={e => setEShip(e.target.value)} min="0" /></div>
               <div><label>Qty</label><input type="number" value={eQty} onChange={e => setEQty(e.target.value)} min="1" max="200" /></div>
