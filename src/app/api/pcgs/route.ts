@@ -32,12 +32,13 @@ export async function GET(req: NextRequest) {
     try { data = JSON.parse(text) } catch { return err('PCGS returned unexpected response') }
 
     if (!data) return err('No coin data found')
+    if (data.IsValidRequest === false) return err(data.ServerMessage || 'Invalid cert number')
 
     // Build item name
     const parts = [
       data.Year,
-      data.MintMark ? `${data.MintMark}` : null,
-      data.CoinName ?? data.Name,
+      data.MintMark ? data.MintMark : null,
+      data.Name ?? data.CoinName,
       data.Denomination,
       data.Grade ? `PCGS ${data.Grade}` : null,
     ].filter(Boolean)
@@ -45,10 +46,14 @@ export async function GET(req: NextRequest) {
     const itemName = parts.join(' ') || `PCGS Cert #${certNum}`
 
     // Price guide value
-    const priceGuideValue = data.PriceGuideValue ?? data.Price ?? null
+    const priceGuideValue = data.PriceGuideValue ?? null
 
-    // Image — PCGS CoinFacts returns ObverseImage and ReverseImage
-    const imageUrl = data.ObverseImage ?? data.ImageObverse ?? data.CoinImageUrl ?? null
+    // Image — use Images array first, then fallbacks
+    let imageUrl: string | null = null
+    if (Array.isArray(data.Images) && data.Images.length > 0) {
+      imageUrl = data.Images[0].Fullsize ?? data.Images[0].Thumbnail ?? null
+    }
+    if (!imageUrl) imageUrl = data.ObverseImage ?? data.ImageObverse ?? data.CoinImageUrl ?? null
 
     return ok({
       certNumber: certNum,
@@ -56,11 +61,10 @@ export async function GET(req: NextRequest) {
       grade: data.Grade,
       year: data.Year,
       mintMark: data.MintMark,
-      coinName: data.CoinName ?? data.Name,
+      coinName: data.Name ?? data.CoinName,
       denomination: data.Denomination,
       priceGuideValue,
       imageUrl,
-      rawData: data,
     })
   } catch (e: any) {
     return err('Failed to lookup PCGS cert: ' + e.message)
