@@ -79,7 +79,7 @@ function RevealContent() {
   const [cardVisible, setCardVisible] = useState(false)
   const [actionsVisible, setActionsVisible] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
+  const [countdown, setCountdown] = useState<number | null>(null)
   const [showAddr, setShowAddr] = useState(false)
   const [addrForm, setAddrForm] = useState<AddressForm>({
     recipientName: '', recipientEmail: '', addressLine1: '', addressLine2: '',
@@ -147,7 +147,6 @@ function RevealContent() {
               pricePaid: p.pricePaid, newBalance: 0,
               revealedAt: p.revealedAt ?? null,
             })
-            // If already resolved, show outcome
             if (p.outcome === 'DELIVERY') {
               setOutcome('delivery')
               setOutcomeMsg(`📦 Delivery already confirmed.`)
@@ -178,7 +177,6 @@ function RevealContent() {
     }, 3250)
   }, [])
 
-  // Start timer once data is loaded and phase is revealed and no outcome yet
   useEffect(() => {
     if (phase !== 'revealed' || outcome) return
     if (!data) return
@@ -244,11 +242,12 @@ function RevealContent() {
     } else setAddrError(d.error)
   }
 
-  const mins = Math.floor(countdown / 60)
-  const secs = countdown % 60
-  const pct = (countdown / COUNTDOWN_SECONDS) * 100
-  const barColor = countdown <= 60 ? '#ff3355' : countdown <= 120 ? '#FF8C00' : '#FF6B85'
-  const urgent = countdown <= 30
+  const safeCountdown = countdown ?? COUNTDOWN_SECONDS
+  const mins = Math.floor(safeCountdown / 60)
+  const secs = safeCountdown % 60
+  const pct = (safeCountdown / COUNTDOWN_SECONDS) * 100
+  const barColor = safeCountdown <= 60 ? '#ff3355' : safeCountdown <= 120 ? '#FF8C00' : '#FF6B85'
+  const urgent = safeCountdown <= 30
 
   return (
     <div className={styles.screen}>
@@ -290,7 +289,7 @@ function RevealContent() {
               {data.box.itemShippingCost > 0 ? ` · $${data.box.itemShippingCost.toFixed(2)} shipping` : ''}
             </div>
 
-            {!outcome && (
+            {!outcome && countdown !== null && (
               <div className={styles.countdown}>
                 <div className={styles.countdownLabel}>Sell back automatically in</div>
                 <div className={styles.countdownBarBg}>
