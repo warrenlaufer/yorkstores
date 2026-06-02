@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
 
 export async function POST(req: NextRequest) {
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
         data: {
           userId,
           type: 'topup',
-          description: `Wallet top-up via Stripe`,
+          description: 'Wallet top-up via Stripe',
           amount: amountDollars,
         },
       }),
@@ -67,5 +69,3 @@ export async function POST(req: NextRequest) {
 
   return new Response('OK', { status: 200 })
 }
-
-export const config = { api: { bodyParser: false } }
