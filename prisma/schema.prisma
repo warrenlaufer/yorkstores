@@ -106,6 +106,7 @@ model Purchase {
   outcome     OutcomeType?
   refundAmt   Decimal     @default(0) @db.Decimal(10, 2)
   createdAt   DateTime    @default(now())
+  revealedAt  DateTime?
   resolvedAt  DateTime?
 
   buyer       User        @relation(fields: [buyerId], references: [id])

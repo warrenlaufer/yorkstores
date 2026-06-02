@@ -68,10 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const drop = await prisma.drop.findUnique({
     where: { id: dropId },
-    include: {
-      boxes: true,
-      owner: true,
-    },
+    include: { boxes: true, owner: true },
   })
 
   if (!drop || !drop.isActive) return err('Drop not found or inactive')
@@ -95,6 +92,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const platformFee = Math.round(boxPrice * 0.05 * 100) / 100
   const storeCredit = Math.round(boxPrice * 0.95 * 100) / 100
+  const now = new Date()
 
   const purchase = await prisma.$transaction(async tx => {
     await tx.box.update({ where: { id: box.id }, data: { sold: true } })
@@ -103,8 +101,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const p = await tx.purchase.upsert({
       where: { boxId: box.id },
-      create: { buyerId: user.id, boxId: box.id, dropId: dropId, pricePaid: boxPrice },
-      update: { buyerId: user.id, pricePaid: boxPrice, outcome: null, refundAmt: 0, resolvedAt: null },
+      create: { buyerId: user.id, boxId: box.id, dropId, pricePaid: boxPrice, revealedAt: now },
+      update: { buyerId: user.id, pricePaid: boxPrice, outcome: null, refundAmt: 0, resolvedAt: null, revealedAt: now },
     })
 
     await tx.transaction.createMany({
@@ -115,12 +113,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     })
 
     await tx.platformTransaction.create({
-      data: {
-        type: 'platform_fee',
-        description: `Platform fee: ${drop.name}`,
-        amount: platformFee,
-        dropId,
-      },
+      data: { type: 'platform_fee', description: `Platform fee: ${drop.name}`, amount: platformFee, dropId },
     })
 
     return p
@@ -130,6 +123,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   return ok({
     purchaseId: purchase.id,
+    revealedAt: now.toISOString(),
     box: {
       itemName: box.itemName,
       itemPrice: Number(box.itemPrice),

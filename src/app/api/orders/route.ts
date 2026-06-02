@@ -31,12 +31,7 @@ export async function POST(req: NextRequest) {
     const storeShippingNet = Math.round((shippingCost - platformFee) * 100) / 100
 
     const order = await tx.order.create({
-      data: {
-        purchaseId,
-        dropId: purchase.box.dropId,
-        buyerId: user.id,
-        ...addressData,
-      },
+      data: { purchaseId, dropId: purchase.box.dropId, buyerId: user.id, ...addressData },
     })
 
     await tx.purchase.update({
@@ -44,59 +39,22 @@ export async function POST(req: NextRequest) {
       data: { outcome: OutcomeType.DELIVERY, resolvedAt: new Date() },
     })
 
-    // Deduct shipping from buyer wallet
     if (shippingCost > 0) {
-      await tx.user.update({
-        where: { id: user.id },
-        data: { walletBalance: { decrement: shippingCost } },
-      })
-      // Credit net shipping to store (95%)
-      await tx.user.update({
-        where: { id: purchase.box.drop.ownerId },
-        data: { storeBalance: { increment: storeShippingNet } },
-      })
-      // Record transactions
-      await tx.transaction.create({
-        data: {
-          userId: user.id,
-          dropId: purchase.box.dropId,
-          type: 'shipping',
-          description: `Shipping: ${purchase.box.itemName}`,
-          amount: -shippingCost,
-        },
-      })
-      await tx.transaction.create({
-        data: {
-          userId: purchase.box.drop.ownerId,
-          dropId: purchase.box.dropId,
-          type: 'shipping_credit',
-          description: `Shipping credit: ${purchase.box.itemName}`,
-          amount: storeShippingNet,
-        },
-      })
-      // Record platform fee on shipping
-      await tx.platformTransaction.create({
-        data: {
-          type: 'platform_fee_shipping',
-          description: `Platform fee (shipping): ${purchase.box.itemName}`,
-          amount: platformFee,
-          dropId: purchase.box.dropId,
-        },
-      })
+      await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: shippingCost } } })
+      await tx.user.update({ where: { id: purchase.box.drop.ownerId }, data: { storeBalance: { increment: storeShippingNet } } })
+      await tx.transaction.create({ data: { userId: user.id, dropId: purchase.box.dropId, type: 'shipping', description: `Shipping: ${purchase.box.itemName}`, amount: -shippingCost } })
+      await tx.transaction.create({ data: { userId: purchase.box.drop.ownerId, dropId: purchase.box.dropId, type: 'shipping_credit', description: `Shipping credit: ${purchase.box.itemName}`, amount: storeShippingNet } })
+      await tx.platformTransaction.create({ data: { type: 'platform_fee_shipping', description: `Platform fee (shipping): ${purchase.box.itemName}`, amount: platformFee, dropId: purchase.box.dropId } })
     }
 
     return { order, purchase }
   })
 
-  // Send emails
   try {
     const addrStr = [
-      order.order.addressLine1,
-      order.order.addressLine2,
-      order.order.city,
-      order.order.state,
-      order.order.postcode,
-      order.order.country,
+      order.order.addressLine1, order.order.addressLine2,
+      order.order.city, order.order.state,
+      order.order.postcode, order.order.country,
     ].filter(Boolean).join('\n')
 
     await sendOrderConfirmationEmail(user.email, user.name, {
@@ -148,6 +106,7 @@ export async function GET(req: NextRequest) {
     pricePaid: Number(p.pricePaid),
     outcome: p.outcome,
     refundAmt: Number(p.refundAmt),
+    revealedAt: p.revealedAt?.toISOString() ?? null,
     createdAt: p.createdAt,
     order: p.order ? {
       status: p.order.status,

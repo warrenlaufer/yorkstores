@@ -8,12 +8,15 @@ type PurchaseData = {
   box: { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl?: string }
   pricePaid: number
   newBalance: number
+  revealedAt: string | null
 }
 
 type AddressForm = {
   recipientName: string; recipientEmail: string; addressLine1: string; addressLine2: string
   city: string; state: string; postcode: string; country: string
 }
+
+const COUNTDOWN_SECONDS = 300
 
 function Confetti({ active }: { active: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -57,6 +60,12 @@ function Confetti({ active }: { active: boolean }) {
   return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999 }} />
 }
 
+function getSecondsRemaining(revealedAt: string | null): number {
+  if (!revealedAt) return COUNTDOWN_SECONDS
+  const elapsed = Math.floor((Date.now() - new Date(revealedAt).getTime()) / 1000)
+  return Math.max(0, COUNTDOWN_SECONDS - elapsed)
+}
+
 function RevealContent() {
   const params = useSearchParams()
   const router = useRouter()
@@ -70,7 +79,7 @@ function RevealContent() {
   const [cardVisible, setCardVisible] = useState(false)
   const [actionsVisible, setActionsVisible] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [countdown, setCountdown] = useState(300)
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
   const [showAddr, setShowAddr] = useState(false)
   const [addrForm, setAddrForm] = useState<AddressForm>({
     recipientName: '', recipientEmail: '', addressLine1: '', addressLine2: '',
@@ -82,8 +91,23 @@ function RevealContent() {
   const [outcomeMsg, setOutcomeMsg] = useState('')
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
+  const hasAutoSold = useRef(false)
 
-  // If pending, poll for purchaseId to appear in URL
+  function startTimer(revealedAt: string | null) {
+    if (timerRef.current) clearInterval(timerRef.current)
+    const remaining = getSecondsRemaining(revealedAt)
+    setCountdown(remaining)
+    if (remaining <= 0) { handleAutoSell(); return }
+    timerRef.current = setInterval(() => {
+      const r = getSecondsRemaining(revealedAt)
+      setCountdown(r)
+      if (r <= 0) {
+        clearInterval(timerRef.current!)
+        handleAutoSell()
+      }
+    }, 1000)
+  }
+
   useEffect(() => {
     if (!pending) return
     pollRef.current = setInterval(() => {
@@ -100,6 +124,7 @@ function RevealContent() {
                 purchaseId: pid,
                 box: { itemName: p.itemName, itemPrice: p.itemPrice, itemShippingCost: p.itemShippingCost, itemImageUrl: p.itemImageUrl },
                 pricePaid: p.pricePaid, newBalance: 0,
+                revealedAt: p.revealedAt ?? null,
               })
             }
           }).catch(() => {})
@@ -115,19 +140,34 @@ function RevealContent() {
       .then(d => {
         if (d.ok && d.data) {
           const p = d.data.find((x: any) => x.id === purchaseId)
-          if (p) setData({
-            purchaseId,
-            box: { itemName: p.itemName, itemPrice: p.itemPrice, itemShippingCost: p.itemShippingCost, itemImageUrl: p.itemImageUrl },
-            pricePaid: p.pricePaid, newBalance: 0,
-          })
+          if (p) {
+            setData({
+              purchaseId,
+              box: { itemName: p.itemName, itemPrice: p.itemPrice, itemShippingCost: p.itemShippingCost, itemImageUrl: p.itemImageUrl },
+              pricePaid: p.pricePaid, newBalance: 0,
+              revealedAt: p.revealedAt ?? null,
+            })
+            // If already resolved, show outcome
+            if (p.outcome === 'DELIVERY') {
+              setOutcome('delivery')
+              setOutcomeMsg(`📦 Delivery already confirmed.`)
+              setPhase('revealed')
+              setCardVisible(true)
+              setActionsVisible(false)
+            } else if (p.outcome === 'SOLD_BACK' || p.outcome === 'AUTO_SOLD') {
+              setOutcome('soldback')
+              setOutcomeMsg(`💸 Already sold back — $${Number(p.refundAmt).toFixed(2)} was credited.`)
+              setPhase('revealed')
+              setCardVisible(true)
+              setActionsVisible(false)
+            }
+          }
         }
       }).catch(() => {})
   }, [purchaseId])
 
   useEffect(() => {
     if (!pending && !purchaseId) { router.push('/dashboard'); return }
-
-    // Animation timings — 3.25 seconds total before reveal
     setTimeout(() => setLidOpen(true), 600)
     setTimeout(() => setShowConfetti(true), 1100)
     setTimeout(() => setCardVisible(true), 2200)
@@ -138,22 +178,17 @@ function RevealContent() {
     }, 3250)
   }, [])
 
+  // Start timer once data is loaded and phase is revealed and no outcome yet
   useEffect(() => {
     if (phase !== 'revealed' || outcome) return
-    timerRef.current = setInterval(() => {
-      setCountdown(c => {
-        if (c <= 1) { clearInterval(timerRef.current!); handleAutoSell(); return 0 }
-        return c - 1
-      })
-    }, 1000)
-    return () => clearInterval(timerRef.current!)
-  }, [phase, outcome])
+    if (!data) return
+    startTimer(data.revealedAt)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [phase, outcome, data])
 
   function stopTimer() { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
 
-  const getPurchaseId = () => {
-    return purchaseId || new URLSearchParams(window.location.search).get('purchaseId') || ''
-  }
+  const getPurchaseId = () => purchaseId || new URLSearchParams(window.location.search).get('purchaseId') || ''
 
   async function handleSellBack() {
     stopTimer(); setSubmitting(true)
@@ -171,6 +206,8 @@ function RevealContent() {
   }
 
   async function handleAutoSell() {
+    if (hasAutoSold.current) return
+    hasAutoSold.current = true
     const res = await fetch('/api/orders/sellback', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ purchaseId: getPurchaseId() }),
@@ -209,7 +246,7 @@ function RevealContent() {
 
   const mins = Math.floor(countdown / 60)
   const secs = countdown % 60
-  const pct = (countdown / 300) * 100
+  const pct = (countdown / COUNTDOWN_SECONDS) * 100
   const barColor = countdown <= 60 ? '#ff3355' : countdown <= 120 ? '#FF8C00' : '#FF6B85'
   const urgent = countdown <= 30
 
@@ -282,12 +319,8 @@ function RevealContent() {
 
             {outcome && (
               <div className={styles.backBtns}>
-                <button className={styles.backBtn} onClick={() => router.push(`/dashboard/drop/${dropId}`)}>
-                  Back to This Drop
-                </button>
-                <button className={styles.backBtnAlt} onClick={() => router.push('/dashboard')}>
-                  Back to All Drops
-                </button>
+                <button className={styles.backBtn} onClick={() => router.push(`/dashboard/drop/${dropId}`)}>Back to This Drop</button>
+                <button className={styles.backBtnAlt} onClick={() => router.push('/dashboard')}>Back to All Drops</button>
               </div>
             )}
           </div>
