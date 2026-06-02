@@ -1,161 +1,196 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import styles from './wallet.module.css'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 
-const PRESETS = [10, 25, 50, 100]
+const AMOUNTS = [25, 50, 100, 250, 500, 1000]
 
-export default function WalletPage() {
+function WalletContent() {
   const router = useRouter()
-  const [amount, setAmount] = useState(25)
-  const [customAmt, setCustomAmt] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [step, setStep] = useState<'pick' | 'paying' | 'done'>('pick')
-
+  const params = useSearchParams()
+  const [balance, setBalance] = useState<number | null>(null)
+  const [selected, setSelected] = useState<number | null>(null)
+  const [custom, setCustom] = useState('')
   const [promoCode, setPromoCode] = useState('')
   const [promoLoading, setPromoLoading] = useState(false)
-  const [promoError, setPromoError] = useState('')
-  const [promoSuccess, setPromoSuccess] = useState('')
+  const [promoMsg, setPromoMsg] = useState('')
+  const [promoErr, setPromoErr] = useState('')
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [checkoutErr, setCheckoutErr] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
-  const finalAmount = customAmt ? parseFloat(customAmt) : amount
+  useEffect(() => {
+    if (params.get('success') === '1') {
+      setSuccessMsg('🎉 Payment successful! Your wallet has been topped up.')
+      router.replace('/dashboard/wallet')
+    }
+    if (params.get('cancelled') === '1') {
+      setCheckoutErr('Payment cancelled.')
+      router.replace('/dashboard/wallet')
+    }
+  }, [params])
 
-  async function startPayment() {
-    if (!finalAmount || finalAmount < 1) { setError('Minimum top-up is $1.'); return }
-    if (finalAmount > 10000) { setError('Maximum top-up is $10,000.'); return }
-    setError('')
-    setLoading(true)
+  useEffect(() => {
+    fetch('/api/users/me').then(r => r.json()).then(d => {
+      if (d.ok) setBalance(Number(d.data.walletBalance))
+    }).catch(() => {})
+  }, [])
+
+  const effectiveAmount = custom ? parseFloat(custom) : selected
+
+  async function handleCheckout() {
+    if (!effectiveAmount || effectiveAmount < 1) { setCheckoutErr('Enter a valid amount (min $1).'); return }
+    if (effectiveAmount > 10000) { setCheckoutErr('Maximum top-up is $10,000.'); return }
+    setCheckoutLoading(true); setCheckoutErr('')
     try {
-      const res = await fetch('/api/users/topup', {
+      const res = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: finalAmount }),
+        body: JSON.stringify({ amount: Math.round(effectiveAmount * 100) }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error); return }
-      setStep('paying')
-      setTimeout(() => {
-        setStep('done')
-        router.refresh()
-      }, 2000)
-    } catch {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+      if (!res.ok) { setCheckoutErr(data.error); return }
+      window.location.href = data.data.url
+    } catch { setCheckoutErr('Something went wrong.') }
+    finally { setCheckoutLoading(false) }
   }
 
-  async function applyPromo() {
-    const code = promoCode.trim().toUpperCase()
-    if (!code) { setPromoError('Please enter a promo code.'); return }
-    setPromoError('')
-    setPromoSuccess('')
-    setPromoLoading(true)
+  async function redeemPromo() {
+    if (!promoCode.trim()) return
+    setPromoLoading(true); setPromoMsg(''); setPromoErr('')
     try {
       const res = await fetch('/api/promo/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: promoCode.trim().toUpperCase() }),
       })
       const data = await res.json()
-      if (!res.ok) { setPromoError(data.error || 'Invalid promo code.'); return }
-      setPromoSuccess(data.data.message)
+      if (!res.ok) { setPromoErr(data.error); return }
+      setPromoMsg(`✅ $${data.data.amount.toFixed(2)} added to your wallet!`)
       setPromoCode('')
-      router.refresh()
-    } catch {
-      setPromoError('Something went wrong. Please try again.')
-    } finally {
-      setPromoLoading(false)
-    }
+      setBalance(prev => prev !== null ? prev + data.data.amount : null)
+    } catch { setPromoErr('Something went wrong.') }
+    finally { setPromoLoading(false) }
   }
 
-  if (step === 'done') return (
-    <div className={styles.wrap}>
-      <div className={styles.successCard}>
-        <div className={styles.successIcon}>✅</div>
-        <h2 className={styles.successTitle}>Payment successful!</h2>
-        <p className={styles.successSub}>${finalAmount.toFixed(2)} has been added to your wallet.</p>
-        <a href="/dashboard" className={styles.doneBtn}>Back to Drops</a>
-      </div>
-    </div>
-  )
-
   return (
-    <div className={styles.wrap}>
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '1.5rem 1.25rem 3rem' }}>
+      <h1 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', marginBottom: '0.2rem' }}>Wallet</h1>
+      <p style={{ fontSize: '0.78rem', color: 'var(--text2)', marginBottom: '1.5rem' }}>Add funds to open drops.</p>
 
-      <div className={styles.card}>
-        <h1 className={styles.title}>Add Funds</h1>
-        <p className={styles.sub}>Funds are added to your wallet instantly after payment.</p>
+      {/* Balance */}
+      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text2)', marginBottom: '0.4rem' }}>Current Balance</div>
+        <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#3DD68C' }}>
+          {balance !== null ? `$${balance.toFixed(2)}` : '—'}
+        </div>
+      </div>
 
-        <div className={styles.presets}>
-          {PRESETS.map(p => (
+      {successMsg && (
+        <div style={{ background: 'rgba(61,214,140,0.12)', border: '1px solid rgba(61,214,140,0.3)', color: '#5FFFA8', fontSize: '0.78rem', padding: '0.6rem 0.85rem', borderRadius: 8, marginBottom: '1rem' }}>
+          {successMsg}
+        </div>
+      )}
+
+      {/* Top-up */}
+      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.85rem' }}>Top Up</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
+          {AMOUNTS.map(a => (
             <button
-              key={p}
-              className={`${styles.preset} ${amount === p && !customAmt ? styles.presetActive : ''}`}
-              onClick={() => { setAmount(p); setCustomAmt('') }}
+              key={a}
+              onClick={() => { setSelected(a); setCustom('') }}
+              style={{
+                background: selected === a && !custom ? 'rgba(255,107,133,0.15)' : '#1D1D26',
+                border: `1px solid ${selected === a && !custom ? '#FF6B85' : 'rgba(255,255,255,0.1)'}`,
+                color: selected === a && !custom ? '#FF8FA3' : '#fff',
+                borderRadius: 8, padding: '0.6rem', fontFamily: 'var(--font)',
+                fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
+              }}
             >
-              ${p}
+              ${a}
             </button>
           ))}
         </div>
 
-        <div className={styles.customRow}>
-          <span className={styles.dollarSign}>$</span>
-          <input
-            type="number"
-            min="1"
-            max="10000"
-            value={customAmt}
-            onChange={e => setCustomAmt(e.target.value)}
-            className={styles.customInput}
-          />
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.3rem' }}>Custom Amount</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ color: 'var(--text2)', fontSize: '0.85rem' }}>$</span>
+            <input
+              type="number"
+              value={custom}
+              onChange={e => { setCustom(e.target.value); setSelected(null) }}
+              placeholder="Enter amount"
+              min="1"
+              max="10000"
+              style={{ flex: 1 }}
+            />
+          </div>
         </div>
 
-        {error && <div className={styles.errBox}>{error}</div>}
+        {checkoutErr && (
+          <div style={{ background: 'rgba(255,107,133,0.12)', border: '1px solid rgba(255,107,133,0.3)', color: '#FF8FA3', fontSize: '0.75rem', padding: '0.5rem 0.75rem', borderRadius: 8, marginBottom: '0.75rem' }}>
+            {checkoutErr}
+          </div>
+        )}
 
-        <div className={styles.divider}><span>Pay with</span></div>
-
-        <button className={styles.applePayBtn} onClick={startPayment} disabled={loading || step === 'paying'}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.7 9.05 7.42c1.42.07 2.38.74 3.2.8 1.22-.24 2.38-.93 3.7-.84 1.57.12 2.76.72 3.53 1.84-3.24 1.94-2.7 6.03.7 7.27-.56 1.34-1.28 2.65-3.13 3.79zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
-          Pay with Apple Pay
+        <button
+          onClick={handleCheckout}
+          disabled={checkoutLoading || !effectiveAmount}
+          style={{
+            width: '100%', background: effectiveAmount ? '#FF6B85' : '#2a2a35',
+            color: effectiveAmount ? '#fff' : 'rgba(255,255,255,0.3)',
+            border: 'none', borderRadius: 10, fontFamily: 'var(--font)',
+            fontWeight: 800, fontSize: '0.9rem', padding: '0.7rem',
+            cursor: effectiveAmount ? 'pointer' : 'not-allowed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'background 0.15s',
+          }}
+        >
+          {checkoutLoading
+            ? <span className="spin" />
+            : effectiveAmount
+              ? `Pay $${Number(effectiveAmount).toFixed(2)} with Stripe`
+              : 'Select an amount'}
         </button>
-
-        <button className={styles.cardBtn} onClick={startPayment} disabled={loading || step === 'paying'}>
-          {step === 'paying' ? <span className="spin" /> : `Add $${finalAmount.toFixed(2)} by card`}
-        </button>
-
-        <p className={styles.stripe}>
-          <svg width="36" height="14" viewBox="0 0 60 25"><text x="0" y="18" fontFamily="Arial" fontSize="15" fontWeight="bold" fill="rgba(255,255,255,0.3)">stripe</text></svg>
-          Secured by Stripe
+        <p style={{ fontSize: '0.65rem', color: 'var(--text3)', textAlign: 'center', marginTop: '0.5rem' }}>
+          Secured by Stripe · Visa, Mastercard, Amex accepted
         </p>
       </div>
 
-      <div className={styles.promoCard}>
-        <h2 className={styles.promoTitle}>🎟 Promo Code</h2>
-        <p className={styles.promoSub}>Have a promo code? Enter it below to add credit to your wallet instantly.</p>
-
-        <div className={styles.promoRow}>
+      {/* Promo code */}
+      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.85rem' }}>Promo Code</div>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <input
-            className={styles.promoInput}
-            type="text"
             value={promoCode}
-            onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); setPromoSuccess('') }}
-            onKeyDown={e => e.key === 'Enter' && applyPromo()}
-            maxLength={32}
+            onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoMsg(''); setPromoErr('') }}
+            onKeyDown={e => e.key === 'Enter' && redeemPromo()}
+            placeholder="Enter promo code…"
+            style={{ flex: 1 }}
           />
           <button
-            className={styles.promoBtn}
-            onClick={applyPromo}
-            disabled={promoLoading}
+            onClick={redeemPromo}
+            disabled={promoLoading || !promoCode.trim()}
+            style={{
+              background: '#FF6B85', color: '#fff', border: 'none', borderRadius: 8,
+              fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 800,
+              padding: '0 1rem', cursor: 'pointer', whiteSpace: 'nowrap',
+              opacity: promoLoading || !promoCode.trim() ? 0.5 : 1,
+            }}
           >
-            {promoLoading ? <span className="spin" /> : 'Apply'}
+            {promoLoading ? <span className="spin" style={{ width: 14, height: 14 }} /> : 'Redeem'}
           </button>
         </div>
-
-        {promoError && <div className={styles.promoErr}>{promoError}</div>}
-        {promoSuccess && <div className={styles.promoOk}>🎉 {promoSuccess}</div>}
+        {promoErr && <p style={{ fontSize: '0.72rem', color: '#FF8FA3', margin: 0 }}>{promoErr}</p>}
+        {promoMsg && <p style={{ fontSize: '0.72rem', color: '#5FFFA8', margin: 0 }}>{promoMsg}</p>}
       </div>
-
     </div>
   )
+}
+
+export default function WalletPage() {
+  return <Suspense><WalletContent /></Suspense>
 }
