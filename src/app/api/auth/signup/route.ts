@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: role as Role,
       company: role === 'STORE_OWNER' ? company : undefined,
-      walletBalance: 500,
-      storeBalance: role === 'STORE_OWNER' ? 200 : 0,
-      emailVerified: true, // set false and add email verification flow if needed
+      walletBalance: 0,
+      storeBalance: 0,
+      emailVerified: true,
     },
   })
 
