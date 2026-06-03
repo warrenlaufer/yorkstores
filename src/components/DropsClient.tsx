@@ -44,7 +44,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
 
   const allCatsSelected = selectedCats.size === CATEGORIES.length
   const noCatsSelected = selectedCats.size === 0
-  const allStoresSelected = selectedStores.size === 0 // empty = all stores
+  const allStoresSelected = selectedStores.size === 0
 
   function toggleCat(cat: string) {
     setSelectedCats(prev => {
@@ -95,7 +95,6 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
 
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
-
           <div className={styles.sidebarTitle}>Categories</div>
           <div className={styles.sidebarActions}>
             <button className={styles.sidebarAction} onClick={selectAllCats} disabled={allCatsSelected}>All</button>
@@ -136,7 +135,6 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
               </div>
             </>
           )}
-
         </aside>
 
         <div className={styles.grid}>
@@ -150,7 +148,12 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
             const pct = Math.round((d.availableBoxes / d.totalBoxes) * 100)
             const badges = getBadges(d)
             return (
-              <div key={d.id} className={styles.card}>
+              <div
+                key={d.id}
+                className={styles.card}
+                onClick={() => !soldOut && router.push(`/dashboard/drop/${d.id}`)}
+                style={{ cursor: soldOut ? 'default' : 'pointer' }}
+              >
                 <div className={styles.badgeRows}>
                   <div className={styles.badgeRowTop}>
                     <span className={styles.badgeCat}>{d.category}</span>
@@ -181,7 +184,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                   <button
                     className={styles.openBtn}
                     disabled={soldOut}
-                    onClick={() => !soldOut && router.push(`/dashboard/drop/${d.id}`)}
+                    onClick={e => { e.stopPropagation(); !soldOut && router.push(`/dashboard/drop/${d.id}`) }}
                   >
                     {soldOut ? 'Sold Out' : `Explore Drop — $${d.boxPrice}`}
                   </button>
