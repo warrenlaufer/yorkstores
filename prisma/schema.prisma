@@ -51,6 +51,7 @@ model User {
   transactions      Transaction[]
   walletTopups      WalletTopup[]
   promoRedemptions  PromoRedemption[]
+  storeTheme        StoreTheme?
 }
 
 model Session {
@@ -198,4 +199,18 @@ model PromoRedemption {
   user        User      @relation(fields: [userId], references: [id])
 
   @@unique([promoCodeId, userId])
+}
+
+model StoreTheme {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  primaryColor    String   @default("#FF6B85")
+  backgroundColor String   @default("#08080B")
+  cardColor       String   @default("#0F0F14")
+  textColor       String   @default("#EEEEF5")
+  accentColor     String   @default("#F5C842")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

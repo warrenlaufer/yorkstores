@@ -39,8 +39,8 @@ export async function POST(req: NextRequest) {
 
   cookies().set(SESSION_COOKIE, jwt, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: true,
+    sameSite: 'none',
     expires: expiresAt,
     path: '/',
   })

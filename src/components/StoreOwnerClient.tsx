@@ -355,8 +355,10 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           <h1 className={styles.title}>Store Owner Dashboard</h1>
           <p className={styles.sub}>Box price = average item value +5%, rounded to nearest dollar.</p>
         </div>
-        <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}>📦 Fulfilment</a>
-      </div>
+        <<div style={{display:'flex',gap:'0.5rem'}}>
+          <a href="/dashboard/store/theme" className={styles.historyBtn}>🎨 Theme</a>
+          <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}>📦 Fulfilment</a>
+        </div>
 
       <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'0.5rem'}}>
