@@ -60,6 +60,16 @@ export default async function StoreHistoryPage() {
     return styles.badgeOther
   }
 
+  // Store wallet topups (withdrawals to bank not yet implemented)
+  const walletTxs = await prisma.transaction.findMany({
+    where: {
+      userId: user.id,
+      type: { in: ['sale', 'buyback', 'shipping_credit', 'withdrawal'] },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
+
   return (
     <div className={styles.wrap}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
@@ -95,13 +105,15 @@ export default async function StoreHistoryPage() {
         </div>
       </div>
 
+      {/* Sales/Buybacks/Shipping table */}
+      <div className={styles.sectionLabel}>Sales & Buybacks</div>
       {transactions.length === 0 ? (
         <div className={styles.empty}>
           <div className={styles.emptyIcon}>📊</div>
           <p>No store transactions yet.</p>
         </div>
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={styles.tableWrap} style={{marginBottom:'2rem'}}>
           <div className={styles.tableHead}>
             <span>Date</span>
             <span>Description</span>
@@ -122,9 +134,7 @@ export default async function StoreHistoryPage() {
                 </span>
                 <span className={styles.cellDesc}>{t.description}</span>
                 <span>
-                  <span className={`${styles.badge} ${getTypeCls(t.type)}`}>
-                    {getTypeLabel(t.type)}
-                  </span>
+                  <span className={`${styles.badge} ${getTypeCls(t.type)}`}>{getTypeLabel(t.type)}</span>
                 </span>
                 <span className={styles.cellMono}>${gross.toFixed(2)}</span>
                 <span className={`${styles.cellMono} ${fee > 0 ? styles.amtNeg : ''}`}>
@@ -132,6 +142,42 @@ export default async function StoreHistoryPage() {
                 </span>
                 <span className={`${styles.cellMono} ${isNeg ? styles.amtNeg : styles.amtPos}`}>
                   {isNeg ? '−' : '+'}${Math.abs(net).toFixed(2)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Store wallet history */}
+      <div className={styles.sectionLabel}>Store Wallet History</div>
+      {walletTxs.length === 0 ? (
+        <div className={styles.empty}>
+          <div className={styles.emptyIcon}>💰</div>
+          <p>No wallet activity yet.</p>
+        </div>
+      ) : (
+        <div className={styles.tableWrap}>
+          <div className={styles.tableHead} style={{gridTemplateColumns:'120px 1fr 100px 90px'}}>
+            <span>Date</span>
+            <span>Description</span>
+            <span>Type</span>
+            <span>Amount</span>
+          </div>
+          {walletTxs.map(t => {
+            const amt = Number(t.amount)
+            const isPos = amt > 0
+            return (
+              <div key={t.id} className={styles.tableRow} style={{gridTemplateColumns:'120px 1fr 100px 90px'}}>
+                <span className={styles.cellMuted}>
+                  {new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+                <span className={styles.cellDesc}>{t.description}</span>
+                <span>
+                  <span className={`${styles.badge} ${getTypeCls(t.type)}`}>{getTypeLabel(t.type)}</span>
+                </span>
+                <span className={`${styles.cellMono} ${isPos ? styles.amtPos : styles.amtNeg}`}>
+                  {isPos ? '+' : '−'}${Math.abs(amt).toFixed(2)}
                 </span>
               </div>
             )

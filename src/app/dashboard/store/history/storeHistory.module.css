@@ -57,3 +57,5 @@
 
 .exportBtn { background: #1D1D26; color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 7px; font-family: var(--font); font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.85rem; text-decoration: none; transition: all 0.15s; white-space: nowrap; }
 .exportBtn:hover { border-color: #FF6B85; color: #FF8FA3; }
+
+.sectionLabel { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #FF8FA3; margin: 1.5rem 0 0.75rem; }
