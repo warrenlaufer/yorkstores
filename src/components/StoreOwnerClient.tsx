@@ -678,10 +678,35 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                     </div>
                   )
                 })}
-              </div>
+         </div>
             )}
 
+            {/* Show newly added items that aren't in existingItemMap yet */}
+            {Object.entries(itemEdits).filter(([k]) => k.includes('_new_')).map(([k, edit]) => (
+              <div key={k} style={{ background: 'rgba(61,214,140,0.08)', border: '1px solid rgba(61,214,140,0.3)', borderRadius: 8, padding: '0.6rem', marginBottom: '0.4rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {edit.newImageUrl && <img src={edit.newImageUrl} alt={edit.newName} style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#5FFFA8' }}>{edit.newName}</div>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--text3)', fontFamily: 'var(--mono)', marginTop: 2 }}>
+                      ${parseFloat(edit.newPrice).toFixed(2)} · +${parseFloat(edit.newShipping||'0').toFixed(2)} ship · ×{edit.addQty} adding
+                    </div>
+                  </div>
+                  <button
+                    style={{ background: 'none', border: 'none', color: 'rgba(255,107,133,0.6)', cursor: 'pointer', fontSize: '0.9rem', padding: '0 3px' }}
+                    onClick={() => {
+                      const newEdits = { ...itemEdits }
+                      delete newEdits[k]
+                      setItemEdits(newEdits)
+                      setExistingBoxes(prev => prev.filter(b => b.id !== k))
+                    }}
+                  >✕</button>
+                </div>
+              </div>
+            ))}
+
             <div className={styles.editSection}>Add New Item Type</div>
+                
             <div className={styles.itemGrid}>
               <div><label>Name</label><textarea value={eName} onChange={e => setEName(e.target.value)} rows={2} style={{resize:'vertical',minHeight:38}} /></div>
               <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" /></div>
