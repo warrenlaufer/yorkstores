@@ -68,6 +68,8 @@
 
 .itemGrid { display: grid; grid-template-columns: 1fr 90px 60px 55px; gap: 0.4rem; margin-bottom: 0.5rem; }
 .itemGridNoShip { display: grid; grid-template-columns: 1fr 90px 55px; gap: 0.4rem; margin-bottom: 0.5rem; }
+.addBtn { width: 100%; background: #FF6B85; color: #fff; border: none; border-radius: 8px; font-family: var(--font); font-size: 0.78rem; font-weight: 800; padding: 0.5rem; cursor: pointer; margin-bottom: 0.6rem; transition: background 0.15s; }
+.addBtn:hover { background: #ff4d6d; }
 .itemList { display: flex; flex-direction: column; gap: 0.35rem; }
 .itemRow { display: flex; align-items: center; gap: 6px; padding: 0.4rem 0.6rem; background: #1D1D26; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08); transition: all 0.15s; }
 .itemRowRemove { opacity: 0.4; border-color: rgba(255,107,133,0.4); background: rgba(255,107,133,0.05); }
@@ -85,7 +87,10 @@
 .qtyVal { font-family: var(--mono); font-size: 0.78rem; font-weight: 700; color: #fff; min-width: 24px; text-align: center; }
 
 .editItemBlock { background: #1D1D26; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.6rem; transition: all 0.15s; }
-.editItemTop { display: flex; align-items: center; gap: 8px; }
+.editItemTop { display: flex; align-items: flex-start; gap: 8px; }
+.editItemImgWrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; }
+.editItemImgBox { width: 48px; height: 48px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #0F0F14; transition: border-color 0.15s; overflow: hidden; }
+.editItemImgBox:hover { border-color: #FF6B85; }
 .editItemFields { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .editItemInput { background: #0F0F14; border: 1px solid rgba(255,255,255,0.12); color: #fff; font-family: var(--font); font-size: 0.75rem; padding: 0.3rem 0.5rem; border-radius: 5px; outline: none; width: 100%; }
 .editItemInput:focus { border-color: #FF6B85; }

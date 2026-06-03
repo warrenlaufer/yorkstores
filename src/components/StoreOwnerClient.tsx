@@ -9,7 +9,7 @@ type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; i
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
 type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
-type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; addQty: number }
+type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; newImageUrl: string | null; addQty: number }
 
 export default function StoreOwnerClient({ user, transactions, drops }: {
   user: { id: string; name: string; email: string; company: string; storeBalance: number }
@@ -41,13 +41,11 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const logoInputRef = useRef<HTMLInputElement>(null)
   const itemImgInputRef = useRef<HTMLInputElement>(null)
 
-  // PSA lookup state
   const [psaCert, setPsaCert] = useState('')
   const [psaLoading, setPsaLoading] = useState(false)
   const [psaError, setPsaError] = useState('')
   const [psaResult, setPsaResult] = useState<any>(null)
 
-  // PCGS lookup state
   const [pcgsCert, setPcgsCert] = useState('')
   const [pcgsLoading, setPcgsLoading] = useState(false)
   const [pcgsError, setPcgsError] = useState('')
@@ -67,6 +65,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [editBoxesLoading, setEditBoxesLoading] = useState(false)
   const [removeBoxIds, setRemoveBoxIds] = useState<string[]>([])
   const [itemEdits, setItemEdits] = useState<Record<string, ItemEdit>>({})
+  const [itemImgUploading, setItemImgUploading] = useState<Record<string, boolean>>({})
   const [eName, setEName] = useState('')
   const [ePrice, setEPrice] = useState('')
   const [eShip, setEShip] = useState('')
@@ -76,6 +75,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [eQty, setEQty] = useState('1')
   const editLogoInputRef = useRef<HTMLInputElement>(null)
   const editItemImgInputRef = useRef<HTMLInputElement>(null)
+  const itemImgRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   const effectiveShip = shippingMode === 'flat' ? flatShipping : iShip
 
@@ -128,6 +128,18 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     finally { setEImgUploading(false) }
   }
 
+  async function handleExistingItemImgUpload(k: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return
+    if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
+    if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
+    setItemImgUploading(prev => ({ ...prev, [k]: true })); setEditError('')
+    try {
+      const url = await uploadImage(file)
+      setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newImageUrl: url } }))
+    } catch (e: any) { setEditError('Image upload failed: ' + e.message) }
+    finally { setItemImgUploading(prev => ({ ...prev, [k]: false })) }
+  }
+
   async function lookupPSA() {
     if (!psaCert.trim()) return
     setPsaLoading(true); setPsaError(''); setPsaResult(null)
@@ -171,6 +183,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditError('')
     setRemoveBoxIds([])
     setItemEdits({})
+    setItemImgUploading({})
     setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
     setEditBoxesLoading(true)
     try {
@@ -184,6 +197,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           if (!map[k]) map[k] = {
             oldName: b.itemName, oldPrice: b.itemPrice, oldShipping: b.itemShippingCost,
             newName: b.itemName, newPrice: String(b.itemPrice), newShipping: String(b.itemShippingCost),
+            newImageUrl: b.itemImageUrl,
             addQty: 0,
           }
         })
@@ -209,6 +223,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         [k]: {
           oldName: eName, oldPrice: price, oldShipping: parseFloat(eShip) || 0,
           newName: eName, newPrice: String(price), newShipping: String(parseFloat(eShip) || 0),
+          newImageUrl: eImg || null,
           addQty: parseInt(eQty) || 1,
         }
       }))
@@ -227,11 +242,17 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditSaving(true); setEditError('')
 
     const updateItems = Object.values(itemEdits)
-      .filter(it => !it.oldName.includes('_new_') && (it.newName !== it.oldName || parseFloat(it.newPrice) !== it.oldPrice || parseFloat(it.newShipping) !== it.oldShipping))
+      .filter(it => !String(it.oldName).includes('_new_') && (
+        it.newName !== it.oldName ||
+        parseFloat(it.newPrice) !== it.oldPrice ||
+        parseFloat(it.newShipping) !== it.oldShipping ||
+        it.newImageUrl !== undefined
+      ))
       .map(it => ({
         oldName: it.oldName, oldPrice: it.oldPrice,
         newName: it.newName, newPrice: parseFloat(it.newPrice) || it.oldPrice,
         newShipping: parseFloat(it.newShipping) || 0,
+        newImageUrl: it.newImageUrl,
       }))
 
     const addBoxes = Object.values(itemEdits)
@@ -240,7 +261,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         itemName: it.newName,
         itemPrice: parseFloat(it.newPrice) || it.oldPrice,
         itemShippingCost: parseFloat(it.newShipping) || 0,
-        itemImageUrl: null,
+        itemImageUrl: it.newImageUrl || null,
         qty: it.addQty,
       }))
 
@@ -410,7 +431,6 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           <div className={styles.panel} style={{marginTop:'0.75rem'}}>
             <div className={styles.panelTitle}>Add Items</div>
 
-            {/* Shipping mode toggle */}
             <div className="field">
               <label>Shipping</label>
               <div className={styles.pricingToggle}>
@@ -583,10 +603,38 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                   const markedCount = it.unsoldIds.filter(id => removeBoxIds.includes(id)).length
                   const availableAfter = it.unsoldIds.length - markedCount + (edit?.addQty ?? 0)
                   if (!edit) return null
+                  const currentImg = edit.newImageUrl
                   return (
                     <div key={k} className={`${styles.editItemBlock} ${availableAfter === 0 && it.unsoldIds.length > 0 ? styles.itemRowRemove : ''}`}>
                       <div className={styles.editItemTop}>
-                        {it.imageUrl && <img src={it.imageUrl} alt={it.name} style={{width:32,height:32,objectFit:'cover',borderRadius:4,flexShrink:0}} />}
+                        <div className={styles.editItemImgWrap}>
+                          <div
+                            className={styles.editItemImgBox}
+                            onClick={() => itemImgRefs.current[k]?.click()}
+                          >
+                            {itemImgUploading[k] ? (
+                              <span className="spin" style={{width:16,height:16}} />
+                            ) : currentImg ? (
+                              <img src={currentImg} alt={it.name} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:4}} />
+                            ) : (
+                              <span style={{fontSize:'1rem'}}>📷</span>
+                            )}
+                          </div>
+                          {currentImg && (
+                            <button
+                              className={styles.removeLogoBtn}
+                              onClick={() => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newImageUrl: null } }))}
+                              style={{fontSize:'0.6rem',marginTop:2}}
+                            >Remove</button>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{display:'none'}}
+                            ref={el => { itemImgRefs.current[k] = el }}
+                            onChange={e => handleExistingItemImgUpload(k, e)}
+                          />
+                        </div>
                         <div className={styles.editItemFields}>
                           <textarea className={styles.editItemInput} value={edit.newName} onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newName: e.target.value } }))} placeholder="Item name" rows={2} style={{resize:'vertical',minHeight:38}} />
                           <div style={{display:'flex',gap:4}}>
