@@ -103,6 +103,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
     setIImgUploading(true); setError('')
+    e.target.value = ''
     try { const url = await uploadImage(file); setIImg(url); setIImgPreview(url) }
     catch (e: any) { setError('Image upload failed: ' + e.message) }
     finally { setIImgUploading(false) }
@@ -112,8 +113,9 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
-    setEditLogoUploading(true); setEditError('')
-    try { const url = await uploadImage(file); setEditLogoUrl(url); setEditLogoPreview(url) }
+    setEImgUploading(true); setEditError('')
+    e.target.value = ''
+    try { const url = await uploadImage(file); setEImg(url); setEImgPreview(url) }
     catch (e: any) { setEditError('Logo upload failed: ' + e.message) }
     finally { setEditLogoUploading(false) }
   }
@@ -133,6 +135,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
     setItemImgUploading(prev => ({ ...prev, [k]: true })); setEditError('')
+    e.target.value = ''
     try {
       const url = await uploadImage(file)
       setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newImageUrl: url } }))
@@ -706,7 +709,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             ))}
 
             <div className={styles.editSection}>Add New Item Type</div>
-                
+
             <div className={styles.itemGrid}>
               <div><label>Name</label><textarea value={eName} onChange={e => setEName(e.target.value)} rows={2} style={{resize:'vertical',minHeight:38}} /></div>
               <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" /></div>
