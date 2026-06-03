@@ -381,6 +381,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               </div>
               <div className={styles.dropRowActions}>
                 <button className={styles.editBtn} onClick={() => openEdit(d)}>Edit</button>
+                <a href={`/drop/${d.id}`} target="_blank" rel="noopener noreferrer" className={styles.shareBtn}>🔗 Share</a>
                 <button className={d.isActive ? styles.deactivateBtn : styles.activateBtn} onClick={() => toggleActive(d)}>
                   {d.isActive ? 'Deactivate' : 'Activate'}
                 </button>

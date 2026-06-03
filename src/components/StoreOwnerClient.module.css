@@ -13,6 +13,9 @@
 .historyBtn { background: #1D1D26; color: #fff; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; font-family: var(--font); font-size: 0.68rem; font-weight: 700; padding: 0.28rem 0.7rem; text-decoration: none; white-space: nowrap; transition: all 0.15s; display: inline-block; }
 .historyBtn:hover { border-color: #FF6B85; color: #FF8FA3; }
 
+.shareBtn { background: rgba(126,200,255,0.1); color: #7EC8FF; border: 1px solid rgba(126,200,255,0.3); border-radius: 6px; font-family: var(--font); font-size: 0.68rem; font-weight: 700; padding: 0.28rem 0.7rem; text-decoration: none; white-space: nowrap; transition: all 0.15s; display: inline-block; }
+.shareBtn:hover { background: rgba(126,200,255,0.2); }
+
 .storeBalance { font-size: 1.6rem; font-weight: 900; font-family: var(--mono); color: #3DD68C; margin-bottom: 0.2rem; }
 .storeBalanceSub { font-size: 0.68rem; color: var(--text2); }
 
@@ -46,7 +49,6 @@
 .itemImgPreview { width: 100%; height: 100%; object-fit: cover; }
 .itemImgPlaceholder { display: flex; align-items: center; justify-content: center; }
 
-/* PSA / PCGS lookup */
 .psaSection { background: #16161D; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.85rem; }
 .psaLabel { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #7EC8FF; margin-bottom: 0.5rem; }
 .psaRow { display: flex; gap: 0.4rem; }
