@@ -604,14 +604,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                   const availableAfter = it.unsoldIds.length - markedCount + (edit?.addQty ?? 0)
                   if (!edit) return null
                   const currentImg = edit.newImageUrl
+                  const isDeleted = availableAfter === 0 && it.unsoldIds.length > 0
                   return (
-                    <div key={k} className={`${styles.editItemBlock} ${availableAfter === 0 && it.unsoldIds.length > 0 ? styles.itemRowRemove : ''}`}>
+                    <div key={k} className={`${styles.editItemBlock} ${isDeleted ? styles.itemRowRemove : ''}`}>
                       <div className={styles.editItemTop}>
                         <div className={styles.editItemImgWrap}>
-                          <div
-                            className={styles.editItemImgBox}
-                            onClick={() => itemImgRefs.current[k]?.click()}
-                          >
+                          <div className={styles.editItemImgBox} onClick={() => itemImgRefs.current[k]?.click()}>
                             {itemImgUploading[k] ? (
                               <span className="spin" style={{width:16,height:16}} />
                             ) : currentImg ? (
@@ -621,19 +619,11 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                             )}
                           </div>
                           {currentImg && (
-                            <button
-                              className={styles.removeLogoBtn}
-                              onClick={() => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newImageUrl: null } }))}
-                              style={{fontSize:'0.6rem',marginTop:2}}
-                            >Remove</button>
+                            <button className={styles.removeLogoBtn} onClick={() => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newImageUrl: null } }))} style={{fontSize:'0.6rem',marginTop:2}}>
+                              Remove
+                            </button>
                           )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            style={{display:'none'}}
-                            ref={el => { itemImgRefs.current[k] = el }}
-                            onChange={e => handleExistingItemImgUpload(k, e)}
-                          />
+                          <input type="file" accept="image/*" style={{display:'none'}} ref={el => { itemImgRefs.current[k] = el }} onChange={e => handleExistingItemImgUpload(k, e)} />
                         </div>
                         <div className={styles.editItemFields}>
                           <textarea className={styles.editItemInput} value={edit.newName} onChange={e => setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], newName: e.target.value } }))} placeholder="Item name" rows={2} style={{resize:'vertical',minHeight:38}} />
@@ -666,11 +656,21 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                               setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: (prev[k].addQty ?? 0) + 1 } }))
                             }
                           }}>+</button>
+                          <button
+                            className={styles.qtyBtn}
+                            title="Delete all of this item type"
+                            style={{background:'rgba(255,107,133,0.15)',borderColor:'rgba(255,107,133,0.4)',color:'#FF8FA3',marginLeft:4}}
+                            onClick={() => {
+                              setRemoveBoxIds(prev => [...prev, ...it.unsoldIds.filter(id => !prev.includes(id))])
+                              setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: 0 } }))
+                            }}
+                          >🗑</button>
                         </div>
                       </div>
                       <div className={styles.editItemMeta}>
                         {it.soldCount} sold · {it.unsoldIds.length - it.unsoldIds.filter(id => removeBoxIds.includes(id)).length} current
                         {(edit.addQty ?? 0) > 0 && <span style={{color:'#5FFFA8'}}> +{edit.addQty} adding</span>}
+                        {isDeleted && <span style={{color:'#FF8FA3'}}> · will be removed</span>}
                       </div>
                     </div>
                   )
