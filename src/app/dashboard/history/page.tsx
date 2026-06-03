@@ -9,14 +9,23 @@ export default async function HistoryPage() {
   const user = await getSession()
   if (!user) redirect('/signin')
 
-  const purchases = await prisma.purchase.findMany({
-    where: { buyerId: user.id },
-    include: {
-      box: { include: { drop: { select: { name: true, emoji: true, logoUrl: true } } } },
-      order: { select: { status: true, trackingNumber: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  })
+  const [purchases, transactions] = await Promise.all([
+    prisma.purchase.findMany({
+      where: { buyerId: user.id },
+      include: {
+        box: { include: { drop: { select: { name: true, emoji: true, logoUrl: true } } } },
+        order: { select: { status: true, trackingNumber: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        type: { in: ['topup', 'purchase', 'sellback', 'shipping'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ])
 
   let runningBalance = Number(user.walletBalance)
   const purchasesWithBalance = [...purchases].reverse().map(p => {
@@ -46,11 +55,19 @@ export default async function HistoryPage() {
   const deliveries = purchases.filter(p => p.outcome === 'DELIVERY').length
   const soldBack = purchases.filter(p => p.outcome === 'SOLD_BACK' || p.outcome === 'AUTO_SOLD').reduce((s, p) => s + Number(p.refundAmt), 0)
   const spent = purchases.reduce((s, p) => s + Number(p.pricePaid), 0)
+  const deposited = transactions.filter(t => t.type === 'topup').reduce((s, t) => s + Number(t.amount), 0)
 
   return (
     <HistoryClient
       purchases={purchasesWithBalance}
-      stats={{ deliveries, soldBack, spent }}
+      stats={{ deliveries, soldBack, spent, deposited }}
+      transactions={transactions.map(t => ({
+        id: t.id,
+        type: t.type,
+        description: t.description,
+        amount: Number(t.amount),
+        createdAt: t.createdAt.toISOString(),
+      }))}
     />
   )
 }
