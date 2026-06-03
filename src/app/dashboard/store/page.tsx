@@ -2,34 +2,55 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { Role } from '@prisma/client'
-import ThemeClient from './ThemeClient'
+import StoreOwnerClient from '@/components/StoreOwnerClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ThemePage() {
+export default async function StorePage() {
   const user = await getSession()
   if (!user) redirect('/signin')
   if (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) redirect('/dashboard')
 
-  const theme = await prisma.storeTheme.findUnique({ where: { userId: user.id } })
-
-  const drops = await prisma.drop.findMany({
-    where: { ownerId: user.id },
-    select: { id: true, name: true, isActive: true },
-    orderBy: { createdAt: 'desc' },
-  })
+  const [drops, transactions] = await Promise.all([
+    prisma.drop.findMany({
+      where: { ownerId: user.id },
+      include: { boxes: { select: { sold: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.transaction.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    }),
+  ])
 
   return (
-    <ThemeClient
-      initial={{
-        primaryColor: theme?.primaryColor ?? '#FF6B85',
-        backgroundColor: theme?.backgroundColor ?? '#08080B',
-        cardColor: theme?.cardColor ?? '#0F0F14',
-        textColor: theme?.textColor ?? '#EEEEF5',
-        accentColor: theme?.accentColor ?? '#F5C842',
+    <StoreOwnerClient
+      user={{
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        company: user.company ?? '',
+        storeBalance: Number(user.storeBalance),
       }}
-      drops={drops}
-      ownerId={user.id}
+      transactions={transactions.map(t => ({
+        id: t.id,
+        type: t.type,
+        description: t.description,
+        amount: Number(t.amount),
+        createdAt: t.createdAt.toISOString(),
+      }))}
+      drops={drops.map(d => ({
+        id: d.id,
+        name: d.name,
+        logoUrl: d.logoUrl ?? undefined,
+        isActive: d.isActive,
+        totalBoxes: d.boxes.length,
+        soldBoxes: d.boxes.filter(b => b.sold).length,
+        sellBackPct: d.sellBackPct,
+        pricingType: d.pricingType,
+        category: d.category,
+      }))}
     />
   )
 }
