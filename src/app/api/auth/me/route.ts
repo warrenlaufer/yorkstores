@@ -11,6 +11,8 @@ export async function GET() {
     role: user.role,
     company: user.company,
     walletBalance: Number(user.walletBalance),
+    cashBalance: Number(user.cashBalance),
+    promoBalance: Number(user.promoBalance),
     storeBalance: Number(user.storeBalance),
   })
 }

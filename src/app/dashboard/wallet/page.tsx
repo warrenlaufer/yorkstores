@@ -32,7 +32,7 @@ function WalletContent() {
   }, [params])
 
   useEffect(() => {
-    fetch('/api/users/me').then(r => r.json()).then(d => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => {
       if (d.ok) {
         setCashBalance(Number(d.data.cashBalance ?? d.data.walletBalance))
         setPromoBalance(Number(d.data.promoBalance ?? 0))
