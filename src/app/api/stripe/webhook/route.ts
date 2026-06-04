@@ -35,16 +35,19 @@ export async function POST(req: NextRequest) {
       return new Response('Missing metadata', { status: 400 })
     }
 
-    // Idempotency — check if already processed
     const existing = await prisma.walletTopup.findUnique({
       where: { stripePaymentIntentId: session.payment_intent as string },
     })
     if (existing) return new Response('Already processed', { status: 200 })
 
     await prisma.$transaction([
+      // Top-ups go to cashBalance only
       prisma.user.update({
         where: { id: userId },
-        data: { walletBalance: { increment: amountDollars } },
+        data: {
+          walletBalance: { increment: amountDollars },
+          cashBalance: { increment: amountDollars },
+        },
       }),
       prisma.walletTopup.create({
         data: {
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest) {
       }),
     ])
 
-    console.log(`Wallet topped up: ${userId} +$${amountDollars}`)
+    console.log(`Wallet topped up: ${userId} +$${amountDollars} (cash)`)
   }
 
   return new Response('OK', { status: 200 })

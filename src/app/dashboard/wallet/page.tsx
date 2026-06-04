@@ -8,7 +8,8 @@ const AMOUNTS = [25, 50, 100, 250, 500, 1000]
 function WalletContent() {
   const router = useRouter()
   const params = useSearchParams()
-  const [balance, setBalance] = useState<number | null>(null)
+  const [cashBalance, setCashBalance] = useState<number | null>(null)
+  const [promoBalance, setPromoBalance] = useState<number | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const [custom, setCustom] = useState('')
   const [promoCode, setPromoCode] = useState('')
@@ -32,11 +33,15 @@ function WalletContent() {
 
   useEffect(() => {
     fetch('/api/users/me').then(r => r.json()).then(d => {
-      if (d.ok) setBalance(Number(d.data.walletBalance))
+      if (d.ok) {
+        setCashBalance(Number(d.data.cashBalance ?? d.data.walletBalance))
+        setPromoBalance(Number(d.data.promoBalance ?? 0))
+      }
     }).catch(() => {})
   }, [])
 
   const effectiveAmount = custom ? parseFloat(custom) : selected
+  const totalBalance = (cashBalance ?? 0) + (promoBalance ?? 0)
 
   async function handleCheckout() {
     if (!effectiveAmount || effectiveAmount < 1) { setCheckoutErr('Enter a valid amount (min $1).'); return }
@@ -66,9 +71,9 @@ function WalletContent() {
       })
       const data = await res.json()
       if (!res.ok) { setPromoErr(data.error); return }
-      setPromoMsg(`✅ $${data.data.amount.toFixed(2)} added to your wallet!`)
+      setPromoMsg(`✅ $${data.data.amount.toFixed(2)} promo credit added!`)
       setPromoCode('')
-      setBalance(prev => prev !== null ? prev + data.data.amount : null)
+      setPromoBalance(prev => (prev ?? 0) + data.data.amount)
     } catch { setPromoErr('Something went wrong.') }
     finally { setPromoLoading(false) }
   }
@@ -78,11 +83,29 @@ function WalletContent() {
       <h1 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', marginBottom: '0.2rem' }}>Wallet</h1>
       <p style={{ fontSize: '0.78rem', color: 'var(--text2)', marginBottom: '1.5rem' }}>Add funds to open drops.</p>
 
-      {/* Balance */}
-      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text2)', marginBottom: '0.4rem' }}>Current Balance</div>
-        <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#3DD68C' }}>
-          {balance !== null ? `$${balance.toFixed(2)}` : '—'}
+      {/* Balance breakdown */}
+      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+          <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text2)', marginBottom: '0.4rem' }}>Total Balance</div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#3DD68C' }}>
+            {cashBalance !== null ? `$${totalBalance.toFixed(2)}` : '—'}
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '1rem' }}>
+          <div style={{ background: '#1D1D26', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#3DD68C', marginBottom: '0.3rem' }}>💵 Cash</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#3DD68C' }}>
+              {cashBalance !== null ? `$${cashBalance.toFixed(2)}` : '—'}
+            </div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--text3)', marginTop: '0.3rem' }}>Withdrawable</div>
+          </div>
+          <div style={{ background: '#1D1D26', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#F5C842', marginBottom: '0.3rem' }}>🎁 Promo</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#F5C842' }}>
+              {promoBalance !== null ? `$${promoBalance.toFixed(2)}` : '—'}
+            </div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--text3)', marginTop: '0.3rem' }}>Non-withdrawable</div>
+          </div>
         </div>
       </div>
 
@@ -94,7 +117,7 @@ function WalletContent() {
 
       {/* Top-up */}
       <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
-        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.85rem' }}>Top Up</div>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.85rem' }}>Top Up Cash Balance</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
           {AMOUNTS.map(a => (
@@ -156,13 +179,14 @@ function WalletContent() {
               : 'Select an amount'}
         </button>
         <p style={{ fontSize: '0.65rem', color: 'var(--text3)', textAlign: 'center', marginTop: '0.5rem' }}>
-          Secured by Stripe · Visa, Mastercard, Amex accepted
+          Secured by Stripe · Visa, Mastercard, Amex accepted · Added to cash balance
         </p>
       </div>
 
       {/* Promo code */}
       <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem' }}>
-        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.85rem' }}>Promo Code</div>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.5rem' }}>Promo Code</div>
+        <p style={{ fontSize: '0.65rem', color: 'var(--text3)', marginBottom: '0.75rem' }}>Promo credits are added to your promo balance and cannot be withdrawn.</p>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <input
             value={promoCode}

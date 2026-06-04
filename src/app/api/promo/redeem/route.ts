@@ -31,7 +31,11 @@ export async function POST(req: NextRequest) {
   await prisma.$transaction([
     prisma.user.update({
       where: { id: user.id },
-      data: { walletBalance: { increment: amount } },
+      data: {
+        walletBalance: { increment: amount },
+        promoBalance: { increment: amount },
+        // cashBalance unchanged — promo credits are not withdrawable
+      },
     }),
     prisma.promoRedemption.create({
       data: { promoCodeId: promo.id, userId: user.id },

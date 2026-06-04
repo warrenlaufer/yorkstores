@@ -29,14 +29,23 @@ export async function POST(req: NextRequest) {
   const sellBackPct = purchase.box.drop.sellBackPct
   const owner = purchase.box.drop.owner
 
-  // Buyer gets the full sellBackPct% of item value — no platform fee on buybacks
+  // Sellback proceeds always go to cashBalance — real value was returned
   const buyerRefund = Math.round(itemValue * (sellBackPct / 100) * 100) / 100
 
   if (Number(owner.storeBalance) < buyerRefund) return err('Store wallet insufficient for buyback')
 
   await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { walletBalance: { increment: buyerRefund } } }),
-    prisma.user.update({ where: { id: owner.id }, data: { storeBalance: { decrement: buyerRefund } } }),
+    prisma.user.update({
+      where: { id: user.id },
+      data: {
+        walletBalance: { increment: buyerRefund },
+        cashBalance: { increment: buyerRefund },
+      },
+    }),
+    prisma.user.update({
+      where: { id: owner.id },
+      data: { storeBalance: { decrement: buyerRefund } },
+    }),
     prisma.box.update({ where: { id: purchase.box.id }, data: { sold: false } }),
     prisma.purchase.update({
       where: { id: purchase.id },
@@ -59,5 +68,10 @@ export async function POST(req: NextRequest) {
     console.error('Sell-back email failed:', e)
   }
 
-  return ok({ refundAmount: buyerRefund, newBalance: Number(user.walletBalance) + buyerRefund })
+  return ok({
+    refundAmount: buyerRefund,
+    newBalance: Number(user.walletBalance) + buyerRefund,
+    newCashBalance: Number(user.cashBalance) + buyerRefund,
+    newPromoBalance: Number(user.promoBalance),
+  })
 }

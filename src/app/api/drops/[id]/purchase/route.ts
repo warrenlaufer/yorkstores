@@ -66,7 +66,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const { dropId, boxId } = parsed.data
 
-  // Check drop exists and is active before entering transaction
   const drop = await prisma.drop.findUnique({
     where: { id: dropId },
     include: { owner: true },
@@ -74,11 +73,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (!drop || !drop.isActive) return err('Drop not found or inactive')
 
-  const buyerBalance = Number(user.walletBalance)
+  const cashBalance = Number(user.cashBalance)
+  const promoBalance = Number(user.promoBalance)
+  const totalBalance = cashBalance + promoBalance
 
   try {
     const result = await prisma.$transaction(async tx => {
-      // Lock and fetch unsold boxes within the transaction to prevent race conditions
       const unsoldBoxes = await tx.$queryRawUnsafe<Array<{
         id: string; itemName: string; itemPrice: number;
         itemShippingCost: number; itemImageUrl: string | null;
@@ -92,14 +92,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       if (!unsoldBoxes.length) throw new Error('NO_BOXES')
 
-      // Pick a box
       const box = boxId
         ? unsoldBoxes.find(b => b.id === boxId)
         : unsoldBoxes[Math.floor(Math.random() * unsoldBoxes.length)]
 
       if (!box) throw new Error('NO_BOXES')
 
-      // Get all boxes for pricing (including sold) — outside lock is fine for pricing
       const allBoxes = await tx.box.findMany({
         where: { dropId },
         select: { itemPrice: true, sold: true },
@@ -109,17 +107,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const unsoldPrices = unsoldBoxes.map(b => Number(b.itemPrice))
       const boxPrice = calcBoxPriceForDrop(allPrices, unsoldPrices, drop.pricingType)
 
-      if (buyerBalance < boxPrice) throw new Error('INSUFFICIENT_BALANCE')
+      if (totalBalance < boxPrice) throw new Error('INSUFFICIENT_BALANCE')
 
       const platformFee = Math.round(boxPrice * 0.05 * 100) / 100
       const storeCredit = Math.round(boxPrice * 0.95 * 100) / 100
       const now = new Date()
 
-      // Mark box as sold
-      await tx.box.update({ where: { id: box.id }, data: { sold: true } })
+      // Spend promo balance first, then cash
+      let promoSpend = Math.min(promoBalance, boxPrice)
+      let cashSpend = Math.round((boxPrice - promoSpend) * 100) / 100
 
-      // Deduct from buyer, credit store
-      await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: boxPrice } } })
+      await tx.box.update({ where: { id: box.id }, data: { sold: true } })
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          walletBalance: { decrement: boxPrice },
+          cashBalance: { decrement: cashSpend },
+          promoBalance: { decrement: promoSpend },
+        },
+      })
       await tx.user.update({ where: { id: drop.ownerId }, data: { storeBalance: { increment: storeCredit } } })
 
       const p = await tx.purchase.upsert({
@@ -139,7 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         data: { type: 'platform_fee', description: `Platform fee: ${drop.name}`, amount: platformFee, dropId },
       })
 
-      return { purchase: p, box, boxPrice, buyerBalance }
+      return { purchase: p, box, boxPrice, cashBalance, promoBalance, cashSpend, promoSpend }
     }, {
       isolationLevel: 'Serializable',
       timeout: 10000,
@@ -157,7 +163,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         itemImageUrl: result.box.itemImageUrl,
       },
       pricePaid: result.boxPrice,
-      newBalance: result.buyerBalance - result.boxPrice,
+      newBalance: totalBalance - result.boxPrice,
+      newCashBalance: result.cashBalance - result.cashSpend,
+      newPromoBalance: result.promoBalance - result.promoSpend,
     }, 201)
 
   } catch (e: any) {
