@@ -130,8 +130,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       const p = await tx.purchase.upsert({
         where: { boxId: box.id },
-        create: { buyerId: user.id, boxId: box.id, dropId, pricePaid: boxPrice, revealedAt: now },
-        update: { buyerId: user.id, pricePaid: boxPrice, outcome: null, refundAmt: 0, resolvedAt: null, revealedAt: now },
+        create: { buyerId: user.id, boxId: box.id, dropId, pricePaid: boxPrice, promoPaid: promoSpend, cashPaid: cashSpend, revealedAt: now },
+        update: { buyerId: user.id, pricePaid: boxPrice, promoPaid: promoSpend, cashPaid: cashSpend, outcome: null, refundAmt: 0, resolvedAt: null, revealedAt: now },
       })
 
       await tx.transaction.createMany({

@@ -29,8 +29,16 @@ export async function POST(req: NextRequest) {
   const sellBackPct = purchase.box.drop.sellBackPct
   const owner = purchase.box.drop.owner
 
-  // Sellback proceeds always go to cashBalance — real value was returned
-  const buyerRefund = Math.round(itemValue * (sellBackPct / 100) * 100) / 100
+  const round2 = (n: number) => Math.round(n * 100) / 100
+  const buyerRefund = round2(itemValue * (sellBackPct / 100))
+
+  // Split the buyback by how the box was funded.
+  // Cash-funded portion returns 100% to cash; promo-funded portion returns 90% to promo, 10% to cash.
+  // Legacy purchases with no recorded split (promoPaid = 0) fall back to 100% cash.
+  const pricePaid = Number(purchase.pricePaid)
+  const promoFraction = pricePaid > 0 ? Number(purchase.promoPaid) / pricePaid : 0
+  const toPromo = round2(buyerRefund * promoFraction * 0.9)
+  const toCash = round2(buyerRefund - toPromo)
 
   if (Number(owner.storeBalance) < buyerRefund) return err('Store wallet insufficient for buyback')
 
@@ -39,7 +47,8 @@ export async function POST(req: NextRequest) {
       where: { id: user.id },
       data: {
         walletBalance: { increment: buyerRefund },
-        cashBalance: { increment: buyerRefund },
+        cashBalance: { increment: toCash },
+        promoBalance: { increment: toPromo },
       },
     }),
     prisma.user.update({
@@ -71,7 +80,7 @@ export async function POST(req: NextRequest) {
   return ok({
     refundAmount: buyerRefund,
     newBalance: Number(user.walletBalance) + buyerRefund,
-    newCashBalance: Number(user.cashBalance) + buyerRefund,
-    newPromoBalance: Number(user.promoBalance),
+    newCashBalance: Number(user.cashBalance) + toCash,
+    newPromoBalance: Number(user.promoBalance) + toPromo,
   })
 }
