@@ -45,7 +45,7 @@ export default function PromoClient({ initial }: { initial: PromoCode[] }) {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
-      setCodes(prev => [{ ...data.data, usedCount: 0, isActive: true, createdAt: new Date().toISOString() }, ...prev])
+      setCodes(prev => [{ ...data.data, amount: Number(data.data.amount), matchPct: Number(data.data.matchPct ?? 100), usedCount: 0, isActive: true, createdAt: new Date().toISOString() }, ...prev])
       setCode(''); setAmount(''); setMatchPct('100'); setType('fixed'); setDescription(''); setMaxUses('')
       setSuccess('Promo code created.')
       setTimeout(() => setSuccess(''), 2500)
@@ -107,7 +107,7 @@ export default function PromoClient({ initial }: { initial: PromoCode[] }) {
         {codes.map(c => (
           <div key={c.id} style={{ display:'grid', gridTemplateColumns:'140px 80px 1fr 80px 60px 80px', gap:8, padding:'0.65rem 1rem', borderBottom:'1px solid rgba(255,255,255,0.05)', alignItems:'center', fontSize:'0.78rem' }}>
             <span style={{ fontFamily:'var(--mono)', fontWeight:700, color:'#F5C842' }}>{c.code}</span>
-            <span style={{ fontFamily:'var(--mono)', color:'#3DD68C', fontSize: c.type === 'match' ? '0.66rem' : '0.78rem' }}>{c.type === 'match' ? `match ${c.matchPct}% · max $${c.amount.toFixed(2)}` : `$${c.amount.toFixed(2)}`}</span>
+            <span style={{ fontFamily:'var(--mono)', color:'#3DD68C', fontSize: c.type === 'match' ? '0.66rem' : '0.78rem' }}>{c.type === 'match' ? `match ${c.matchPct}% · max $${Number(c.amount).toFixed(2)}` : `$${Number(c.amount).toFixed(2)}`}</span>
             <span style={{ color:'var(--text2)', fontSize:'0.72rem' }}>{c.description || '—'}</span>
             <span style={{ color:'var(--text2)', fontSize:'0.72rem' }}>{c.usedCount}{c.maxUses ? ` / ${c.maxUses}` : ''}</span>
             <span>
