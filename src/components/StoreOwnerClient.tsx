@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './StoreOwnerClient.module.css'
+import StoreWalletActions from './StoreWalletActions'
 
 const CATEGORIES = ['Bullion','Certified Coins','Collectible Coins','Jewelry','Luxury Brands','Other Collectibles','Sporting Goods','Trading Cards','Watches']
 
@@ -372,6 +373,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <p className={styles.storeBalanceSub}>Funded from box sales. Covers buybacks.</p>
         <p className={styles.storeBalanceSub}>Reserved for buybacks: ${user.reservedBalance.toFixed(2)} · Available: ${user.availableBalance.toFixed(2)}</p>
       </div>
+
+      <StoreWalletActions storeBalance={user.storeBalance} availableBalance={user.availableBalance} />
 
       {drops.length > 0 && (
         <div className={styles.panel} style={{marginBottom:'0.75rem'}}>

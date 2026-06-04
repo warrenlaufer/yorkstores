@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { Role } from '@prisma/client'
 import styles from './admin.module.css'
 import PromoClient from './PromoClient'
+import WithdrawalsClient from './WithdrawalsClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ export default async function AdminPage() {
   const user = await getSession()
   if (!user || user.role !== Role.ADMIN) redirect('/dashboard')
 
-  const [userCount, dropCount, purchaseCount, revenue, platformRevenue, recentPurchases, users, recentPlatformTx, promoCodes] = await Promise.all([
+  const [userCount, dropCount, purchaseCount, revenue, platformRevenue, recentPurchases, users, recentPlatformTx, promoCodes, withdrawals] = await Promise.all([
     prisma.user.count(),
     prisma.drop.count(),
     prisma.purchase.count(),
@@ -37,6 +38,11 @@ export default async function AdminPage() {
     }),
     prisma.promoCode.findMany({
       orderBy: { createdAt: 'desc' },
+    }),
+    prisma.withdrawal.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { user: { select: { name: true, email: true, role: true, company: true } } },
     }),
   ])
 
@@ -124,6 +130,16 @@ export default async function AdminPage() {
         usedCount: c.usedCount,
         isActive: c.isActive,
         createdAt: c.createdAt.toISOString(),
+      }))} />
+
+      <div className={styles.section} style={{marginTop:'2rem'}}>Withdrawals</div>
+      <WithdrawalsClient initial={withdrawals.map(w => ({
+        id: w.id,
+        source: w.source,
+        amount: Number(w.amount),
+        status: w.status,
+        createdAt: w.createdAt.toISOString(),
+        user: { name: w.user.name, email: w.user.email, role: w.user.role, company: w.user.company },
       }))} />
 
     </div>

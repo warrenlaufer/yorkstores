@@ -26,6 +26,12 @@ enum OutcomeType {
   AUTO_FAILED
 }
 
+enum WithdrawalStatus {
+  PENDING
+  PAID
+  REJECTED
+}
+
 model User {
   id                String    @id @default(cuid())
   email             String    @unique
@@ -52,6 +58,7 @@ model User {
   orders            Order[]
   transactions      Transaction[]
   walletTopups      WalletTopup[]
+  withdrawals       Withdrawal[]
   promoRedemptions  PromoRedemption[]
   storeTheme        StoreTheme?
 }
@@ -178,6 +185,19 @@ model WalletTopup {
   createdAt             DateTime @default(now())
 
   user                  User     @relation(fields: [userId], references: [id])
+}
+
+model Withdrawal {
+  id          String           @id @default(cuid())
+  userId      String
+  source      String           // 'buyer' (cashBalance) or 'store' (storeBalance)
+  amount      Decimal          @db.Decimal(10, 2)
+  status      WithdrawalStatus @default(PENDING)
+  note        String?
+  createdAt   DateTime         @default(now())
+  processedAt DateTime?
+
+  user        User             @relation(fields: [userId], references: [id])
 }
 
 model PromoCode {

@@ -2,12 +2,14 @@ import { NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
 import Stripe from 'stripe'
+import { Role } from '@prisma/client'
 import { z } from 'zod'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
 
 const schema = z.object({
   amount: z.number().int().min(100).max(100000), // in cents
+  target: z.enum(['wallet', 'store']).optional().default('wallet'),
 })
 
 export async function POST(req: NextRequest) {
@@ -18,7 +20,14 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
-  const { amount } = parsed.data
+  const { amount, target } = parsed.data
+
+  if (target === 'store' && user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) {
+    return err('Only store owners can top up a store balance', 403)
+  }
+
+  const isStore = target === 'store'
+  const redirectPath = isStore ? '/dashboard/store' : '/dashboard/wallet'
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -28,8 +37,8 @@ export async function POST(req: NextRequest) {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: 'Yorkstores Wallet Top-up',
-            description: `Add $${(amount / 100).toFixed(2)} to your Yorkstores wallet`,
+            name: isStore ? 'Yorkstores Store Top-up' : 'Yorkstores Wallet Top-up',
+            description: `Add $${(amount / 100).toFixed(2)} to your Yorkstores ${isStore ? 'store balance' : 'wallet'}`,
           },
           unit_amount: amount,
         },
@@ -39,10 +48,11 @@ export async function POST(req: NextRequest) {
     metadata: {
       userId: user.id,
       amountDollars: (amount / 100).toFixed(2),
+      target,
     },
     customer_email: user.email,
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/wallet?success=1`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/wallet?cancelled=1`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}?success=1`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}${redirectPath}?cancelled=1`,
   })
 
   return ok({ url: session.url })

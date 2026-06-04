@@ -19,6 +19,10 @@ function WalletContent() {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutErr, setCheckoutErr] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [wdAmount, setWdAmount] = useState('')
+  const [wdLoading, setWdLoading] = useState(false)
+  const [wdMsg, setWdMsg] = useState('')
+  const [wdErr, setWdErr] = useState('')
 
   useEffect(() => {
     if (params.get('success') === '1') {
@@ -58,6 +62,25 @@ function WalletContent() {
       window.location.href = data.data.url
     } catch { setCheckoutErr('Something went wrong.') }
     finally { setCheckoutLoading(false) }
+  }
+
+  async function handleWithdraw() {
+    const amt = parseFloat(wdAmount)
+    if (!amt || amt < 10) { setWdErr('Minimum withdrawal is $10.'); return }
+    if (cashBalance !== null && amt > cashBalance) { setWdErr('Amount exceeds your withdrawable cash balance.'); return }
+    setWdLoading(true); setWdMsg(''); setWdErr('')
+    try {
+      const res = await fetch('/api/withdrawals', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amt, source: 'buyer' }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setWdErr(data.error); return }
+      setWdMsg(`✅ Withdrawal of $${amt.toFixed(2)} requested. You'll be paid out after admin review.`)
+      setWdAmount('')
+      setCashBalance(prev => (prev ?? 0) - amt)
+    } catch { setWdErr('Something went wrong.') }
+    finally { setWdLoading(false) }
   }
 
   async function redeemPromo() {
@@ -181,6 +204,39 @@ function WalletContent() {
         <p style={{ fontSize: '0.65rem', color: 'var(--text3)', textAlign: 'center', marginTop: '0.5rem' }}>
           Secured by Stripe · Visa, Mastercard, Amex accepted · Added to cash balance
         </p>
+      </div>
+
+      {/* Withdraw */}
+      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#3DD68C', marginBottom: '0.5rem' }}>Withdraw Cash</div>
+        <p style={{ fontSize: '0.65rem', color: 'var(--text3)', marginBottom: '0.75rem' }}>Withdraw from your cash balance (promo credit can't be withdrawn). Minimum $10. Paid out after admin review.</p>
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flex: 1 }}>
+            <span style={{ color: 'var(--text2)', fontSize: '0.85rem' }}>$</span>
+            <input
+              type="number"
+              value={wdAmount}
+              onChange={e => { setWdAmount(e.target.value); setWdMsg(''); setWdErr('') }}
+              placeholder="Amount"
+              min="10"
+              style={{ flex: 1 }}
+            />
+          </div>
+          <button
+            onClick={handleWithdraw}
+            disabled={wdLoading || !wdAmount}
+            style={{
+              background: '#3DD68C', color: '#0F0F14', border: 'none', borderRadius: 8,
+              fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 800,
+              padding: '0 1rem', cursor: 'pointer', whiteSpace: 'nowrap',
+              opacity: wdLoading || !wdAmount ? 0.5 : 1,
+            }}
+          >
+            {wdLoading ? <span className="spin" style={{ width: 14, height: 14 }} /> : 'Withdraw'}
+          </button>
+        </div>
+        {wdErr && <p style={{ fontSize: '0.72rem', color: '#FF8FA3', margin: 0 }}>{wdErr}</p>}
+        {wdMsg && <p style={{ fontSize: '0.72rem', color: '#5FFFA8', margin: 0 }}>{wdMsg}</p>}
       </div>
 
       {/* Promo code */}

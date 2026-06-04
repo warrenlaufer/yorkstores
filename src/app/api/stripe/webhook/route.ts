@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
 
     const userId = session.metadata?.userId
     const amountDollars = parseFloat(session.metadata?.amountDollars ?? '0')
+    const target = session.metadata?.target ?? 'wallet'
 
     if (!userId || !amountDollars) {
       console.error('Missing metadata:', session.metadata)
@@ -40,34 +41,45 @@ export async function POST(req: NextRequest) {
     })
     if (existing) return new Response('Already processed', { status: 200 })
 
-    await prisma.$transaction([
-      // Top-ups go to cashBalance only
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          walletBalance: { increment: amountDollars },
-          cashBalance: { increment: amountDollars },
-        },
-      }),
-      prisma.walletTopup.create({
-        data: {
-          userId,
-          amount: amountDollars,
-          stripePaymentIntentId: session.payment_intent as string,
-          status: 'completed',
-        },
-      }),
-      prisma.transaction.create({
-        data: {
-          userId,
-          type: 'topup',
-          description: 'Wallet top-up via Stripe',
-          amount: amountDollars,
-        },
-      }),
-    ])
-
-    console.log(`Wallet topped up: ${userId} +$${amountDollars} (cash)`)
+    if (target === 'store') {
+      // Store top-up → storeBalance
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: { storeBalance: { increment: amountDollars } },
+        }),
+        prisma.walletTopup.create({
+          data: { userId, amount: amountDollars, stripePaymentIntentId: session.payment_intent as string, status: 'completed' },
+        }),
+        prisma.transaction.create({
+          data: { userId, type: 'store_topup', description: 'Store balance top-up via Stripe', amount: amountDollars },
+        }),
+      ])
+      // If this restores the store to solvent, lift any suspension.
+      const owner = await prisma.user.findUnique({ where: { id: userId }, select: { storeBalance: true } })
+      if (owner && Number(owner.storeBalance) >= 0) {
+        await prisma.drop.updateMany({ where: { ownerId: userId, isActive: false }, data: { isActive: true } })
+      }
+      console.log(`Store topped up: ${userId} +$${amountDollars}`)
+    } else {
+      // Wallet top-up → cashBalance only
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            walletBalance: { increment: amountDollars },
+            cashBalance: { increment: amountDollars },
+          },
+        }),
+        prisma.walletTopup.create({
+          data: { userId, amount: amountDollars, stripePaymentIntentId: session.payment_intent as string, status: 'completed' },
+        }),
+        prisma.transaction.create({
+          data: { userId, type: 'topup', description: 'Wallet top-up via Stripe', amount: amountDollars },
+        }),
+      ])
+      console.log(`Wallet topped up: ${userId} +$${amountDollars} (cash)`)
+    }
   }
 
   return new Response('OK', { status: 200 })
