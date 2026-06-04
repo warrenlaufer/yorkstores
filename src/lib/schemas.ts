@@ -6,9 +6,13 @@ export const signUpSchema = z.object({
   password: z.string().min(8).max(128),
   role: z.enum(['BUYER', 'STORE_OWNER']),
   company: z.string().min(2).max(100).optional(),
+  inviteCode: z.string().max(64).optional(),
 }).refine(d => d.role !== 'STORE_OWNER' || !!d.company, {
   message: 'Company name is required for store owners',
   path: ['company'],
+}).refine(d => d.role !== 'STORE_OWNER' || !!d.inviteCode?.trim(), {
+  message: 'A seller invite code is required',
+  path: ['inviteCode'],
 })
 
 export const signInSchema = z.object({

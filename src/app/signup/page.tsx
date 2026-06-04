@@ -38,7 +38,7 @@ export default function SignUpPage() {
   const [step, setStep] = useState<'role' | 'invite' | 'form'>('role')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const INVITE_CODE = 'STOREFRONT'
+  const [verifying, setVerifying] = useState(false)
 
   function handleRoleContinue() {
     if (role === 'STORE_OWNER') {
@@ -48,12 +48,23 @@ export default function SignUpPage() {
     }
   }
 
-  function checkInvite() {
-    if (inviteCode.toUpperCase() === INVITE_CODE) {
-      setError('')
+  async function checkInvite() {
+    if (!inviteCode.trim()) { setError('Please enter your invite code.'); return }
+    setVerifying(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/verify-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inviteCode.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Invalid invite code.'); return }
       setStep('form')
-    } else {
-      setError('Invalid invite code. Please check and try again.')
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setVerifying(false)
     }
   }
 
@@ -65,7 +76,7 @@ export default function SignUpPage() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role, company: role === 'STORE_OWNER' ? company : undefined }),
+        body: JSON.stringify({ name, email, password, role, company: role === 'STORE_OWNER' ? company : undefined, inviteCode: role === 'STORE_OWNER' ? inviteCode.trim() : undefined }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -126,7 +137,7 @@ export default function SignUpPage() {
                 style={{textAlign:'center',fontFamily:'var(--mono)',fontSize:'1rem',fontWeight:700,letterSpacing:'0.1em'}}
               />
             </div>
-            <button type="button" className={styles.submitBtn} onClick={checkInvite}>Verify Code</button>
+            <button type="button" className={styles.submitBtn} onClick={checkInvite} disabled={verifying}>{verifying ? <span className="spin" /> : 'Verify Code'}</button>
             <p className={styles.footer}>
               <button type="button" onClick={() => { setStep('role'); setError('') }} style={{background:'none',border:'none',color:'#FF8FA3',cursor:'pointer',fontFamily:'inherit',fontSize:'0.8rem',fontWeight:700,textDecoration:'underline'}}>← Back</button>
             </p>

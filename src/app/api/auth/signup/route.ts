@@ -15,7 +15,12 @@ export async function POST(req: NextRequest) {
   const parsed = signUpSchema.safeParse(body)
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
-  const { name, email, password, role, company } = parsed.data
+  const { name, email, password, role, company, inviteCode } = parsed.data
+
+  const STORE_INVITE_CODE = (process.env.STORE_INVITE_CODE ?? 'STOREFRONT').toUpperCase()
+  if (role === 'STORE_OWNER' && (inviteCode ?? '').trim().toUpperCase() !== STORE_INVITE_CODE) {
+    return err('Invalid seller invite code')
+  }
 
   const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
   if (existing) return err('An account with this email already exists')
