@@ -1,9 +1,12 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const PRESETS = [100, 250, 500, 1000]
 
 export default function StoreWalletActions({ storeBalance, availableBalance }: { storeBalance: number; availableBalance: number }) {
+  const router = useRouter()
+  const [available, setAvailable] = useState(availableBalance)
   const [topupAmt, setTopupAmt] = useState('')
   const [topupLoading, setTopupLoading] = useState(false)
   const [topupErr, setTopupErr] = useState('')
@@ -33,7 +36,7 @@ export default function StoreWalletActions({ storeBalance, availableBalance }: {
   async function handleWithdraw() {
     const amt = parseFloat(wdAmount)
     if (!amt || amt < 10) { setWdErr('Minimum withdrawal is $10.'); return }
-    if (amt > availableBalance) { setWdErr('Amount exceeds your available balance.'); return }
+    if (amt > available) { setWdErr('Amount exceeds your available balance.'); return }
     setWdLoading(true); setWdMsg(''); setWdErr('')
     try {
       const res = await fetch('/api/withdrawals', {
@@ -44,6 +47,8 @@ export default function StoreWalletActions({ storeBalance, availableBalance }: {
       if (!res.ok) { setWdErr(data.error); return }
       setWdMsg(`✅ Withdrawal of $${amt.toFixed(2)} requested. Paid out after admin review.`)
       setWdAmount('')
+      setAvailable(a => Math.round((a - amt) * 100) / 100)
+      router.refresh()
     } catch { setWdErr('Something went wrong.') }
     finally { setWdLoading(false) }
   }
@@ -82,7 +87,7 @@ export default function StoreWalletActions({ storeBalance, availableBalance }: {
       {/* Withdraw */}
       <div style={card}>
         <div style={{ ...label, color: '#3DD68C' }}>Withdraw</div>
-        <p style={sub}>Available to withdraw: <strong style={{ color: '#3DD68C' }}>${availableBalance.toFixed(2)}</strong>. Reserved buyback funds and negative balances can't be withdrawn. Minimum $10.</p>
+        <p style={sub}>Available to withdraw: <strong style={{ color: '#3DD68C' }}>${available.toFixed(2)}</strong>. Reserved buyback funds and negative balances can't be withdrawn. Minimum $10.</p>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flex: 1 }}>
             <span style={{ color: 'var(--text2)', fontSize: '0.85rem' }}>$</span>
