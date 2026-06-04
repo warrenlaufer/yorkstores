@@ -24,7 +24,7 @@ export async function GET() {
     include: { _count: { select: { redemptions: true } } },
   })
 
-  return ok(codes)
+  return ok(codes.map(c => ({ ...c, amount: Number(c.amount) })))
 }
 
 export async function POST(req: NextRequest) {
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  return ok(promo)
+  return ok({ ...promo, amount: Number(promo.amount) })
 }
 
 export async function DELETE(req: NextRequest) {
