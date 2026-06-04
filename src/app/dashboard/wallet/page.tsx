@@ -18,6 +18,7 @@ function WalletContent() {
   const [promoErr, setPromoErr] = useState('')
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutErr, setCheckoutErr] = useState('')
+  const [matchCode, setMatchCode] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [wdAmount, setWdAmount] = useState('')
   const [wdLoading, setWdLoading] = useState(false)
@@ -55,7 +56,7 @@ function WalletContent() {
       const res = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Math.round(effectiveAmount * 100) }),
+        body: JSON.stringify({ amount: Math.round(effectiveAmount * 100), promoCode: matchCode.trim() || undefined }),
       })
       const data = await res.json()
       if (!res.ok) { setCheckoutErr(data.error); return }
@@ -174,6 +175,18 @@ function WalletContent() {
               style={{ flex: 1 }}
             />
           </div>
+        </div>
+
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.3rem' }}>Match Code (optional)</label>
+          <input
+            type="text"
+            value={matchCode}
+            onChange={e => { setMatchCode(e.target.value.toUpperCase()); setCheckoutErr('') }}
+            placeholder="Get bonus promo credit on your deposit"
+            style={{ width: '100%', fontFamily: 'var(--mono)', letterSpacing: '0.05em' }}
+          />
+          <p style={{ fontSize: '0.6rem', color: 'var(--text3)', margin: '0.3rem 0 0' }}>Match codes add bonus promo credit equal to your deposit (up to the code's cap). Promo credit isn't withdrawable.</p>
         </div>
 
         {checkoutErr && (

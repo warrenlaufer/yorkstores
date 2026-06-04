@@ -79,6 +79,33 @@ export async function POST(req: NextRequest) {
         }),
       ])
       console.log(`Wallet topped up: ${userId} +$${amountDollars} (cash)`)
+
+      // Deposit-match promo: grant matching promo credit if a valid match code rode along.
+      const promoCodeId = session.metadata?.promoCodeId
+      if (promoCodeId) {
+        const promo = await prisma.promoCode.findUnique({
+          where: { id: promoCodeId },
+          include: { redemptions: { where: { userId } } },
+        })
+        if (
+          promo && promo.isActive && promo.type === 'match' &&
+          (!promo.expiresAt || promo.expiresAt >= new Date()) &&
+          (promo.maxUses === null || promo.usedCount < promo.maxUses) &&
+          promo.redemptions.length === 0
+        ) {
+          const cap = Number(promo.amount)
+          const match = Math.min(Math.round(amountDollars * (promo.matchPct / 100) * 100) / 100, cap)
+          if (match > 0) {
+            await prisma.$transaction([
+              prisma.user.update({ where: { id: userId }, data: { walletBalance: { increment: match }, promoBalance: { increment: match } } }),
+              prisma.promoRedemption.create({ data: { promoCodeId: promo.id, userId } }),
+              prisma.promoCode.update({ where: { id: promo.id }, data: { usedCount: { increment: 1 } } }),
+              prisma.transaction.create({ data: { userId, type: 'promo_match', description: `Deposit match (${promo.code}): +$${match.toFixed(2)} promo`, amount: match } }),
+            ])
+            console.log(`Deposit match: ${userId} +$${match} promo (${promo.code})`)
+          }
+        }
+      }
     }
   }
 

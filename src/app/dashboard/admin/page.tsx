@@ -124,7 +124,9 @@ export default async function AdminPage() {
       <PromoClient initial={promoCodes.map(c => ({
         id: c.id,
         code: c.code,
+        type: c.type,
         amount: Number(c.amount),
+        matchPct: c.matchPct,
         description: c.description,
         maxUses: c.maxUses,
         usedCount: c.usedCount,

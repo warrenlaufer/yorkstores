@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (!promo || !promo.isActive) return err('Invalid or expired promo code')
+  if (promo.type === 'match') return err('This is a deposit-match code — enter it on the Top Up screen when adding funds')
   if (promo.expiresAt && promo.expiresAt < new Date()) return err('This promo code has expired')
   if (promo.maxUses !== null && promo.usedCount >= promo.maxUses) return err('This promo code has reached its usage limit')
   if (promo.redemptions.length > 0) return err('You have already used this promo code')

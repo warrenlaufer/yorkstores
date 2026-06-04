@@ -203,7 +203,9 @@ model Withdrawal {
 model PromoCode {
   id          String   @id @default(cuid())
   code        String   @unique
+  type        String   @default("fixed")
   amount      Decimal  @db.Decimal(10, 2)
+  matchPct    Int      @default(100)
   description String?
   maxUses     Int?
   usedCount   Int      @default(0)
