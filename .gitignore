@@ -1,7 +1,12 @@
 .env
 .env.local
+.env.save
+.env.*.local
 .next/
 node_modules/
 .vercel/
 *.log
+*.save
+.DS_Store
+*.tsbuildinfo
 prisma/migrations/
