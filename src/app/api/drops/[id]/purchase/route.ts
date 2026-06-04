@@ -111,6 +111,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       const platformFee = Math.round(boxPrice * 0.05 * 100) / 100
       const storeCredit = Math.round(boxPrice * 0.95 * 100) / 100
+      const reservedAmt = Math.round(box.itemPrice * (drop.sellBackPct / 100) * 100) / 100
       const now = new Date()
 
       // Spend promo balance first, then cash
@@ -130,8 +131,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       const p = await tx.purchase.upsert({
         where: { boxId: box.id },
-        create: { buyerId: user.id, boxId: box.id, dropId, pricePaid: boxPrice, promoPaid: promoSpend, cashPaid: cashSpend, revealedAt: now },
-        update: { buyerId: user.id, pricePaid: boxPrice, promoPaid: promoSpend, cashPaid: cashSpend, outcome: null, refundAmt: 0, resolvedAt: null, revealedAt: now },
+        create: { buyerId: user.id, boxId: box.id, dropId, pricePaid: boxPrice, promoPaid: promoSpend, cashPaid: cashSpend, reservedAmt, revealedAt: now },
+        update: { buyerId: user.id, pricePaid: boxPrice, promoPaid: promoSpend, cashPaid: cashSpend, reservedAmt, outcome: null, refundAmt: 0, resolvedAt: null, revealedAt: now },
       })
 
       await tx.transaction.createMany({

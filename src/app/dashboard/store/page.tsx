@@ -11,7 +11,7 @@ export default async function StorePage() {
   if (!user) redirect('/signin')
   if (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) redirect('/dashboard')
 
-  const [drops, transactions] = await Promise.all([
+  const [drops, transactions, reservedAgg] = await Promise.all([
     prisma.drop.findMany({
       where: { ownerId: user.id },
       include: { boxes: { select: { sold: true } } },
@@ -22,7 +22,14 @@ export default async function StorePage() {
       orderBy: { createdAt: 'desc' },
       take: 20,
     }),
+    prisma.purchase.aggregate({
+      where: { drop: { ownerId: user.id }, outcome: null },
+      _sum: { reservedAmt: true },
+    }),
   ])
+
+  const reservedBalance = Number(reservedAgg._sum?.reservedAmt ?? 0)
+  const availableBalance = Math.round((Number(user.storeBalance) - reservedBalance) * 100) / 100
 
   return (
     <StoreOwnerClient
@@ -32,6 +39,8 @@ export default async function StorePage() {
         email: user.email,
         company: user.company ?? '',
         storeBalance: Number(user.storeBalance),
+        reservedBalance,
+        availableBalance,
       }}
       transactions={transactions.map(t => ({
         id: t.id,

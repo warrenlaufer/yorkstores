@@ -45,6 +45,12 @@ export async function POST(req: NextRequest) {
       await tx.transaction.create({ data: { userId: user.id, dropId: purchase.box.dropId, type: 'shipping', description: `Shipping: ${purchase.box.itemName}`, amount: -shippingCost } })
       await tx.transaction.create({ data: { userId: purchase.box.drop.ownerId, dropId: purchase.box.dropId, type: 'shipping_credit', description: `Shipping credit: ${purchase.box.itemName}`, amount: storeShippingNet } })
       await tx.platformTransaction.create({ data: { type: 'platform_fee_shipping', description: `Platform fee (shipping): ${purchase.box.itemName}`, amount: platformFee, dropId: purchase.box.dropId } })
+
+      // If this credit restores the store to solvent, lift any suspension (reactivate its drops).
+      const ownerNow = await tx.user.findUnique({ where: { id: purchase.box.drop.ownerId }, select: { storeBalance: true } })
+      if (ownerNow && Number(ownerNow.storeBalance) >= 0) {
+        await tx.drop.updateMany({ where: { ownerId: purchase.box.drop.ownerId, isActive: false }, data: { isActive: true } })
+      }
     }
 
     return { order, purchase }

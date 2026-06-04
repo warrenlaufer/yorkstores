@@ -108,6 +108,7 @@ model Purchase {
   pricePaid   Decimal     @db.Decimal(10, 2)
   promoPaid   Decimal     @default(0) @db.Decimal(10, 2)
   cashPaid    Decimal     @default(0) @db.Decimal(10, 2)
+  reservedAmt Decimal     @default(0) @db.Decimal(10, 2)
   outcome     OutcomeType?
   refundAmt   Decimal     @default(0) @db.Decimal(10, 2)
   createdAt   DateTime    @default(now())
