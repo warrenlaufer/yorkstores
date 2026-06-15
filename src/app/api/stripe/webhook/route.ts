@@ -14,12 +14,14 @@ export async function POST(req: NextRequest) {
     return new Response('Webhook secret not configured', { status: 400 })
   }
 
-  let event: Stripe.Event
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
-  } catch (e: any) {
-    console.error('Webhook signature verification failed:', e.message)
-    return new Response(`Webhook Error: ${e.message}`, { status: 400 })
+  const secrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET].filter(Boolean) as string[]
+  let event: Stripe.Event | null = null
+  for (const secret of secrets) {
+    try { event = stripe.webhooks.constructEvent(body, sig, secret); break } catch { /* try next secret */ }
+  }
+  if (!event) {
+    console.error('Webhook signature verification failed for all configured secrets')
+    return new Response('Webhook signature verification failed', { status: 400 })
   }
 
   if (event.type === 'checkout.session.completed') {
