@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
 import { Role } from '@prisma/client'
+import { createTransfer } from '@/lib/stripe'
 import { z } from 'zod'
 
 const actionSchema = z.object({
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     where: status ? { status: status as any } : {},
     orderBy: { createdAt: 'desc' },
     take: 100,
-    include: { user: { select: { name: true, email: true, role: true, company: true } } },
+    include: { user: { select: { name: true, email: true, role: true, company: true, payoutsEnabled: true, stripeAccountId: true } } },
   })
 
   return ok(withdrawals.map(w => ({
@@ -31,7 +32,13 @@ export async function GET(req: NextRequest) {
     status: w.status,
     createdAt: w.createdAt.toISOString(),
     processedAt: w.processedAt?.toISOString() ?? null,
-    user: { name: w.user.name, email: w.user.email, role: w.user.role, company: w.user.company },
+    user: {
+      name: w.user.name,
+      email: w.user.email,
+      role: w.user.role,
+      company: w.user.company,
+      payoutsReady: !!(w.user.payoutsEnabled && w.user.stripeAccountId),
+    },
   })))
 }
 
@@ -43,26 +50,23 @@ export async function POST(req: NextRequest) {
   const parsed = actionSchema.safeParse(body)
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
-  try {
-    const updated = await prisma.$transaction(async (tx) => {
-      const w = await tx.withdrawal.findUnique({ where: { id: parsed.data.id } })
-      if (!w) throw new Error('NOT_FOUND')
-      if (w.status !== 'PENDING') throw new Error('ALREADY_PROCESSED')
+  const w = await prisma.withdrawal.findUnique({ where: { id: parsed.data.id } })
+  if (!w) return err('Withdrawal not found')
+  if (w.status !== 'PENDING') return err('This withdrawal has already been processed')
 
-      const amount = Number(w.amount)
+  const amount = Number(w.amount)
 
-      if (parsed.data.action === 'reject') {
-        // Refund the held balance back to the user.
+  // Reject → refund the held balance and mark rejected.
+  if (parsed.data.action === 'reject') {
+    try {
+      await prisma.$transaction(async (tx) => {
         if (w.source === 'buyer') {
           await tx.user.update({
             where: { id: w.userId },
             data: { cashBalance: { increment: amount }, walletBalance: { increment: amount } },
           })
         } else {
-          await tx.user.update({
-            where: { id: w.userId },
-            data: { storeBalance: { increment: amount } },
-          })
+          await tx.user.update({ where: { id: w.userId }, data: { storeBalance: { increment: amount } } })
           const owner = await tx.user.findUnique({ where: { id: w.userId }, select: { storeBalance: true } })
           if (owner && Number(owner.storeBalance) >= 0) {
             await tx.drop.updateMany({ where: { ownerId: w.userId, isActive: false }, data: { isActive: true } })
@@ -71,19 +75,37 @@ export async function POST(req: NextRequest) {
         await tx.transaction.create({
           data: { userId: w.userId, type: 'withdrawal_rejected', description: `Withdrawal rejected — refunded (${w.source})`, amount },
         })
-      }
-
-      return tx.withdrawal.update({
-        where: { id: w.id },
-        data: { status: parsed.data.action === 'approve' ? 'PAID' : 'REJECTED', processedAt: new Date() },
+        await tx.withdrawal.update({ where: { id: w.id }, data: { status: 'REJECTED', processedAt: new Date() } })
       })
-    })
+      return ok({ id: w.id, status: 'REJECTED' })
+    } catch (e) {
+      console.error('Withdrawal reject error:', e)
+      return err('Could not reject — please try again')
+    }
+  }
 
-    return ok({ id: updated.id, status: updated.status })
+  // Approve → pay out via a Stripe Connect transfer to the user's connected account.
+  const recipient = await prisma.user.findUnique({
+    where: { id: w.userId },
+    select: { stripeAccountId: true, payoutsEnabled: true },
+  })
+  if (!recipient?.stripeAccountId || !recipient.payoutsEnabled) {
+    return err('This user has not finished Stripe payout onboarding, so funds can\u2019t be sent yet.')
+  }
+
+  try {
+    // idempotencyKey keyed on the withdrawal id prevents a double payout on retry.
+    const transfer = await createTransfer(recipient.stripeAccountId, amount, `wd_${w.id}`, `Yorkstores withdrawal (${w.source})`)
+    await prisma.withdrawal.update({
+      where: { id: w.id },
+      data: { status: 'PAID', processedAt: new Date(), stripeTransferId: transfer.id },
+    })
+    await prisma.transaction.create({
+      data: { userId: w.userId, type: 'withdrawal_paid', description: `Withdrawal paid out (${w.source})`, amount: 0 },
+    })
+    return ok({ id: w.id, status: 'PAID' })
   } catch (e: any) {
-    if (e.message === 'NOT_FOUND') return err('Withdrawal not found')
-    if (e.message === 'ALREADY_PROCESSED') return err('This withdrawal has already been processed')
-    console.error('Admin withdrawal error:', e)
-    return err('Action failed — please try again')
+    console.error('Transfer failed:', e?.message)
+    return err('Stripe transfer failed: ' + (e?.message ?? 'unknown error'))
   }
 }

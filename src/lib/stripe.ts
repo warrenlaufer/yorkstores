@@ -35,3 +35,21 @@ export async function createConnectOnboardingLink(accountId: string, appUrl: str
     type: 'account_onboarding',
   })
 }
+
+export async function getConnectAccount(accountId: string) {
+  return stripe.accounts.retrieve(accountId)
+}
+
+// Move funds from the platform balance to a connected account (a payout to a buyer or store).
+// idempotencyKey prevents a double-transfer if the call is retried.
+export async function createTransfer(destinationAccountId: string, amountDollars: number, idempotencyKey: string, description?: string) {
+  return stripe.transfers.create(
+    {
+      amount: Math.round(amountDollars * 100),
+      currency: 'usd',
+      destination: destinationAccountId,
+      description,
+    },
+    { idempotencyKey }
+  )
+}

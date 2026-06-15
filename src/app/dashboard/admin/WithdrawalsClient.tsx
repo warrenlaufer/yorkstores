@@ -8,7 +8,7 @@ type W = {
   amount: number
   status: string
   createdAt: string
-  user: { name: string; email: string; role: string; company: string | null }
+  user: { name: string; email: string; role: string; company: string | null; payoutsReady: boolean }
 }
 
 export default function WithdrawalsClient({ initial }: { initial: W[] }) {
@@ -50,9 +50,9 @@ export default function WithdrawalsClient({ initial }: { initial: W[] }) {
           <span>
             {w.status === 'PENDING' ? (
               <span style={{ display: 'flex', gap: 6 }}>
-                <button disabled={busy === w.id} onClick={() => act(w.id, 'approve')}
-                  style={{ background: '#3DD68C', color: '#0F0F14', border: 'none', borderRadius: 5, fontFamily: 'var(--font)', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', cursor: 'pointer' }}>
-                  Mark Paid
+                <button disabled={busy === w.id || !w.user.payoutsReady} title={w.user.payoutsReady ? 'Send the payout via Stripe' : 'User has not completed Stripe payout onboarding'} onClick={() => act(w.id, 'approve')}
+                  style={{ background: w.user.payoutsReady ? '#3DD68C' : '#2A2A33', color: w.user.payoutsReady ? '#0F0F14' : 'var(--text3)', border: 'none', borderRadius: 5, fontFamily: 'var(--font)', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', cursor: w.user.payoutsReady ? 'pointer' : 'not-allowed' }}>
+                  {w.user.payoutsReady ? 'Approve & Pay' : 'No payout setup'}
                 </button>
                 <button disabled={busy === w.id} onClick={() => act(w.id, 'reject')}
                   style={{ background: 'transparent', color: '#FF8FA3', border: '1px solid rgba(255,107,133,0.3)', borderRadius: 5, fontFamily: 'var(--font)', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', cursor: 'pointer' }}>

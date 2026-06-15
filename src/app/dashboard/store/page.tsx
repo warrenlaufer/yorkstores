@@ -41,6 +41,7 @@ export default async function StorePage() {
         storeBalance: Number(user.storeBalance),
         reservedBalance,
         availableBalance,
+        payoutsEnabled: user.payoutsEnabled,
       }}
       transactions={transactions.map(t => ({
         id: t.id,

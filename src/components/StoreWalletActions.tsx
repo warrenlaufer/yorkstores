@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 
 const PRESETS = [100, 250, 500, 1000]
 
-export default function StoreWalletActions({ storeBalance, availableBalance }: { storeBalance: number; availableBalance: number }) {
+export default function StoreWalletActions({ storeBalance, availableBalance, payoutsEnabled }: { storeBalance: number; availableBalance: number; payoutsEnabled: boolean }) {
   const router = useRouter()
   const [available, setAvailable] = useState(availableBalance)
   const [topupAmt, setTopupAmt] = useState('')
@@ -15,6 +15,17 @@ export default function StoreWalletActions({ storeBalance, availableBalance }: {
   const [wdLoading, setWdLoading] = useState(false)
   const [wdMsg, setWdMsg] = useState('')
   const [wdErr, setWdErr] = useState('')
+  const [connectLoading, setConnectLoading] = useState(false)
+
+  async function startConnect() {
+    setConnectLoading(true)
+    try {
+      const res = await fetch('/api/connect/onboard', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && data.data?.url) window.location.href = data.data.url
+      else { setWdErr(data.error || 'Could not start payout setup.'); setConnectLoading(false) }
+    } catch { setWdErr('Something went wrong.'); setConnectLoading(false) }
+  }
 
   async function handleTopup() {
     const amt = parseFloat(topupAmt)
@@ -88,6 +99,7 @@ export default function StoreWalletActions({ storeBalance, availableBalance }: {
       <div style={card}>
         <div style={{ ...label, color: '#3DD68C' }}>Withdraw</div>
         <p style={sub}>Available to withdraw: <strong style={{ color: '#3DD68C' }}>${available.toFixed(2)}</strong>. Reserved buyback funds and negative balances can't be withdrawn. Minimum $10.</p>
+        {payoutsEnabled ? (
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flex: 1 }}>
             <span style={{ color: 'var(--text2)', fontSize: '0.85rem' }}>$</span>
@@ -98,6 +110,12 @@ export default function StoreWalletActions({ storeBalance, availableBalance }: {
             {wdLoading ? <span className="spin" style={{ width: 14, height: 14 }} /> : 'Withdraw'}
           </button>
         </div>
+        ) : (
+          <button onClick={startConnect} disabled={connectLoading}
+            style={{ background: '#635BFF', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 800, padding: '0.5rem 1rem', cursor: 'pointer' }}>
+            {connectLoading ? 'Starting…' : 'Set up payouts with Stripe'}
+          </button>
+        )}
         {wdErr && <p style={{ fontSize: '0.72rem', color: '#FF8FA3', margin: '0.5rem 0 0' }}>{wdErr}</p>}
         {wdMsg && <p style={{ fontSize: '0.72rem', color: '#5FFFA8', margin: '0.5rem 0 0' }}>{wdMsg}</p>}
       </div>

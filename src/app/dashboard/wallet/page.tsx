@@ -21,6 +21,8 @@ function WalletContent() {
   const [matchCode, setMatchCode] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [wdAmount, setWdAmount] = useState('')
+  const [payoutsEnabled, setPayoutsEnabled] = useState<boolean | null>(null)
+  const [connectLoading, setConnectLoading] = useState(false)
   const [wdLoading, setWdLoading] = useState(false)
   const [wdMsg, setWdMsg] = useState('')
   const [wdErr, setWdErr] = useState('')
@@ -41,6 +43,7 @@ function WalletContent() {
       if (d.ok) {
         setCashBalance(Number(d.data.cashBalance ?? d.data.walletBalance))
         setPromoBalance(Number(d.data.promoBalance ?? 0))
+        setPayoutsEnabled(!!d.data.payoutsEnabled)
       }
     }).catch(() => {})
   }, [])
@@ -63,6 +66,16 @@ function WalletContent() {
       window.location.href = data.data.url
     } catch { setCheckoutErr('Something went wrong.') }
     finally { setCheckoutLoading(false) }
+  }
+
+  async function startConnect() {
+    setConnectLoading(true)
+    try {
+      const res = await fetch('/api/connect/onboard', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok && data.data?.url) window.location.href = data.data.url
+      else { setWdErr(data.error || 'Could not start payout setup.'); setConnectLoading(false) }
+    } catch { setWdErr('Something went wrong.'); setConnectLoading(false) }
   }
 
   async function handleWithdraw() {
@@ -222,7 +235,18 @@ function WalletContent() {
       {/* Withdraw */}
       <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
         <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#3DD68C', marginBottom: '0.5rem' }}>Withdraw Cash</div>
-        <p style={{ fontSize: '0.65rem', color: 'var(--text3)', marginBottom: '0.75rem' }}>Withdraw from your cash balance (promo credit can't be withdrawn). Minimum $10. Paid out after admin review.</p>
+        <p style={{ fontSize: '0.65rem', color: 'var(--text3)', marginBottom: '0.75rem' }}>Withdraw from your cash balance (promo credit can't be withdrawn). Minimum $10. Paid to your bank via Stripe after admin review.</p>
+        {payoutsEnabled === false ? (
+          <div>
+            <p style={{ fontSize: '0.7rem', color: 'var(--text2)', marginBottom: '0.6rem' }}>Set up payouts with Stripe to withdraw. You'll add your bank details on Stripe's secure page.</p>
+            <button onClick={startConnect} disabled={connectLoading}
+              style={{ background: '#635BFF', color: '#fff', border: 'none', borderRadius: 8, fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 800, padding: '0.5rem 1rem', cursor: 'pointer' }}>
+              {connectLoading ? 'Starting…' : 'Set up payouts'}
+            </button>
+            {wdErr && <p style={{ fontSize: '0.72rem', color: '#FF8FA3', margin: '0.5rem 0 0' }}>{wdErr}</p>}
+          </div>
+        ) : (
+        <>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flex: 1 }}>
             <span style={{ color: 'var(--text2)', fontSize: '0.85rem' }}>$</span>
@@ -250,6 +274,8 @@ function WalletContent() {
         </div>
         {wdErr && <p style={{ fontSize: '0.72rem', color: '#FF8FA3', margin: 0 }}>{wdErr}</p>}
         {wdMsg && <p style={{ fontSize: '0.72rem', color: '#5FFFA8', margin: 0 }}>{wdMsg}</p>}
+        </>
+        )}
       </div>
 
       {/* Promo code */}

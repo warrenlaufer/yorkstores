@@ -14,5 +14,7 @@ export async function GET() {
     cashBalance: Number(user.cashBalance),
     promoBalance: Number(user.promoBalance),
     storeBalance: Number(user.storeBalance),
+    payoutsEnabled: user.payoutsEnabled,
+    hasStripeAccount: !!user.stripeAccountId,
   })
 }

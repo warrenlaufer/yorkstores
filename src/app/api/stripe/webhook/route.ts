@@ -109,5 +109,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Connect: keep each user's payout eligibility in sync with their connected account.
+  if (event.type === 'account.updated') {
+    const account = event.data.object as Stripe.Account
+    try {
+      await prisma.user.updateMany({
+        where: { stripeAccountId: account.id },
+        data: { payoutsEnabled: !!account.payouts_enabled },
+      })
+      console.log(`Connect account ${account.id}: payouts_enabled=${account.payouts_enabled}`)
+    } catch (e) {
+      console.error('account.updated handling failed:', e)
+    }
+  }
+
   return new Response('OK', { status: 200 })
 }

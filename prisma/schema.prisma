@@ -45,6 +45,7 @@ model User {
   storeBalance      Decimal   @default(0.00) @db.Decimal(10, 2)
   stripeCustomerId  String?   @unique
   stripeAccountId   String?   @unique
+  payoutsEnabled    Boolean   @default(false)
   resetToken        String?   @unique
   resetTokenExpiry  DateTime?
   emailVerified     Boolean   @default(false)
@@ -194,6 +195,7 @@ model Withdrawal {
   amount      Decimal          @db.Decimal(10, 2)
   status      WithdrawalStatus @default(PENDING)
   note        String?
+  stripeTransferId String?
   createdAt   DateTime         @default(now())
   processedAt DateTime?
 

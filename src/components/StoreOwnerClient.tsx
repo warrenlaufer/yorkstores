@@ -13,7 +13,7 @@ type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippi
 type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; newImageUrl: string | null; addQty: number }
 
 export default function StoreOwnerClient({ user, transactions, drops }: {
-  user: { id: string; name: string; email: string; company: string; storeBalance: number; reservedBalance: number; availableBalance: number }
+  user: { id: string; name: string; email: string; company: string; storeBalance: number; reservedBalance: number; availableBalance: number; payoutsEnabled: boolean }
   transactions: Tx[]
   drops: DropSummary[]
 }) {
@@ -374,7 +374,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         <p className={styles.storeBalanceSub}>Reserved for buybacks: ${user.reservedBalance.toFixed(2)} · Available: ${user.availableBalance.toFixed(2)}</p>
       </div>
 
-      <StoreWalletActions storeBalance={user.storeBalance} availableBalance={user.availableBalance} />
+      <StoreWalletActions storeBalance={user.storeBalance} availableBalance={user.availableBalance} payoutsEnabled={user.payoutsEnabled} />
 
       {drops.length > 0 && (
         <div className={styles.panel} style={{marginBottom:'0.75rem'}}>

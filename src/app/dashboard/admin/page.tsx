@@ -42,7 +42,7 @@ export default async function AdminPage() {
     prisma.withdrawal.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
-      include: { user: { select: { name: true, email: true, role: true, company: true } } },
+      include: { user: { select: { name: true, email: true, role: true, company: true, payoutsEnabled: true, stripeAccountId: true } } },
     }),
   ])
 
@@ -141,7 +141,7 @@ export default async function AdminPage() {
         amount: Number(w.amount),
         status: w.status,
         createdAt: w.createdAt.toISOString(),
-        user: { name: w.user.name, email: w.user.email, role: w.user.role, company: w.user.company },
+        user: { name: w.user.name, email: w.user.email, role: w.user.role, company: w.user.company, payoutsReady: !!(w.user.payoutsEnabled && w.user.stripeAccountId) },
       }))} />
 
     </div>
