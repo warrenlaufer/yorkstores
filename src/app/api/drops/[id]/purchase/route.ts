@@ -115,8 +115,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const now = new Date()
 
       // Spend promo balance first, then cash
-      let promoSpend = Math.min(promoBalance, boxPrice)
-      let cashSpend = Math.round((boxPrice - promoSpend) * 100) / 100
+      // Split 50/50 between promo and cash where possible. If one side is short of its
+      // half, use what's there and cover the remainder from the other side.
+      const half = Math.round((boxPrice / 2) * 100) / 100
+      let promoSpend: number
+      let cashSpend: number
+      if (promoBalance >= half && cashBalance >= half) {
+        promoSpend = half
+        cashSpend = Math.round((boxPrice - half) * 100) / 100
+      } else if (promoBalance < half) {
+        promoSpend = Math.round(promoBalance * 100) / 100
+        cashSpend = Math.round((boxPrice - promoSpend) * 100) / 100
+      } else {
+        cashSpend = Math.round(cashBalance * 100) / 100
+        promoSpend = Math.round((boxPrice - cashSpend) * 100) / 100
+      }
 
       await tx.box.update({ where: { id: box.id }, data: { sold: true } })
       await tx.user.update({

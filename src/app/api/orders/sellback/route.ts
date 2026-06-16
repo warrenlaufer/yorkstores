@@ -40,11 +40,10 @@ export async function POST(req: NextRequest) {
 
       const buyerRefund = round2(itemValue * (sellBackPct / 100))
 
-      // Split the buyback by how the box was funded.
-      // Cash-funded portion returns 100% to cash; promo-funded portion returns 90% to promo, 10% to cash.
+      // The buyback comes back in the same promo/cash ratio the box was funded with.
       const pricePaid = Number(purchase.pricePaid)
       const promoFraction = pricePaid > 0 ? Number(purchase.promoPaid) / pricePaid : 0
-      const toPromo = round2(buyerRefund * promoFraction * 0.9)
+      const toPromo = round2(buyerRefund * promoFraction)
       const toCash = round2(buyerRefund - toPromo)
 
       // Read the store balance fresh inside the transaction (serializable) for a safe limit check.
