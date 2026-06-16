@@ -33,17 +33,29 @@ export async function POST(req: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       const me = await tx.user.findUnique({
         where: { id: user.id },
-        select: { cashBalance: true, storeBalance: true },
+        select: { cashBalance: true, storeBalance: true, promoBalance: true },
       })
       if (!me) throw new Error('NOT_FOUND')
 
+      let forfeitedPromo = 0
       if (source === 'buyer') {
         const cash = Number(me.cashBalance)
         if (cash < amount) throw new Error('INSUFFICIENT')
+        // Withdrawing cash forfeits all promo credit.
+        forfeitedPromo = Math.round(Number(me.promoBalance) * 100) / 100
         await tx.user.update({
           where: { id: user.id },
-          data: { cashBalance: { decrement: amount }, walletBalance: { decrement: amount } },
+          data: {
+            cashBalance: { decrement: amount },
+            promoBalance: { set: 0 },
+            walletBalance: { decrement: amount + forfeitedPromo },
+          },
         })
+        if (forfeitedPromo > 0) {
+          await tx.transaction.create({
+            data: { userId: user.id, type: 'promo_forfeited', description: 'Promo credit forfeited on withdrawal', amount: -forfeitedPromo },
+          })
+        }
       } else {
         const storeBalance = Number(me.storeBalance)
         const reservedAgg = await tx.purchase.aggregate({
@@ -61,7 +73,7 @@ export async function POST(req: NextRequest) {
       }
 
       const withdrawal = await tx.withdrawal.create({
-        data: { userId: user.id, source, amount, status: 'PENDING' },
+        data: { userId: user.id, source, amount, status: 'PENDING', forfeitedPromo },
       })
 
       await tx.transaction.create({

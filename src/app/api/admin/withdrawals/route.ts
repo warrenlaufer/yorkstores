@@ -61,10 +61,20 @@ export async function POST(req: NextRequest) {
     try {
       await prisma.$transaction(async (tx) => {
         if (w.source === 'buyer') {
+          const restorePromo = Number(w.forfeitedPromo)
           await tx.user.update({
             where: { id: w.userId },
-            data: { cashBalance: { increment: amount }, walletBalance: { increment: amount } },
+            data: {
+              cashBalance: { increment: amount },
+              promoBalance: { increment: restorePromo },
+              walletBalance: { increment: amount + restorePromo },
+            },
           })
+          if (restorePromo > 0) {
+            await tx.transaction.create({
+              data: { userId: w.userId, type: 'promo_restored', description: 'Promo credit restored (withdrawal rejected)', amount: restorePromo },
+            })
+          }
         } else {
           await tx.user.update({ where: { id: w.userId }, data: { storeBalance: { increment: amount } } })
           const owner = await tx.user.findUnique({ where: { id: w.userId }, select: { storeBalance: true } })

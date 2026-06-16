@@ -26,6 +26,7 @@ function WalletContent() {
   const [wdLoading, setWdLoading] = useState(false)
   const [wdMsg, setWdMsg] = useState('')
   const [wdErr, setWdErr] = useState('')
+  const [wdConfirm, setWdConfirm] = useState(false)
 
   useEffect(() => {
     if (params.get('success') === '1') {
@@ -78,10 +79,17 @@ function WalletContent() {
     } catch { setWdErr('Something went wrong.'); setConnectLoading(false) }
   }
 
-  async function handleWithdraw() {
+  function handleWithdraw() {
     const amt = parseFloat(wdAmount)
     if (!amt || amt < 10) { setWdErr('Minimum withdrawal is $10.'); return }
     if (cashBalance !== null && amt > cashBalance) { setWdErr('Amount exceeds your withdrawable cash balance.'); return }
+    setWdErr('')
+    // If there's promo credit to forfeit, require an explicit confirmation first.
+    if ((promoBalance ?? 0) > 0 && !wdConfirm) { setWdConfirm(true); return }
+    doWithdraw(amt)
+  }
+
+  async function doWithdraw(amt: number) {
     setWdLoading(true); setWdMsg(''); setWdErr('')
     try {
       const res = await fetch('/api/withdrawals', {
@@ -93,6 +101,8 @@ function WalletContent() {
       setWdMsg(`✅ Withdrawal of $${amt.toFixed(2)} requested. You'll be paid out after admin review.`)
       setWdAmount('')
       setCashBalance(prev => (prev ?? 0) - amt)
+      setPromoBalance(0)
+      setWdConfirm(false)
     } catch { setWdErr('Something went wrong.') }
     finally { setWdLoading(false) }
   }
@@ -272,6 +282,22 @@ function WalletContent() {
             {wdLoading ? <span className="spin" style={{ width: 14, height: 14 }} /> : 'Withdraw'}
           </button>
         </div>
+        {wdConfirm && (
+          <div style={{ background: 'rgba(255,107,133,0.08)', border: '1px solid rgba(255,107,133,0.3)', borderRadius: 8, padding: '0.6rem 0.75rem', margin: '0 0 0.5rem' }}>
+            <p style={{ fontSize: '0.72rem', color: '#FF8FA3', fontWeight: 700, margin: '0 0 0.4rem' }}>⚠️ Withdrawing forfeits all your promo credit{promoBalance ? ` ($${promoBalance.toFixed(2)})` : ''}.</p>
+            <p style={{ fontSize: '0.66rem', color: 'var(--text2)', margin: '0 0 0.6rem' }}>This can't be undone — your promo balance will drop to $0.</p>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => { const a = parseFloat(wdAmount); if (a) doWithdraw(a) }} disabled={wdLoading}
+                style={{ background: '#FF6B85', color: '#fff', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: '0.72rem', fontWeight: 800, padding: '0.4rem 0.9rem', cursor: 'pointer' }}>
+                {wdLoading ? 'Submitting…' : 'Forfeit promo & withdraw'}
+              </button>
+              <button onClick={() => setWdConfirm(false)} disabled={wdLoading}
+                style={{ background: 'transparent', color: 'var(--text2)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 7, fontFamily: 'var(--font)', fontSize: '0.72rem', fontWeight: 700, padding: '0.4rem 0.9rem', cursor: 'pointer' }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         {wdErr && <p style={{ fontSize: '0.72rem', color: '#FF8FA3', margin: 0 }}>{wdErr}</p>}
         {wdMsg && <p style={{ fontSize: '0.72rem', color: '#5FFFA8', margin: 0 }}>{wdMsg}</p>}
         </>

@@ -196,6 +196,7 @@ model Withdrawal {
   status      WithdrawalStatus @default(PENDING)
   note        String?
   stripeTransferId String?
+  forfeitedPromo Decimal     @default(0) @db.Decimal(10, 2)
   createdAt   DateTime         @default(now())
   processedAt DateTime?
 
