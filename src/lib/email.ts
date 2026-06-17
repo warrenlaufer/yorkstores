@@ -25,6 +25,25 @@ function baseTemplate(content: string) {
 </html>`
 }
 
+// Alerts admin when a US Coins pricing API call fails. Never throws.
+export async function sendCatalogFailureAlert(context: string, message: string) {
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: 'admin@yorkstores.com',
+      subject: '⚠️ US Coins pricing API failure',
+      html: baseTemplate(`
+        <h1 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 8px">US Coins pricing call failed</h1>
+        <p style="color:#9898B0;font-size:15px;line-height:1.6;margin:0 0 8px"><strong style="color:#fff">Where:</strong> ${context}</p>
+        <p style="color:#9898B0;font-size:15px;line-height:1.6;margin:0 0 8px"><strong style="color:#fff">Error:</strong> ${message}</p>
+        <p style="color:#9898B0;font-size:15px;line-height:1.6;margin:0">Time: ${new Date().toISOString()}</p>
+      `),
+    })
+  } catch (e) {
+    console.error('Failed to send catalog-failure alert email:', e)
+  }
+}
+
 export async function sendWelcomeEmail(to: string, name: string) {
   await resend.emails.send({
     from: FROM,

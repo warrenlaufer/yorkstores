@@ -37,6 +37,8 @@ export const createDropSchema = z.object({
     itemPrice: z.number().min(0.01).max(100000),
     itemShippingCost: z.number().min(0).max(1000).default(0),
     itemImageUrl: z.string().url().optional().or(z.literal('')),
+    useUscApi: z.boolean().optional().default(false),
+    sku: z.string().max(64).optional(),
     qty: z.number().int().min(1).max(200).default(1),
   })).min(1).max(200),
 })

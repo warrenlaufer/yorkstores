@@ -6,7 +6,7 @@ import StoreWalletActions from './StoreWalletActions'
 
 const CATEGORIES = ['Bullion','Certified Coins','Collectible Coins','Jewelry','Luxury Brands','Other Collectibles','Sporting Goods','Trading Cards','Watches']
 
-type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string }
+type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string; useUscApi?: boolean; sku?: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
 type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
@@ -36,6 +36,11 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [iImgPreview, setIImgPreview] = useState('')
   const [iImgUploading, setIImgUploading] = useState(false)
   const [iQty, setIQty] = useState('1')
+  const [useUsc, setUseUsc] = useState(false)
+  const [uscCatalog, setUscCatalog] = useState<{ sku: string; description: string; sellPrice: number; majorCategory: string; availability: string; imageUrl: string | null }[] | null>(null)
+  const [uscSku, setUscSku] = useState('')
+  const [uscLoading, setUscLoading] = useState(false)
+  const [uscError, setUscError] = useState('')
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -301,15 +306,39 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     router.refresh()
   }
 
+  async function loadUscCatalog() {
+    if (uscCatalog) return
+    setUscLoading(true); setUscError('')
+    try {
+      const res = await fetch('/api/catalog/bullion')
+      const d = await res.json()
+      if (res.ok) setUscCatalog(d.data)
+      else setUscError(d.error || 'Could not load catalog')
+    } catch { setUscError('Could not load catalog') }
+    finally { setUscLoading(false) }
+  }
+
+  function selectUscSku(sku: string) {
+    setUscSku(sku)
+    const item = uscCatalog?.find(i => i.sku === sku)
+    if (item) {
+      setIName(item.description)
+      setIPrice(String(item.sellPrice))
+      if (item.imageUrl) { setIImg(item.imageUrl); setIImgPreview(item.imageUrl) }
+    }
+  }
+
   function addBox() {
     const price = parseFloat(iPrice)
     const shipPrice = parseFloat(effectiveShip) || 0
     if (!iName || isNaN(price) || price <= 0) { setError('Enter a valid item name and price.'); return }
+    if (useUsc && !uscSku) { setError('Select a catalog item, or uncheck “Use USC API for pricing”.'); return }
     setBoxes(prev => [...prev, {
       itemName: iName, itemPrice: price, itemShippingCost: shipPrice,
       itemImageUrl: iImg, qty: Math.max(1, parseInt(iQty) || 1), _id: Math.random().toString(36).slice(2),
+      useUscApi: useUsc, sku: useUsc ? uscSku : undefined,
     }])
-    setIName(''); setIPrice(''); setIImg(''); setIImgPreview(''); setIQty('1')
+    setIName(''); setIPrice(''); setIImg(''); setIImgPreview(''); setIQty('1'); setUscSku('')
     if (shippingMode === 'per_item') setIShip('')
     setPsaCert(''); setPsaResult(null); setPsaError('')
     setPcgsCert(''); setPcgsResult(null); setPcgsError('')
@@ -432,7 +461,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             </div>
             <div className="field">
               <label>Category</label>
-              <select value={category} onChange={e => setCategory(e.target.value)}>
+              <select value={category} onChange={e => { setCategory(e.target.value); if (e.target.value !== 'Bullion') { setUseUsc(false); setUscSku('') } }}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -506,9 +535,29 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               </div>
             )}
 
+            {category === 'Bullion' && (
+              <div style={{ marginBottom: '0.6rem', padding: '0.6rem 0.75rem', background: 'rgba(126,224,255,0.06)', border: '1px solid rgba(126,224,255,0.25)', borderRadius: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>
+                  <input type="checkbox" checked={useUsc} onChange={e => { setUseUsc(e.target.checked); if (e.target.checked) loadUscCatalog(); else setUscSku('') }} />
+                  Use USC API for pricing
+                </label>
+                {useUsc && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    {uscLoading ? <span style={{ fontSize: '0.75rem', color: 'var(--text3)' }}>Loading catalog…</span>
+                      : uscError ? <span style={{ fontSize: '0.75rem', color: '#FF8FA3' }}>{uscError}</span>
+                      : <select value={uscSku} onChange={e => selectUscSku(e.target.value)} style={{ width: '100%' }}>
+                          <option value="">Select a catalog item…</option>
+                          {uscCatalog?.map(i => <option key={i.sku} value={i.sku}>{i.description} — ${i.sellPrice.toFixed(2)} ({i.availability})</option>)}
+                        </select>}
+                    <p style={{ fontSize: '0.68rem', color: 'var(--text3)', margin: '0.4rem 0 0' }}>Price is set from the catalog now and auto-refreshes hourly while the drop is live.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className={shippingMode === 'flat' ? styles.itemGridNoShip : styles.itemGrid}>
-              <div><label>Name</label><textarea value={iName} onChange={e => setIName(e.target.value)} rows={2} style={{resize:'vertical',minHeight:38}} /></div>
-              <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" /></div>
+              <div><label>Name</label><textarea value={iName} onChange={e => setIName(e.target.value)} rows={2} readOnly={useUsc} title={useUsc ? 'Set from the US Coins catalog' : undefined} style={{resize:'vertical',minHeight:38, ...(useUsc ? { opacity: 0.7 } : {})}} /></div>
+              <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" readOnly={useUsc} title={useUsc ? 'Set from the US Coins catalog' : undefined} style={useUsc ? { opacity: 0.7 } : undefined} /></div>
               {shippingMode === 'per_item' && <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} min="0" /></div>}
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
             </div>

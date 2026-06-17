@@ -101,6 +101,8 @@ model Box {
   itemPrice        Decimal   @db.Decimal(10, 2)
   itemShippingCost Decimal   @default(0) @db.Decimal(10, 2)
   itemImageUrl     String?
+  useUscApi        Boolean   @default(false)
+  sku              String?
   sold             Boolean   @default(false)
   createdAt        DateTime  @default(now())
 

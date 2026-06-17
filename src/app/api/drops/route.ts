@@ -5,6 +5,8 @@ import { ok, err } from '@/lib/api'
 import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
 import { createDropSchema } from '@/lib/schemas'
+import { fetchUscCatalogMap } from '@/lib/usc'
+import { sendCatalogFailureAlert } from '@/lib/email'
 
 const CATEGORIES = [
   'Bullion',
@@ -67,14 +69,35 @@ export async function POST(req: NextRequest) {
   const pricingType = body?.pricingType === 'dynamic' ? 'dynamic' : 'fixed'
   const category = CATEGORIES.includes(body?.category) ? body.category : 'Other Collectibles'
 
-  const boxRecords = boxDefs.flatMap(b =>
-    Array.from({ length: b.qty }, () => ({
+  // If any box opts into USC API pricing, fetch the catalog once and snapshot prices.
+  let uscMap: Awaited<ReturnType<typeof fetchUscCatalogMap>> | null = null
+  if (boxDefs.some(b => b.useUscApi)) {
+    try {
+      uscMap = await fetchUscCatalogMap()
+    } catch (e: any) {
+      await sendCatalogFailureAlert('Drop creation price snapshot (/api/drops)', e?.message || 'unknown error')
+      return err('Could not reach the US Coins catalog to price bullion items. Please try again shortly.')
+    }
+    for (const b of boxDefs) {
+      if (b.useUscApi) {
+        if (!b.sku) return err('Select a catalog item for each box set to use USC API pricing.')
+        if (!uscMap.get(b.sku)) return err(`US Coins catalog has no SKU "${b.sku}".`)
+      }
+    }
+  }
+
+  const boxRecords = boxDefs.flatMap(b => {
+    const usc = b.useUscApi && b.sku ? uscMap?.get(b.sku) : null
+    const price = usc ? usc.sellPrice : b.itemPrice
+    return Array.from({ length: b.qty }, () => ({
       itemName: b.itemName,
-      itemPrice: b.itemPrice,
+      itemPrice: price,
       itemShippingCost: b.itemShippingCost,
       itemImageUrl: b.itemImageUrl || null,
+      useUscApi: !!usc,
+      sku: usc ? b.sku : null,
     }))
-  )
+  })
 
   for (let i = boxRecords.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
