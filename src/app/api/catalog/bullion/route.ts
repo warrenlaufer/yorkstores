@@ -7,7 +7,7 @@ import { fetchUscCatalog } from '@/lib/usc'
 // Seller/admin only; the API key stays on the server.
 export async function GET() {
   const user = await getSession()
-  if (!user || (user.role !== Role.STORE && user.role !== Role.ADMIN)) return err('Forbidden', 403)
+  if (!user || (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN)) return err('Forbidden', 403)
 
   try {
     const items = await fetchUscCatalog()
