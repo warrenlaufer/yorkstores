@@ -538,7 +538,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             {category === 'Bullion' && (
               <div style={{ marginBottom: '0.6rem', padding: '0.4rem 0.6rem', background: 'rgba(126,224,255,0.06)', border: '1px solid rgba(126,224,255,0.25)', borderRadius: 8 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  <input type="checkbox" checked={useUsc} onChange={e => { setUseUsc(e.target.checked); if (e.target.checked) loadUscCatalog(); else setUscSku('') }} style={{ margin: 0, flexShrink: 0 }} />
+                  <input type="checkbox" checked={useUsc} onChange={e => { setUseUsc(e.target.checked); if (e.target.checked) loadUscCatalog(); else setUscSku('') }} style={{ appearance: 'auto', width: 16, height: 16, minWidth: 16, padding: 0, margin: 0, background: 'transparent', border: 'none', borderRadius: 0, flexShrink: 0, accentColor: '#FF6B85' }} />
                   Use USC API for pricing
                 </label>
                 {useUsc && (
