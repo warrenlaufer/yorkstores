@@ -5,6 +5,8 @@ import { ok, err } from '@/lib/api'
 import { createOrderSchema } from '@/lib/schemas'
 import { sendOrderConfirmationEmail, sendNewOrderNotificationEmail } from '@/lib/email'
 import { OutcomeType } from '@prisma/client'
+import { calculateTax, recordTaxTransaction } from '@/lib/stripe'
+import { toStripeTaxAddress } from '@/lib/tax'
 
 export async function POST(req: NextRequest) {
   const user = await getSession()
@@ -15,6 +17,27 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
   const { purchaseId, ...addressData } = parsed.data
+
+  // Validate the purchase before any external calls.
+  const pre = await prisma.purchase.findUnique({
+    where: { id: purchaseId },
+    select: { buyerId: true, outcome: true, pricePaid: true },
+  })
+  if (!pre) return err('Purchase not found')
+  if (pre.buyerId !== user.id) return err('Forbidden', 403)
+  if (pre.outcome) return err('Already resolved')
+
+  // Sales tax (shipped items only) via Stripe Tax, based on the box price.
+  let salesTax = 0
+  let taxCalcId: string | null = null
+  try {
+    const calc = await calculateTax(Math.round(Number(pre.pricePaid) * 100), toStripeTaxAddress(addressData))
+    salesTax = (calc.tax_amount_exclusive ?? 0) / 100
+    taxCalcId = calc.id
+  } catch (e: any) {
+    console.error('Tax calculation failed:', e?.message)
+    return err('Could not calculate sales tax for this address. Please check your address and try again.')
+  }
 
   const order = await prisma.$transaction(async (tx) => {
     const purchase = await tx.purchase.findUnique({
@@ -31,7 +54,7 @@ export async function POST(req: NextRequest) {
     const storeShippingNet = Math.round((shippingCost - platformFee) * 100) / 100
 
     const order = await tx.order.create({
-      data: { purchaseId, dropId: purchase.box.dropId, buyerId: user.id, ...addressData },
+      data: { purchaseId, dropId: purchase.box.dropId, buyerId: user.id, taxPaid: salesTax, ...addressData },
     })
 
     await tx.purchase.update({
@@ -53,8 +76,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Charge sales tax on the shipped item (collected by the platform).
+    if (salesTax > 0) {
+      await tx.user.update({ where: { id: user.id }, data: { walletBalance: { decrement: salesTax } } })
+      await tx.transaction.create({ data: { userId: user.id, dropId: purchase.box.dropId, type: 'sales_tax', description: `Sales tax: ${purchase.box.itemName}`, amount: -salesTax } })
+      await tx.platformTransaction.create({ data: { type: 'sales_tax', description: `Sales tax collected: ${purchase.box.itemName}`, amount: salesTax, dropId: purchase.box.dropId } })
+    }
+
     return { order, purchase }
   })
+
+  // Record the tax transaction in Stripe Tax for reporting (external; best-effort).
+  if (taxCalcId && salesTax > 0) {
+    try {
+      const taxTxn = await recordTaxTransaction(taxCalcId, order.order.id)
+      await prisma.order.update({ where: { id: order.order.id }, data: { stripeTaxTransactionId: taxTxn.id } })
+    } catch (e: any) {
+      console.error('Tax transaction record failed:', e?.message)
+    }
+  }
 
   try {
     const addrStr = [

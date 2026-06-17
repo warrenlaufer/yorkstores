@@ -144,6 +144,8 @@ model Order {
   postcode        String
   country         String      @default("United States")
   trackingNumber  String?
+  taxPaid         Decimal     @default(0) @db.Decimal(10, 2)
+  stripeTaxTransactionId String?
   shippedAt       DateTime?
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

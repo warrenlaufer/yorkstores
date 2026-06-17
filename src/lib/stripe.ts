@@ -53,3 +53,18 @@ export async function createTransfer(destinationAccountId: string, amountDollars
     { idempotencyKey }
   )
 }
+
+// Stripe Tax: calculate tax for a given (tax-exclusive) amount and shipping address.
+// Returns a Tax Calculation; `tax_amount_exclusive` is the tax to add on top, in cents.
+export async function calculateTax(amountCents: number, address: any, reference = 'box') {
+  return stripe.tax.calculations.create({
+    currency: 'usd',
+    line_items: [{ amount: amountCents, reference, tax_behavior: 'exclusive' }],
+    customer_details: { address, address_source: 'shipping' },
+  })
+}
+
+// Record a finalized tax transaction from a calculation (for Stripe Tax reporting/filing).
+export async function recordTaxTransaction(calculationId: string, reference: string) {
+  return stripe.tax.transactions.createFromCalculation({ calculation: calculationId, reference })
+}

@@ -89,6 +89,8 @@ function RevealContent() {
   const [submitting, setSubmitting] = useState(false)
   const [outcome, setOutcome] = useState<'delivery' | 'soldback' | null>(null)
   const [outcomeMsg, setOutcomeMsg] = useState('')
+  const [taxPreview, setTaxPreview] = useState<number | null>(null)
+  const [taxLoading, setTaxLoading] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const hasAutoSold = useRef(false)
@@ -222,6 +224,23 @@ function RevealContent() {
   function openDelivery() { stopTimer(); setShowAddr(true) }
   function cancelDelivery() { setShowAddr(false) }
 
+  // Clear a stale tax estimate whenever the address changes.
+  useEffect(() => { setTaxPreview(null) }, [addrForm.addressLine1, addrForm.city, addrForm.state, addrForm.postcode, addrForm.country])
+
+  async function previewTax() {
+    setTaxLoading(true); setAddrError('')
+    try {
+      const res = await fetch('/api/orders/tax-preview', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ purchaseId: getPurchaseId(), ...addrForm }),
+      })
+      const d = await res.json()
+      if (res.ok) setTaxPreview(d.data.tax)
+      else setAddrError(d.error)
+    } catch { setAddrError('Could not calculate tax.') }
+    finally { setTaxLoading(false) }
+  }
+
   async function submitDelivery() {
     setAddrError('')
     if (!addrForm.recipientName || !addrForm.recipientEmail || !addrForm.addressLine1 || !addrForm.city || !addrForm.postcode) {
@@ -330,9 +349,21 @@ function RevealContent() {
         <div className={styles.addrOverlay} onClick={cancelDelivery}>
           <div className={styles.addrBox} onClick={e => e.stopPropagation()}>
             <h2 className={styles.addrTitle}>📦 Shipping Address</h2>
-            <p className={styles.addrSub}>
-              Shipping cost: {data?.box.itemShippingCost ? `$${data.box.itemShippingCost.toFixed(2)} (charged separately)` : 'Free'}
-            </p>
+            <div className={styles.addrSub}>
+              {(() => {
+                const shipping = data?.box.itemShippingCost ?? 0
+                const tax = taxPreview ?? 0
+                const total = Math.round((shipping + tax) * 100) / 100
+                return (
+                  <span style={{ display: 'block', lineHeight: 1.8 }}>
+                    Shipping: {shipping > 0 ? `$${shipping.toFixed(2)}` : 'Free'}<br />
+                    {taxPreview === null
+                      ? <span style={{ color: 'var(--text3)' }}>Sales tax is calculated from your address — fill it in, then tap “Calculate sales tax”.</span>
+                      : <>Sales tax (on ${(data?.pricePaid ?? 0).toFixed(2)} box price): ${tax.toFixed(2)}<br /><strong>Total charged at delivery: ${total.toFixed(2)}</strong></>}
+                  </span>
+                )
+              })()}
+            </div>
             {addrError && <div className={styles.addrErr}>{addrError}</div>}
             <div className="field"><label>Full Name</label><input value={addrForm.recipientName} onChange={e => setAddrForm(p => ({...p, recipientName: e.target.value}))} /></div>
             <div className="field"><label>Email (for tracking)</label><input type="email" value={addrForm.recipientEmail} onChange={e => setAddrForm(p => ({...p, recipientEmail: e.target.value}))} /></div>
@@ -346,6 +377,10 @@ function RevealContent() {
               <div className="field"><label>Postcode / ZIP</label><input value={addrForm.postcode} onChange={e => setAddrForm(p => ({...p, postcode: e.target.value}))} /></div>
               <div className="field"><label>Country</label><input value={addrForm.country} onChange={e => setAddrForm(p => ({...p, country: e.target.value}))} /></div>
             </div>
+            <button type="button" onClick={previewTax} disabled={taxLoading}
+              style={{ marginTop: '0.7rem', width: '100%', background: 'transparent', color: '#7EE0FF', border: '1px solid rgba(126,224,255,0.4)', borderRadius: 7, fontFamily: 'var(--font)', fontSize: '0.74rem', fontWeight: 700, padding: '0.45rem 0.9rem', cursor: 'pointer' }}>
+              {taxLoading ? 'Calculating…' : 'Calculate sales tax'}
+            </button>
             <div style={{display:'flex',gap:'0.6rem',marginTop:'0.75rem'}}>
               <button className={styles.cancelBtn} onClick={cancelDelivery}>Cancel</button>
               <button className={styles.confirmBtn} onClick={submitDelivery} disabled={submitting}>
