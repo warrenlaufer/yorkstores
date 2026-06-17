@@ -556,7 +556,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             )}
 
             <div className={shippingMode === 'flat' ? styles.itemGridNoShip : styles.itemGrid}>
-              <div><label>Name</label><textarea value={iName} onChange={e => setIName(e.target.value)} rows={2} readOnly={useUsc} title={useUsc ? 'Set from the US Coins catalog' : undefined} style={{resize:'vertical',minHeight:38, ...(useUsc ? { opacity: 0.7 } : {})}} /></div>
+              <div><label>Name</label><textarea value={iName} onChange={e => setIName(e.target.value)} rows={1} readOnly={useUsc} title={useUsc ? 'Set from the US Coins catalog' : undefined} style={{resize:'vertical',minHeight:38, ...(useUsc ? { opacity: 0.7 } : {})}} /></div>
               <div><label>Value $</label><input type="number" value={iPrice} onChange={e => setIPrice(e.target.value)} min="0.01" readOnly={useUsc} title={useUsc ? 'Set from the US Coins catalog' : undefined} style={useUsc ? { opacity: 0.7 } : undefined} /></div>
               {shippingMode === 'per_item' && <div><label>Ship $</label><input type="number" value={iShip} onChange={e => setIShip(e.target.value)} min="0" /></div>}
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
