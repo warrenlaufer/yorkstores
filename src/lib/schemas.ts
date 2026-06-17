@@ -7,6 +7,7 @@ export const signUpSchema = z.object({
   role: z.enum(['BUYER', 'STORE_OWNER']),
   company: z.string().min(2).max(100).optional(),
   inviteCode: z.string().max(64).optional(),
+  agreedToTerms: z.literal(true, { errorMap: () => ({ message: 'You must agree to the policies to sign up' }) }),
 }).refine(d => d.role !== 'STORE_OWNER' || !!d.company, {
   message: 'Company name is required for store owners',
   path: ['company'],

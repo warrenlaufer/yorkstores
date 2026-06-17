@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword, createSession, SESSION_COOKIE, SESSION_DURATION } from '@/lib/auth'
 import { ok, err, limiter } from '@/lib/api'
 import { signUpSchema } from '@/lib/schemas'
+import { AGREEMENTS_VERSION } from '@/lib/legal'
 import { sendWelcomeEmail } from '@/lib/email'
 import { Role } from '@prisma/client'
 
@@ -26,6 +27,8 @@ export async function POST(req: NextRequest) {
   if (existing) return err('An account with this email already exists')
 
   const passwordHash = await hashPassword(password)
+  const now = new Date()
+  const isSeller = role === 'STORE_OWNER'
 
   const user = await prisma.user.create({
     data: {
@@ -37,6 +40,14 @@ export async function POST(req: NextRequest) {
       walletBalance: 0,
       storeBalance: 0,
       emailVerified: true,
+      agreementVersion: AGREEMENTS_VERSION,
+      agreementAcceptedAt: now,
+      ...(isSeller ? { sellerAgreementVersion: AGREEMENTS_VERSION, sellerAgreementAcceptedAt: now } : {}),
+      agreementAcceptances: {
+        create: isSeller
+          ? [{ kind: 'general', version: AGREEMENTS_VERSION }, { kind: 'seller', version: AGREEMENTS_VERSION }]
+          : [{ kind: 'general', version: AGREEMENTS_VERSION }],
+      },
     },
   })
 

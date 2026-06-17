@@ -35,6 +35,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState('')
   const [company, setCompany] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  const [agreed, setAgreed] = useState(false)
   const [step, setStep] = useState<'role' | 'invite' | 'form'>('role')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -71,12 +72,13 @@ export default function SignUpPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (!agreed) { setError('Please agree to the policies to continue.'); return }
     setLoading(true)
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role, company: role === 'STORE_OWNER' ? company : undefined, inviteCode: role === 'STORE_OWNER' ? inviteCode.trim() : undefined }),
+        body: JSON.stringify({ name, email, password, role, company: role === 'STORE_OWNER' ? company : undefined, inviteCode: role === 'STORE_OWNER' ? inviteCode.trim() : undefined, agreedToTerms: agreed }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -172,7 +174,16 @@ export default function SignUpPage() {
                 <label htmlFor="password">Password</label>
                 <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
               </div>
-              <button type="submit" className={styles.submitBtn} disabled={loading}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', fontSize: '0.78rem', lineHeight: 1.5, margin: '0.25rem 0 0.75rem' }}>
+                <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ appearance: 'auto', width: 16, height: 16, minWidth: 16, padding: 0, margin: '2px 0 0', background: 'transparent', border: 'none', borderRadius: 0, flexShrink: 0, accentColor: '#FF6B85' }} />
+                <span>
+                  I have read and agree to the{' '}
+                  <a href="/legal/terms" target="_blank" style={{ color: '#FF8FA3', textDecoration: 'underline' }}>Terms of Service</a>{' '}and{' '}
+                  <a href="/legal/privacy" target="_blank" style={{ color: '#FF8FA3', textDecoration: 'underline' }}>Privacy Policy</a>
+                  {role === 'STORE_OWNER' && <>{', '}and the{' '}<a href="/legal/seller-agreement" target="_blank" style={{ color: '#FF8FA3', textDecoration: 'underline' }}>Seller Agreement</a></>}.
+                </span>
+              </label>
+              <button type="submit" className={styles.submitBtn} disabled={loading || !agreed}>
                 {loading ? <span className="spin" /> : 'Create account'}
               </button>
             </form>
