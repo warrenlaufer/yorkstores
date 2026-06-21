@@ -60,6 +60,7 @@ export default async function StorePage() {
         sellBackPct: d.sellBackPct,
         pricingType: d.pricingType,
         category: d.category,
+        subcategory: d.subcategory,
       }))}
     />
   )

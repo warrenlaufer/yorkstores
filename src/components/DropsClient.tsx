@@ -2,18 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './DropsClient.module.css'
-
-const CATEGORIES = [
-  'Bullion',
-  'Certified Coins',
-  'Collectible Coins',
-  'Jewelry',
-  'Luxury Brands',
-  'Other Collectibles',
-  'Sporting Goods',
-  'Trading Cards',
-  'Watches',
-]
+import { CATEGORIES, subcategoriesFor, ALL_SUBCATEGORIES } from '@/lib/categories'
 
 type Drop = {
   id: string
@@ -27,7 +16,7 @@ type Drop = {
   minPrice: number
   maxPrice: number
   category: string
-  pricingType: string
+  subcategory?: string | null
   sellBackPct: number
   createdAt: string
   recentPurchases: number
@@ -38,6 +27,7 @@ type User = { id: string; name: string; email: string; role: string; walletBalan
 export default function DropsClient({ drops, user }: { drops: Drop[]; user: User }) {
   const router = useRouter()
   const [selectedCats, setSelectedCats] = useState<Set<string>>(new Set(CATEGORIES))
+  const [selectedSubs, setSelectedSubs] = useState<Set<string>>(new Set(ALL_SUBCATEGORIES))
   const [selectedStores, setSelectedStores] = useState<Set<string>>(new Set())
 
   const stores = Array.from(new Set(drops.map(d => d.owner))).sort()
@@ -64,14 +54,24 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
     })
   }
 
+  function toggleSub(sub: string) {
+    setSelectedSubs(prev => {
+      const next = new Set(prev)
+      if (next.has(sub)) next.delete(sub)
+      else next.add(sub)
+      return next
+    })
+  }
+
   function selectAllCats() { setSelectedCats(new Set(CATEGORIES)) }
   function clearCats() { setSelectedCats(new Set()) }
   function clearStores() { setSelectedStores(new Set()) }
 
   const filtered = drops.filter(d => {
     const catMatch = selectedCats.has(d.category)
+    const subMatch = !d.subcategory || selectedSubs.has(d.subcategory)
     const storeMatch = selectedStores.size === 0 || selectedStores.has(d.owner)
-    return catMatch && storeMatch
+    return catMatch && subMatch && storeMatch
   })
 
   function getBadges(d: Drop) {
@@ -101,16 +101,32 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
             <button className={styles.sidebarAction} onClick={clearCats} disabled={noCatsSelected}>None</button>
           </div>
           <div className={styles.sidebarList}>
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                className={`${styles.sidebarItem} ${selectedCats.has(cat) ? styles.sidebarItemActive : ''}`}
-                onClick={() => toggleCat(cat)}
-              >
-                <span className={styles.sidebarCheck}>{selectedCats.has(cat) ? '✓' : ''}</span>
-                {cat}
-              </button>
-            ))}
+            {CATEGORIES.map(cat => {
+              const subs = subcategoriesFor(cat)
+              const catSelected = selectedCats.has(cat)
+              return (
+                <div key={cat}>
+                  <button
+                    className={`${styles.sidebarItem} ${catSelected ? styles.sidebarItemActive : ''}`}
+                    onClick={() => toggleCat(cat)}
+                  >
+                    <span className={styles.sidebarCheck}>{catSelected ? '✓' : ''}</span>
+                    {cat}
+                  </button>
+                  {subs.length > 0 && catSelected && subs.map(sub => (
+                    <button
+                      key={sub}
+                      className={`${styles.sidebarItem} ${selectedSubs.has(sub) ? styles.sidebarItemActive : ''}`}
+                      style={{ paddingLeft: 30, fontSize: '0.82em' }}
+                      onClick={() => toggleSub(sub)}
+                    >
+                      <span className={styles.sidebarCheck}>{selectedSubs.has(sub) ? '✓' : ''}</span>
+                      {sub}
+                    </button>
+                  ))}
+                </div>
+              )
+            })}
           </div>
 
           {stores.length > 0 && (
@@ -156,7 +172,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
               >
                 <div className={styles.badgeRows}>
                   <div className={styles.badgeRowTop}>
-                    <span className={styles.badgeCat}>{d.category}</span>
+                    <span className={styles.badgeCat}>{d.category}{d.subcategory ? ` · ${d.subcategory}` : ''}</span>
                   </div>
                   <div className={styles.badgeRowBottom}>
                     {badges.map(b => (

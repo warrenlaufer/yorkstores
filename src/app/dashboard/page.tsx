@@ -41,6 +41,7 @@ export default async function DashboardPage() {
       minPrice: allPrices.length ? Math.min(...allPrices) : 0,
       maxPrice: allPrices.length ? Math.max(...allPrices) : 0,
       category: d.category,
+      subcategory: d.subcategory,
       pricingType: d.pricingType,
       sellBackPct: d.sellBackPct,
       createdAt: d.createdAt.toISOString(),

@@ -7,18 +7,7 @@ import { Role } from '@prisma/client'
 import { createDropSchema } from '@/lib/schemas'
 import { fetchUscCatalogMap } from '@/lib/usc'
 import { sendCatalogFailureAlert } from '@/lib/email'
-
-const CATEGORIES = [
-  'Bullion',
-  'Certified Coins',
-  'Collectible Coins',
-  'Jewelry',
-  'Luxury Brands',
-  'Other Collectibles',
-  'Sporting Goods',
-  'Trading Cards',
-  'Watches',
-]
+import { isValidCategory, normalizeSubcategory } from '@/lib/categories'
 
 export async function GET() {
   const drops = await prisma.drop.findMany({
@@ -42,6 +31,7 @@ export async function GET() {
       sellBackPct: d.sellBackPct,
       pricingType: d.pricingType,
       category: d.category,
+      subcategory: d.subcategory,
       owner: d.owner.company ?? d.owner.name,
       boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, d.pricingType),
       totalBoxes: d.boxes.length,
@@ -67,7 +57,8 @@ export async function POST(req: NextRequest) {
     ? Math.min(100, Math.max(1, Math.round(body.sellBackPct)))
     : 90
   const pricingType = body?.pricingType === 'dynamic' ? 'dynamic' : 'fixed'
-  const category = CATEGORIES.includes(body?.category) ? body.category : 'Other Collectibles'
+  const category = isValidCategory(body?.category) ? body.category : 'Other Collectibles'
+  const subcategory = normalizeSubcategory(category, body?.subcategory)
 
   // If any box opts into USC API pricing, fetch the catalog once and snapshot prices.
   let uscMap: Awaited<ReturnType<typeof fetchUscCatalogMap>> | null = null
@@ -106,7 +97,7 @@ export async function POST(req: NextRequest) {
 
   const drop = await prisma.drop.create({
     data: {
-      name, emoji, logoUrl, sellBackPct, pricingType, category,
+      name, emoji, logoUrl, sellBackPct, pricingType, category, subcategory,
       ownerId: user.id,
       boxes: { create: boxRecords },
     },

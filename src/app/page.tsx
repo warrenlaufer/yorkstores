@@ -100,7 +100,7 @@ export default async function HomePage() {
         <h2 style={{ textAlign:'center', fontSize:'1.5rem', fontWeight:900, marginBottom:'0.5rem', letterSpacing:'-0.02em' }}>What's inside</h2>
         <p style={{ textAlign:'center', color:'#9898B0', fontSize:'0.85rem', marginBottom:'2rem' }}>Drops across a wide range of categories.</p>
         <div style={{ display:'flex', flexWrap:'wrap', gap:'0.5rem', justifyContent:'center' }}>
-          {['Trading Cards','Certified Coins','Collectible Coins','Bullion','Watches','Jewelry','Luxury Brands','Sporting Goods','Other Collectibles'].map(cat => (
+          {['Trading Cards','Coins','Bullion','Watches','Jewelry','Luxury Brands','Sporting Goods','Other Collectibles'].map(cat => (
             <span key={cat} style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:20, padding:'0.35rem 0.85rem', fontSize:'0.75rem', fontWeight:600, color:'#9898B0' }}>{cat}</span>
           ))}
         </div>

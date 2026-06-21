@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
 import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
+import { normalizeSubcategory } from '@/lib/categories'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const drop = await prisma.drop.findUnique({
@@ -32,7 +33,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     sellBackPct: drop.sellBackPct,
     pricingType: drop.pricingType,
     category: drop.category,
-    owner: drop.owner.company ?? drop.owner.name,
+    subcategory: drop.subcategory,
     boxPrice: calcBoxPriceForDrop(allPrices, unsoldPrices, drop.pricingType),
     boxes: drop.boxes.map(b => ({
       id: b.id,
@@ -67,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(body.isActive !== undefined && { isActive: body.isActive }),
       ...(body.sellBackPct !== undefined && { sellBackPct: Math.min(100, Math.max(1, body.sellBackPct)) }),
       ...(body.pricingType !== undefined && { pricingType: body.pricingType === 'dynamic' ? 'dynamic' : 'fixed' }),
-      ...(body.category !== undefined && { category: body.category }),
+      ...(body.category !== undefined && { category: body.category, subcategory: normalizeSubcategory(body.category, body.subcategory) }),
     },
   })
 

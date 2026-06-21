@@ -3,12 +3,11 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './StoreOwnerClient.module.css'
 import StoreWalletActions from './StoreWalletActions'
-
-const CATEGORIES = ['Bullion','Certified Coins','Collectible Coins','Jewelry','Luxury Brands','Other Collectibles','Sporting Goods','Trading Cards','Watches']
+import { CATEGORIES, subcategoriesFor } from '@/lib/categories'
 
 type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string; useUscApi?: boolean; sku?: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
-type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string }
+type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string; subcategory?: string | null }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
 type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; newImageUrl: string | null; addQty: number }
 
@@ -26,6 +25,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [sellBackPct, setSellBackPct] = useState('90')
   const [pricingType, setPricingType] = useState<'fixed' | 'dynamic'>('fixed')
   const [category, setCategory] = useState('Other Collectibles')
+  const [subcategory, setSubcategory] = useState('')
   const [shippingMode, setShippingMode] = useState<'flat' | 'per_item'>('per_item')
   const [flatShipping, setFlatShipping] = useState('')
   const [boxes, setBoxes] = useState<BoxDef[]>([])
@@ -65,6 +65,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [editSellBackPct, setEditSellBackPct] = useState('90')
   const [editPricingType, setEditPricingType] = useState<'fixed' | 'dynamic'>('fixed')
   const [editCategory, setEditCategory] = useState('Other Collectibles')
+  const [editSubcategory, setEditSubcategory] = useState('')
   const [editSaving, setEditSaving] = useState(false)
   const [editError, setEditError] = useState('')
   const [existingBoxes, setExistingBoxes] = useState<ExistingBox[]>([])
@@ -189,6 +190,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setEditSellBackPct(String(drop.sellBackPct))
     setEditPricingType(drop.pricingType === 'dynamic' ? 'dynamic' : 'fixed')
     setEditCategory(drop.category ?? 'Other Collectibles')
+    setEditSubcategory(drop.subcategory ?? '')
     setEditError('')
     setRemoveBoxIds([])
     setItemEdits({})
@@ -284,6 +286,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           sellBackPct: Math.min(100, Math.max(1, parseInt(editSellBackPct) || 90)),
           pricingType: editPricingType,
           category: editCategory,
+          subcategory: subcategoriesFor(editCategory).length ? editSubcategory : null,
           addBoxes: addBoxes.length > 0 ? addBoxes : undefined,
           removeBoxIds: removeBoxIds.length > 0 ? removeBoxIds : undefined,
           updateItems: updateItems.length > 0 ? updateItems : undefined,
@@ -361,12 +364,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
       const res = await fetch('/api/drops', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, pricingType, category, boxes }),
+        body: JSON.stringify({ name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, pricingType, category, subcategory: subcategoriesFor(category).length ? subcategory : null, boxes }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
       setSuccess('Drop published!')
-      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setCategory('Other Collectibles')
+      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setCategory('Other Collectibles'); setSubcategory('')
       setShippingMode('per_item'); setFlatShipping(''); setBoxes([])
       setTimeout(() => { setSuccess(''); router.refresh() }, 1500)
     } catch { setError('Something went wrong.') }
@@ -461,10 +464,18 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             </div>
             <div className="field">
               <label>Category</label>
-              <select value={category} onChange={e => { setCategory(e.target.value); if (e.target.value !== 'Bullion') { setUseUsc(false); setUscSku('') } }}>
+              <select value={category} onChange={e => { const c = e.target.value; setCategory(c); setSubcategory(subcategoriesFor(c)[0] ?? ''); if (c !== 'Bullion') { setUseUsc(false); setUscSku('') } }}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            {subcategoriesFor(category).length > 0 && (
+              <div className="field">
+                <label>Subcategory</label>
+                <select value={subcategory} onChange={e => setSubcategory(e.target.value)}>
+                  {subcategoriesFor(category).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className={styles.panel} style={{marginTop:'0.75rem'}}>
@@ -508,7 +519,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               </div>
             )}
 
-            {category === 'Certified Coins' && (
+            {category === 'Coins' && subcategory === 'Certified Coins' && (
               <div className={styles.psaSection}>
                 <div className={styles.psaLabel} style={{color:'#F5C842'}}>PCGS Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
                 <div className={styles.psaRow}>
@@ -562,7 +573,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div><label>Qty</label><input type="number" value={iQty} onChange={e => setIQty(e.target.value)} min="1" max="200" /></div>
             </div>
             <div className="field">
-              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>{category === 'Trading Cards' || category === 'Certified Coins' ? '(auto-filled from lookup)' : '(optional)'}</span></label>
+              <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>{category === 'Trading Cards' || (category === 'Coins' && subcategory === 'Certified Coins') ? '(auto-filled from lookup)' : '(optional)'}</span></label>
               <div className={styles.itemImgRow}>
                 <div className={styles.itemImgUpload} onClick={() => itemImgInputRef.current?.click()}>
                   {iImgPreview ? <img src={iImgPreview} alt="Item preview" className={styles.itemImgPreview} /> : (
@@ -595,7 +606,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.preview}>
                 <div className={styles.previewRow}><span>Drop</span><span>{name || 'Unnamed Drop'}</span></div>
                 <div className={styles.previewRow}><span>Owner</span><span>{user.company}</span></div>
-                <div className={styles.previewRow}><span>Category</span><span>{category}</span></div>
+                <div className={styles.previewRow}><span>Category</span><span>{category}{subcategory ? ` · ${subcategory}` : ''}</span></div>
                 <div className={styles.previewRow}><span>Boxes</span><span>{totalBoxes}</span></div>
                 <div className={styles.previewRow}><span>Avg value</span><span>${avgVal.toFixed(2)}</span></div>
                 <div className={styles.previewRow}><span>Box price (avg +5%)</span><span style={{color:'#F5C842'}}>${boxPrice}</span></div>
@@ -649,10 +660,18 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             </div>
             <div className="field">
               <label>Category</label>
-              <select value={editCategory} onChange={e => setEditCategory(e.target.value)}>
+              <select value={editCategory} onChange={e => { const c = e.target.value; setEditCategory(c); setEditSubcategory(subcategoriesFor(c)[0] ?? '') }}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            {subcategoriesFor(editCategory).length > 0 && (
+              <div className="field">
+                <label>Subcategory</label>
+                <select value={editSubcategory} onChange={e => setEditSubcategory(e.target.value)}>
+                  {subcategoriesFor(editCategory).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            )}
 
             <div className={styles.editSection}>Current Items</div>
             {editBoxesLoading ? <p style={{color:'var(--text2)',fontSize:'0.78rem'}}>Loading items…</p> : (
