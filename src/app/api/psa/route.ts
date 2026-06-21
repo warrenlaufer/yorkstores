@@ -22,15 +22,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch cert details and images in parallel
-    const [certRes, imgRes] = await Promise.all([
-      fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNum}`, { headers }),
-      fetch(`https://api.psacard.com/publicapi/cert/GetImagesByCertNumber/${certNum}`, { headers }),
-    ])
+    const certRes = await fetch(`https://api.psacard.com/publicapi/cert/GetByCertNumber/${certNum}`, { headers })
+
+    if (certRes.status === 429) return err('PSA is rate-limiting requests right now. Please wait a minute and try again.', 429)
+    if (certRes.status === 401 || certRes.status === 403) return err('PSA rejected the request — check the API token and its permissions.', 502)
+    if (!certRes.ok) return err(`PSA lookup failed (HTTP ${certRes.status}). Please try again shortly.`, 502)
 
     const certText = await certRes.text()
     let data: any
-    try { data = JSON.parse(certText) } catch { return err('PSA returned unexpected response') }
+    try { data = JSON.parse(certText) } catch { return err('PSA returned an unexpected response.') }
 
     if (data.IsValidRequest === false) return err(data.ServerMessage || 'Invalid cert number')
     if (data.ServerMessage === 'No data found') return err('No card found for this cert number')
@@ -51,9 +51,12 @@ export async function GET(req: NextRequest) {
 
     const itemName = parts.join(' ') || `PSA Cert #${certNum}`
 
-    // Get front image from images endpoint
+    // Only fetch the image after a successful cert lookup, so a failed or
+    // rate-limited lookup doesn't spend a second request. A 429 here is
+    // non-fatal — we just return without an image.
     let imageUrl: string | null = null
     try {
+      const imgRes = await fetch(`https://api.psacard.com/publicapi/cert/GetImagesByCertNumber/${certNum}`, { headers })
       if (imgRes.ok) {
         const imgData = await imgRes.json()
         if (Array.isArray(imgData) && imgData.length > 0) {
