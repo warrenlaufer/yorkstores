@@ -28,6 +28,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
   const router = useRouter()
   const [selectedCats, setSelectedCats] = useState<Set<string>>(new Set(CATEGORIES))
   const [selectedSubs, setSelectedSubs] = useState<Set<string>>(new Set(ALL_SUBCATEGORIES))
+  const [sort, setSort] = useState('newest')
   const [selectedStores, setSelectedStores] = useState<Set<string>>(new Set())
 
   const stores = Array.from(new Set(drops.map(d => d.owner))).sort()
@@ -74,6 +75,21 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
     return catMatch && subMatch && storeMatch
   })
 
+  const time = (s: string) => new Date(s).getTime()
+  const sorted = [...filtered].sort((a, b) => {
+    switch (sort) {
+      case 'oldest': return time(a.createdAt) - time(b.createdAt)
+      case 'price_desc': return b.boxPrice - a.boxPrice
+      case 'price_asc': return a.boxPrice - b.boxPrice
+      case 'buyback_desc': return b.sellBackPct - a.sellBackPct
+      case 'buyback_asc': return a.sellBackPct - b.sellBackPct
+      case 'remaining_desc': return b.availableBoxes - a.availableBoxes
+      case 'remaining_asc': return a.availableBoxes - b.availableBoxes
+      case 'newest':
+      default: return time(b.createdAt) - time(a.createdAt)
+    }
+  })
+
   function getBadges(d: Drop) {
     const badges: { label: string; cls: string }[] = []
     const now = Date.now()
@@ -117,7 +133,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                     <button
                       key={sub}
                       className={`${styles.sidebarItem} ${selectedSubs.has(sub) ? styles.sidebarItemActive : ''}`}
-                      style={{ paddingLeft: 30, fontSize: '0.82em' }}
+                      style={{ paddingLeft: 30, fontSize: '0.66rem' }}
                       onClick={() => toggleSub(sub)}
                     >
                       <span className={styles.sidebarCheck}>{selectedSubs.has(sub) ? '✓' : ''}</span>
@@ -153,13 +169,31 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
           )}
         </aside>
 
-        <div className={styles.grid}>
-          {filtered.length === 0 ? (
-            <div className={styles.empty}>
-              <div className={styles.emptyIcon}>🎁</div>
-              <p>No drops match your filters.</p>
+        <div className={styles.main}>
+          <div className={styles.toolbar}>
+            <span className={styles.resultCount}>{sorted.length} {sorted.length === 1 ? 'drop' : 'drops'}</span>
+            <div className={styles.sortWrap}>
+              <label className={styles.sortLabel}>Sort</label>
+              <select className={styles.sortSelect} value={sort} onChange={e => setSort(e.target.value)}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="price_desc">Box price: high to low</option>
+                <option value="price_asc">Box price: low to high</option>
+                <option value="buyback_desc">Buyback %: high to low</option>
+                <option value="buyback_asc">Buyback %: low to high</option>
+                <option value="remaining_desc">Boxes remaining: high to low</option>
+                <option value="remaining_asc">Boxes remaining: low to high</option>
+              </select>
             </div>
-          ) : filtered.map(d => {
+          </div>
+
+          <div className={styles.grid}>
+            {sorted.length === 0 ? (
+              <div className={styles.empty}>
+                <div className={styles.emptyIcon}>🎁</div>
+                <p>No drops match your filters.</p>
+              </div>
+            ) : sorted.map(d => {
             const soldOut = d.availableBoxes === 0
             const pct = Math.round((d.availableBoxes / d.totalBoxes) * 100)
             const badges = getBadges(d)
@@ -208,6 +242,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
               </div>
             )
           })}
+          </div>
         </div>
       </div>
     </div>

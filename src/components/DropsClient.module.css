@@ -6,10 +6,17 @@
 
 /* Layout */
 .layout { display: flex; gap: 1.25rem; align-items: flex-start; }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.resultCount { font-size: 0.75rem; color: var(--text3); }
+.sortWrap { display: flex; align-items: center; gap: 0.5rem; }
+.sortLabel { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #FF8FA3; }
+.sortSelect { background: #0F0F14; color: var(--text); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; font-family: var(--font); font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.6rem; cursor: pointer; }
+.sortSelect:focus { outline: none; border-color: #FF6B85; }
 
 /* Sidebar */
 .sidebar {
-  width: 160px;
+  width: 230px;
   flex-shrink: 0;
   background: #0F0F14;
   border: 1px solid rgba(255,255,255,0.09);
@@ -24,7 +31,7 @@
 .sidebarAction:hover:not(:disabled) { color: #fff; border-color: rgba(255,255,255,0.3); }
 .sidebarAction:disabled { opacity: 0.3; cursor: not-allowed; }
 .sidebarList { display: flex; flex-direction: column; gap: 2px; }
-.sidebarItem { display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text2); border: none; border-radius: 6px; font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.38rem 0.5rem; cursor: pointer; transition: all 0.15s; text-align: left; width: 100%; }
+.sidebarItem { display: flex; align-items: center; gap: 6px; background: transparent; color: var(--text2); border: none; border-radius: 6px; font-family: var(--font); font-size: 0.72rem; font-weight: 600; padding: 0.38rem 0.5rem; cursor: pointer; transition: all 0.15s; text-align: left; width: 100%; white-space: nowrap; }
 .sidebarItem:hover { background: rgba(255,255,255,0.05); color: #fff; }
 .sidebarItemActive { background: rgba(255,107,133,0.1); color: #FF8FA3; }
 .sidebarItemActive:hover { background: rgba(255,107,133,0.18); }
