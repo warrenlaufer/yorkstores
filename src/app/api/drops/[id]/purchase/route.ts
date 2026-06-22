@@ -73,12 +73,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (!drop || !drop.isActive) return err('Drop not found or inactive')
 
-  const cashBalance = Number(user.cashBalance)
-  const promoBalance = Number(user.promoBalance)
-  const totalBalance = cashBalance + promoBalance
-
   try {
     const result = await prisma.$transaction(async tx => {
+      // Lock the buyer's wallet row and read the authoritative balance inside the
+      // transaction, so two near-simultaneous purchases can't both pass the check
+      // against the same stale balance and overspend.
+      const buyerRows = await tx.$queryRawUnsafe<Array<{ cashBalance: number; promoBalance: number }>>(
+        `SELECT "cashBalance"::float AS "cashBalance", "promoBalance"::float AS "promoBalance" FROM "User" WHERE id = $1 FOR UPDATE`,
+        user.id
+      )
+      const lockedCash = Math.round(Number(buyerRows[0]?.cashBalance ?? 0) * 100) / 100
+      const lockedPromo = Math.round(Number(buyerRows[0]?.promoBalance ?? 0) * 100) / 100
+      const lockedTotal = Math.round((lockedCash + lockedPromo) * 100) / 100
+
       const unsoldBoxes = await tx.$queryRawUnsafe<Array<{
         id: string; itemName: string; itemPrice: number;
         itemShippingCost: number; itemImageUrl: string | null;
@@ -107,7 +114,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const unsoldPrices = unsoldBoxes.map(b => Number(b.itemPrice))
       const boxPrice = calcBoxPriceForDrop(allPrices, unsoldPrices, drop.pricingType)
 
-      if (totalBalance < boxPrice) throw new Error('INSUFFICIENT_BALANCE')
+      if (lockedTotal < boxPrice) throw new Error('INSUFFICIENT_BALANCE')
 
       const platformFee = Math.round(boxPrice * 0.05 * 100) / 100
       const storeCredit = Math.round(boxPrice * 0.95 * 100) / 100
@@ -120,14 +127,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       const half = Math.round((boxPrice / 2) * 100) / 100
       let promoSpend: number
       let cashSpend: number
-      if (promoBalance >= half && cashBalance >= half) {
+      if (lockedPromo >= half && lockedCash >= half) {
         promoSpend = half
         cashSpend = Math.round((boxPrice - half) * 100) / 100
-      } else if (promoBalance < half) {
-        promoSpend = Math.round(promoBalance * 100) / 100
+      } else if (lockedPromo < half) {
+        promoSpend = Math.round(lockedPromo * 100) / 100
         cashSpend = Math.round((boxPrice - promoSpend) * 100) / 100
       } else {
-        cashSpend = Math.round(cashBalance * 100) / 100
+        cashSpend = Math.round(lockedCash * 100) / 100
         promoSpend = Math.round((boxPrice - cashSpend) * 100) / 100
       }
 
@@ -159,7 +166,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         data: { type: 'platform_fee', description: `Platform fee: ${drop.name}`, amount: platformFee, dropId },
       })
 
-      return { purchase: p, box, boxPrice, cashBalance, promoBalance, cashSpend, promoSpend }
+      return { purchase: p, box, boxPrice, cashBalance: lockedCash, promoBalance: lockedPromo, cashSpend, promoSpend }
     }, {
       isolationLevel: 'Serializable',
       timeout: 10000,
@@ -177,7 +184,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         itemImageUrl: result.box.itemImageUrl,
       },
       pricePaid: result.boxPrice,
-      newBalance: totalBalance - result.boxPrice,
+      newBalance: Math.round((result.cashBalance + result.promoBalance - result.boxPrice) * 100) / 100,
       newCashBalance: result.cashBalance - result.cashSpend,
       newPromoBalance: result.promoBalance - result.promoSpend,
     }, 201)

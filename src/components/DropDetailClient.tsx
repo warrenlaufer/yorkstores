@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import styles from './DropDetailClient.module.css'
@@ -8,10 +8,11 @@ type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: 
 type Drop = { id: string; name: string; emoji: string; logoUrl?: string; owner: string; boxPrice: number; sellBackPct: number; pricingType: string; boxes: Box[] }
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
-export default function DropDetailClient({ drop, user }: { drop: Drop; user: User }) {
+export default function DropDetailClient({ drop, user, initialError = '' }: { drop: Drop; user: User; initialError?: string }) {
   const router = useRouter()
   const [buying, setBuying] = useState<string | null>(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialError)
+  useEffect(() => { setError(initialError) }, [initialError])
   const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
   const [confirmRandom, setConfirmRandom] = useState(false)
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)

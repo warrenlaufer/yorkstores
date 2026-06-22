@@ -6,7 +6,7 @@ import DropDetailClient from '@/components/DropDetailClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DropPage({ params }: { params: { id: string } }) {
+export default async function DropPage({ params, searchParams }: { params: { id: string }, searchParams: { error?: string } }) {
   const user = await getSession()
   if (!user) redirect('/signin')
 
@@ -27,6 +27,7 @@ export default async function DropPage({ params }: { params: { id: string } }) {
 
   return (
     <DropDetailClient
+      initialError={typeof searchParams?.error === 'string' ? searchParams.error : ''}
       drop={{
         id: drop.id,
         name: drop.name,
