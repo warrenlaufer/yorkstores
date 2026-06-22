@@ -48,6 +48,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const itemImgInputRef = useRef<HTMLInputElement>(null)
 
   const [psaCert, setPsaCert] = useState('')
+  const [certGrader, setCertGrader] = useState('psa')
   const [psaLoading, setPsaLoading] = useState(false)
   const [psaError, setPsaError] = useState('')
   const [psaResult, setPsaResult] = useState<any>(null)
@@ -59,6 +60,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
   // Edit-form lookup state (mirrors the create-form lookups, isolated from it)
   const [ePsaCert, setEPsaCert] = useState('')
+  const [eCertGrader, setECertGrader] = useState('psa')
   const [ePsaLoading, setEPsaLoading] = useState(false)
   const [ePsaError, setEPsaError] = useState('')
   const [ePsaResult, setEPsaResult] = useState<any>(null)
@@ -166,13 +168,16 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!psaCert.trim()) return
     setPsaLoading(true); setPsaError(''); setPsaResult(null)
     try {
-      const res = await fetch(`/api/psa?cert=${psaCert.trim()}`)
+      const res = await fetch('/api/cert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grader: certGrader, cert: psaCert.trim() }),
+      })
       const data = await res.json()
       if (!res.ok) { setPsaError(data.error || 'Cert not found'); return }
       setPsaResult(data.data)
       setIName(data.data.itemName)
-      setIImg(data.data.imageUrl ?? '')
-      setIImgPreview(data.data.imageUrl ?? '')
+      if (data.data.imageUrl) { setIImg(data.data.imageUrl); setIImgPreview(data.data.imageUrl) }
       setIPrice('')
     } catch { setPsaError('Failed to lookup cert') }
     finally { setPsaLoading(false) }
@@ -198,12 +203,16 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     if (!ePsaCert.trim()) return
     setEPsaLoading(true); setEPsaError(''); setEPsaResult(null)
     try {
-      const res = await fetch(`/api/psa?cert=${ePsaCert.trim()}`)
+      const res = await fetch('/api/cert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grader: eCertGrader, cert: ePsaCert.trim() }),
+      })
       const data = await res.json()
       if (!res.ok) { setEPsaError(data.error || 'Cert not found'); return }
       setEPsaResult(data.data)
       setEName(data.data.itemName)
-      setEImg(data.data.imageUrl ?? ''); setEImgPreview(data.data.imageUrl ?? '')
+      if (data.data.imageUrl) { setEImg(data.data.imageUrl); setEImgPreview(data.data.imageUrl) }
       setEPrice('')
     } catch { setEPsaError('Failed to lookup cert') }
     finally { setEPsaLoading(false) }
@@ -558,9 +567,15 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
             {category === 'Trading Cards' && (
               <div className={styles.psaSection}>
-                <div className={styles.psaLabel}>PSA Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
+                <div className={styles.psaLabel}>Cert Lookup (PSA, Beckett, SGC, CGC) <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
                 <div className={styles.psaRow}>
-                  <input className={styles.psaInput} type="text" value={psaCert} onChange={e => { setPsaCert(e.target.value); setPsaResult(null); setPsaError('') }} onKeyDown={e => e.key === 'Enter' && lookupPSA()} placeholder="Enter PSA cert number…" />
+                  <select value={certGrader} onChange={e => { setCertGrader(e.target.value); setPsaResult(null); setPsaError('') }} style={{ flexShrink: 0, width: 'auto' }}>
+                    <option value="psa">PSA</option>
+                    <option value="bgs">Beckett</option>
+                    <option value="sgc">SGC</option>
+                    <option value="cgc">CGC</option>
+                  </select>
+                  <input className={styles.psaInput} type="text" value={psaCert} onChange={e => { setPsaCert(e.target.value); setPsaResult(null); setPsaError('') }} onKeyDown={e => e.key === 'Enter' && lookupPSA()} placeholder="Enter cert number…" />
                   <button className={styles.psaBtn} onClick={lookupPSA} disabled={psaLoading || !psaCert.trim()}>
                     {psaLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
                   </button>
@@ -568,10 +583,13 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 {psaError && <p className={styles.psaError}>{psaError}</p>}
                 {psaResult && (
                   <div className={styles.psaResult}>
-                    {psaResult.imageUrl && <img src={psaResult.imageUrl} alt={psaResult.itemName} className={styles.psaImage} />}
                     <div className={styles.psaResultInfo}>
-                      <div className={styles.psaResultName}>{psaResult.itemName}</div>
-                      <div className={styles.psaResultMeta}>{psaResult.grade && <span>PSA {psaResult.grade}</span>}{psaResult.category && <span> · {psaResult.category}</span>}</div>
+                      <div className={styles.psaResultName}>{psaResult.description}</div>
+                      <div className={styles.psaResultMeta}>
+                        {psaResult.grader && <span>{psaResult.grader}{psaResult.grade ? ` ${psaResult.grade}` : ''}</span>}
+                        {psaResult.gemRate != null && <span> · {psaResult.gemRate}% gem rate</span>}
+                        {psaResult.gradePopulation != null && <span> · pop {psaResult.gradePopulation}{psaResult.totalPopulation != null ? `/${psaResult.totalPopulation}` : ''}</span>}
+                      </div>
                       <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
                     </div>
                   </div>
@@ -844,9 +862,15 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
             {editCategory === 'Trading Cards' && (
               <div className={styles.psaSection}>
-                <div className={styles.psaLabel}>PSA Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
+                <div className={styles.psaLabel}>Cert Lookup (PSA, Beckett, SGC, CGC) <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
                 <div className={styles.psaRow}>
-                  <input className={styles.psaInput} type="text" value={ePsaCert} onChange={e => { setEPsaCert(e.target.value); setEPsaResult(null); setEPsaError('') }} onKeyDown={e => e.key === 'Enter' && lookupPSAEdit()} placeholder="Enter PSA cert number…" />
+                  <select value={eCertGrader} onChange={e => { setECertGrader(e.target.value); setEPsaResult(null); setEPsaError('') }} style={{ flexShrink: 0, width: 'auto' }}>
+                    <option value="psa">PSA</option>
+                    <option value="bgs">Beckett</option>
+                    <option value="sgc">SGC</option>
+                    <option value="cgc">CGC</option>
+                  </select>
+                  <input className={styles.psaInput} type="text" value={ePsaCert} onChange={e => { setEPsaCert(e.target.value); setEPsaResult(null); setEPsaError('') }} onKeyDown={e => e.key === 'Enter' && lookupPSAEdit()} placeholder="Enter cert number…" />
                   <button className={styles.psaBtn} onClick={lookupPSAEdit} disabled={ePsaLoading || !ePsaCert.trim()}>
                     {ePsaLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
                   </button>
@@ -854,10 +878,13 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                 {ePsaError && <p className={styles.psaError}>{ePsaError}</p>}
                 {ePsaResult && (
                   <div className={styles.psaResult}>
-                    {ePsaResult.imageUrl && <img src={ePsaResult.imageUrl} alt={ePsaResult.itemName} className={styles.psaImage} />}
                     <div className={styles.psaResultInfo}>
-                      <div className={styles.psaResultName}>{ePsaResult.itemName}</div>
-                      <div className={styles.psaResultMeta}>{ePsaResult.grade && <span>PSA {ePsaResult.grade}</span>}{ePsaResult.category && <span> · {ePsaResult.category}</span>}</div>
+                      <div className={styles.psaResultName}>{ePsaResult.description}</div>
+                      <div className={styles.psaResultMeta}>
+                        {ePsaResult.grader && <span>{ePsaResult.grader}{ePsaResult.grade ? ` ${ePsaResult.grade}` : ''}</span>}
+                        {ePsaResult.gemRate != null && <span> · {ePsaResult.gemRate}% gem rate</span>}
+                        {ePsaResult.gradePopulation != null && <span> · pop {ePsaResult.gradePopulation}{ePsaResult.totalPopulation != null ? `/${ePsaResult.totalPopulation}` : ''}</span>}
+                      </div>
                       <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
                     </div>
                   </div>
