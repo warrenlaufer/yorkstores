@@ -5,6 +5,7 @@ import { ok, err } from '@/lib/api'
 import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
 import { normalizeSubcategory } from '@/lib/categories'
+import { fetchUscCatalogMap } from '@/lib/usc'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const drop = await prisma.drop.findUnique({
@@ -73,15 +74,33 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   })
 
   if (body.addBoxes && Array.isArray(body.addBoxes) && body.addBoxes.length > 0) {
-    const newBoxRecords = body.addBoxes.flatMap((b: any) =>
-      Array.from({ length: b.qty || 1 }, () => ({
+    let uscMap: Awaited<ReturnType<typeof fetchUscCatalogMap>> | null = null
+    if (body.addBoxes.some((b: any) => b.useUscApi)) {
+      try {
+        uscMap = await fetchUscCatalogMap()
+      } catch {
+        return err('Could not reach the US Coins catalog to price bullion items. Please try again shortly.')
+      }
+      for (const b of body.addBoxes) {
+        if (b.useUscApi) {
+          if (!b.sku) return err('Select a catalog item for each bullion box set to use USC API pricing.')
+          if (!uscMap.get(b.sku)) return err(`US Coins catalog has no SKU "${b.sku}".`)
+        }
+      }
+    }
+    const newBoxRecords = body.addBoxes.flatMap((b: any) => {
+      const usc = b.useUscApi && b.sku ? uscMap?.get(b.sku) : null
+      const price = usc ? usc.sellPrice : b.itemPrice
+      return Array.from({ length: b.qty || 1 }, () => ({
         dropId: params.id,
         itemName: b.itemName,
-        itemPrice: b.itemPrice,
+        itemPrice: price,
         itemShippingCost: b.itemShippingCost || 0,
         itemImageUrl: b.itemImageUrl || null,
+        useUscApi: !!usc,
+        sku: usc ? b.sku : null,
       }))
-    )
+    })
     await prisma.box.createMany({ data: newBoxRecords })
   }
 

@@ -9,7 +9,7 @@ type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; i
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
 type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string; subcategory?: string | null }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
-type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; newImageUrl: string | null; addQty: number }
+type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; newImageUrl: string | null; addQty: number; useUscApi?: boolean; sku?: string }
 
 export default function StoreOwnerClient({ user, transactions, drops }: {
   user: { id: string; name: string; email: string; company: string; storeBalance: number; reservedBalance: number; availableBalance: number; payoutsEnabled: boolean }
@@ -56,6 +56,18 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const [pcgsLoading, setPcgsLoading] = useState(false)
   const [pcgsError, setPcgsError] = useState('')
   const [pcgsResult, setPcgsResult] = useState<any>(null)
+
+  // Edit-form lookup state (mirrors the create-form lookups, isolated from it)
+  const [ePsaCert, setEPsaCert] = useState('')
+  const [ePsaLoading, setEPsaLoading] = useState(false)
+  const [ePsaError, setEPsaError] = useState('')
+  const [ePsaResult, setEPsaResult] = useState<any>(null)
+  const [ePcgsCert, setEPcgsCert] = useState('')
+  const [ePcgsLoading, setEPcgsLoading] = useState(false)
+  const [ePcgsError, setEPcgsError] = useState('')
+  const [ePcgsResult, setEPcgsResult] = useState<any>(null)
+  const [eUseUsc, setEUseUsc] = useState(false)
+  const [eUscSku, setEUscSku] = useState('')
 
   const [editingDrop, setEditingDrop] = useState<DropSummary | null>(null)
   const [editName, setEditName] = useState('')
@@ -182,8 +194,47 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     finally { setPcgsLoading(false) }
   }
 
-  async function openEdit(drop: DropSummary) {
-    setEditingDrop(drop)
+  async function lookupPSAEdit() {
+    if (!ePsaCert.trim()) return
+    setEPsaLoading(true); setEPsaError(''); setEPsaResult(null)
+    try {
+      const res = await fetch(`/api/psa?cert=${ePsaCert.trim()}`)
+      const data = await res.json()
+      if (!res.ok) { setEPsaError(data.error || 'Cert not found'); return }
+      setEPsaResult(data.data)
+      setEName(data.data.itemName)
+      setEImg(data.data.imageUrl ?? ''); setEImgPreview(data.data.imageUrl ?? '')
+      setEPrice('')
+    } catch { setEPsaError('Failed to lookup cert') }
+    finally { setEPsaLoading(false) }
+  }
+
+  async function lookupPCGSEdit() {
+    if (!ePcgsCert.trim()) return
+    setEPcgsLoading(true); setEPcgsError(''); setEPcgsResult(null)
+    try {
+      const res = await fetch(`/api/pcgs?cert=${ePcgsCert.trim()}`)
+      const data = await res.json()
+      if (!res.ok) { setEPcgsError(data.error || 'Cert not found'); return }
+      setEPcgsResult(data.data)
+      setEName(data.data.itemName)
+      setEImg(data.data.imageUrl ?? ''); setEImgPreview(data.data.imageUrl ?? '')
+      if (data.data.priceGuideValue) setEPrice(String(data.data.priceGuideValue))
+    } catch { setEPcgsError('Failed to lookup cert') }
+    finally { setEPcgsLoading(false) }
+  }
+
+  function selectUscSkuEdit(sku: string) {
+    setEUscSku(sku)
+    const item = uscCatalog?.find(i => i.sku === sku)
+    if (item) {
+      setEName(item.description)
+      setEPrice(String(item.sellPrice))
+      if (item.imageUrl) { setEImg(item.imageUrl); setEImgPreview(item.imageUrl) }
+    }
+  }
+
+  async function openEdit(drop: DropSummary) {    setEditingDrop(drop)
     setEditName(drop.name)
     setEditLogoUrl(drop.logoUrl ?? '')
     setEditLogoPreview(drop.logoUrl ?? '')
@@ -196,6 +247,9 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     setItemEdits({})
     setItemImgUploading({})
     setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
+    setEPsaCert(''); setEPsaResult(null); setEPsaError('')
+    setEPcgsCert(''); setEPcgsResult(null); setEPcgsError('')
+    setEUseUsc(false); setEUscSku('')
     setEditBoxesLoading(true)
     try {
       const res = await fetch(`/api/drops/${drop.id}`)
@@ -221,6 +275,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   function addEditBox() {
     const price = parseFloat(ePrice)
     if (!eName || isNaN(price) || price <= 0) { setEditError('Enter a valid item name and price.'); return }
+    if (eUseUsc && !eUscSku) { setEditError('Select a catalog item, or uncheck “Use USC API for pricing”.'); return }
     const existingKey = Object.keys(itemEdits).find(k => {
       const edit = itemEdits[k]
       return edit.newName === eName && parseFloat(edit.newPrice) === price
@@ -236,6 +291,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           newName: eName, newPrice: String(price), newShipping: String(parseFloat(eShip) || 0),
           newImageUrl: eImg || null,
           addQty: parseInt(eQty) || 1,
+          useUscApi: eUseUsc, sku: eUseUsc ? eUscSku : undefined,
         }
       }))
       setExistingBoxes(prev => [...prev, {
@@ -243,7 +299,9 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         itemShippingCost: parseFloat(eShip) || 0, itemImageUrl: eImg || null, sold: false,
       }])
     }
-    setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1')
+    setEName(''); setEPrice(''); setEShip(''); setEImg(''); setEImgPreview(''); setEQty('1'); setEUscSku('')
+    setEPsaCert(''); setEPsaResult(null); setEPsaError('')
+    setEPcgsCert(''); setEPcgsResult(null); setEPcgsError('')
     setEditError('')
   }
 
@@ -274,6 +332,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
         itemShippingCost: parseFloat(it.newShipping) || 0,
         itemImageUrl: it.newImageUrl || null,
         qty: it.addQty,
+        useUscApi: it.useUscApi || false,
+        sku: it.useUscApi ? it.sku : undefined,
       }))
 
     try {
@@ -660,7 +720,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             </div>
             <div className="field">
               <label>Category</label>
-              <select value={editCategory} onChange={e => { const c = e.target.value; setEditCategory(c); setEditSubcategory(subcategoriesFor(c)[0] ?? '') }}>
+              <select value={editCategory} onChange={e => { const c = e.target.value; setEditCategory(c); setEditSubcategory(subcategoriesFor(c)[0] ?? ''); if (c !== 'Bullion') { setEUseUsc(false); setEUscSku('') } }}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
@@ -782,9 +842,79 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
             <div className={styles.editSection}>Add New Item Type</div>
 
+            {editCategory === 'Trading Cards' && (
+              <div className={styles.psaSection}>
+                <div className={styles.psaLabel}>PSA Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
+                <div className={styles.psaRow}>
+                  <input className={styles.psaInput} type="text" value={ePsaCert} onChange={e => { setEPsaCert(e.target.value); setEPsaResult(null); setEPsaError('') }} onKeyDown={e => e.key === 'Enter' && lookupPSAEdit()} placeholder="Enter PSA cert number…" />
+                  <button className={styles.psaBtn} onClick={lookupPSAEdit} disabled={ePsaLoading || !ePsaCert.trim()}>
+                    {ePsaLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
+                  </button>
+                </div>
+                {ePsaError && <p className={styles.psaError}>{ePsaError}</p>}
+                {ePsaResult && (
+                  <div className={styles.psaResult}>
+                    {ePsaResult.imageUrl && <img src={ePsaResult.imageUrl} alt={ePsaResult.itemName} className={styles.psaImage} />}
+                    <div className={styles.psaResultInfo}>
+                      <div className={styles.psaResultName}>{ePsaResult.itemName}</div>
+                      <div className={styles.psaResultMeta}>{ePsaResult.grade && <span>PSA {ePsaResult.grade}</span>}{ePsaResult.category && <span> · {ePsaResult.category}</span>}</div>
+                      <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {editCategory === 'Coins' && editSubcategory === 'Certified Coins' && (
+              <div className={styles.psaSection}>
+                <div className={styles.psaLabel} style={{color:'#F5C842'}}>PCGS Cert Lookup <span style={{color:'var(--text3)',fontWeight:400,fontSize:'0.65rem'}}>(optional)</span></div>
+                <div className={styles.psaRow}>
+                  <input className={styles.psaInput} type="text" value={ePcgsCert} onChange={e => { setEPcgsCert(e.target.value); setEPcgsResult(null); setEPcgsError('') }} onKeyDown={e => e.key === 'Enter' && lookupPCGSEdit()} placeholder="Enter PCGS cert number…" />
+                  <button className={styles.pcgsBtn} onClick={lookupPCGSEdit} disabled={ePcgsLoading || !ePcgsCert.trim()}>
+                    {ePcgsLoading ? <span className="spin" style={{width:14,height:14}} /> : 'Lookup'}
+                  </button>
+                </div>
+                {ePcgsError && <p className={styles.psaError}>{ePcgsError}</p>}
+                {ePcgsResult && (
+                  <div className={styles.psaResult}>
+                    {ePcgsResult.imageUrl && <img src={ePcgsResult.imageUrl} alt={ePcgsResult.itemName} className={styles.psaImage} />}
+                    <div className={styles.psaResultInfo}>
+                      <div className={styles.psaResultName}>{ePcgsResult.itemName}</div>
+                      <div className={styles.psaResultMeta}>{ePcgsResult.grade && <span>PCGS {ePcgsResult.grade}</span>}{ePcgsResult.denomination && <span> · {ePcgsResult.denomination}</span>}</div>
+                      {ePcgsResult.priceGuideValue ? (
+                        <p className={styles.psaResultHint} style={{color:'#F5C842'}}>Price guide: ${ePcgsResult.priceGuideValue} — pre-filled below, adjust as needed.</p>
+                      ) : (
+                        <p className={styles.psaResultHint}>Name and image pre-filled below. Enter the value manually.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {editCategory === 'Bullion' && (
+              <div style={{ marginBottom: '0.6rem', padding: '0.4rem 0.6rem', background: 'rgba(126,224,255,0.06)', border: '1px solid rgba(126,224,255,0.25)', borderRadius: 8 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <input type="checkbox" checked={eUseUsc} onChange={e => { setEUseUsc(e.target.checked); if (e.target.checked) loadUscCatalog(); else setEUscSku('') }} style={{ appearance: 'auto', width: 16, height: 16, minWidth: 16, padding: 0, margin: 0, background: 'transparent', border: 'none', borderRadius: 0, flexShrink: 0, accentColor: '#FF6B85' }} />
+                  Use USC API for pricing
+                </label>
+                {eUseUsc && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    {uscLoading ? <span style={{ fontSize: '0.75rem', color: 'var(--text3)' }}>Loading catalog…</span>
+                      : uscError ? <span style={{ fontSize: '0.75rem', color: '#FF8FA3' }}>{uscError}</span>
+                      : <select value={eUscSku} onChange={e => selectUscSkuEdit(e.target.value)} style={{ width: '100%' }}>
+                          <option value="">Select a catalog item…</option>
+                          {uscCatalog?.map(i => <option key={i.sku} value={i.sku}>{i.description} — ${i.sellPrice.toFixed(2)} ({i.availability})</option>)}
+                        </select>}
+                    <p style={{ fontSize: '0.68rem', color: 'var(--text3)', margin: '0.4rem 0 0' }}>Price is set from the catalog now and auto-refreshes hourly while the drop is live.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className={styles.itemGrid}>
-              <div><label>Name</label><textarea value={eName} onChange={e => setEName(e.target.value)} rows={2} style={{resize:'vertical',minHeight:38}} /></div>
-              <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" /></div>
+              <div><label>Name</label><textarea value={eName} onChange={e => setEName(e.target.value)} rows={2} readOnly={eUseUsc} title={eUseUsc ? 'Set from the US Coins catalog' : undefined} style={{resize:'vertical',minHeight:38, ...(eUseUsc ? { opacity: 0.7 } : {})}} /></div>
+              <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" readOnly={eUseUsc} title={eUseUsc ? 'Set from the US Coins catalog' : undefined} style={eUseUsc ? { opacity: 0.7 } : undefined} /></div>
               <div><label>Ship $</label><input type="number" value={eShip} onChange={e => setEShip(e.target.value)} min="0" /></div>
               <div><label>Qty</label><input type="number" value={eQty} onChange={e => setEQty(e.target.value)} min="1" max="200" /></div>
             </div>
