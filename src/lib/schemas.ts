@@ -25,6 +25,11 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email(),
 })
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Enter your current password'),
+  password: z.string().min(8, 'New password must be at least 8 characters').max(128),
+})
+
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(8).max(128),

@@ -171,6 +171,7 @@ export default function DashboardNav({ user }: { user: User }) {
             <span className={styles.chipValue}>${user.storeBalance.toFixed(2)}</span>
           </button>
         )}
+        <a href="/dashboard/settings" className={styles.signOutBtn} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Settings</a>
         <button className={styles.signOutBtn} onClick={signOut}>Sign out</button>
       </div>
     </nav>
