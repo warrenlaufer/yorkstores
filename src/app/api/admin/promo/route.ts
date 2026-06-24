@@ -55,13 +55,13 @@ export async function POST(req: NextRequest) {
   return ok({ ...promo, amount: Number(promo.amount) })
 }
 
-export async function DELETE(req: NextRequest) {
+export async function PATCH(req: NextRequest) {
   const user = await getSession()
   if (!user || user.role !== Role.ADMIN) return err('Forbidden', 403)
 
-  const { id } = await req.json()
+  const { id, isActive } = await req.json()
   if (!id) return err('Missing id')
 
-  await prisma.promoCode.update({ where: { id }, data: { isActive: false } })
-  return ok({ disabled: true })
+  const updated = await prisma.promoCode.update({ where: { id }, data: { isActive: !!isActive } })
+  return ok({ id: updated.id, isActive: updated.isActive })
 }

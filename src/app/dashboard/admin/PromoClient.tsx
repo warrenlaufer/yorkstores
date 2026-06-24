@@ -55,9 +55,9 @@ export default function PromoClient({ initial }: { initial: PromoCode[] }) {
 
   async function toggleActive(id: string, isActive: boolean) {
     const res = await fetch('/api/admin/promo', {
-      method: 'DELETE',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, isActive: !isActive }),
     })
     if (res.ok) {
       setCodes(prev => prev.map(c => c.id === id ? { ...c, isActive: !isActive } : c))
