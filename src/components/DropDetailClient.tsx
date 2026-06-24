@@ -106,6 +106,9 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
             <div className={styles.priceVal}>${drop.boxPrice}</div>
             <div className={styles.priceLbl}>per box</div>
           </div>
+          <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 800, color: '#7CE0A3', margin: '0.1rem 0' }}>
+            {drop.sellBackPct}% buyback
+          </div>
           <button
             className={styles.chooseForMeBtn}
             onClick={handleChooseForMe}
