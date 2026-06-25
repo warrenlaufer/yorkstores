@@ -134,9 +134,9 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
     const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
     if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
-    setEImgUploading(true); setEditError('')
+    setEditLogoUploading(true); setEditError('')
     e.target.value = ''
-    try { const url = await uploadImage(file); setEImg(url); setEImgPreview(url) }
+    try { const url = await uploadImage(file); setEditLogoUrl(url); setEditLogoPreview(url) }
     catch (e: any) { setEditError('Logo upload failed: ' + e.message) }
     finally { setEditLogoUploading(false) }
   }
