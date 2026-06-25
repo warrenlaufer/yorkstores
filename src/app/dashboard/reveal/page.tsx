@@ -337,7 +337,7 @@ function RevealContent() {
 
             {outcome && (
               <div className={styles.backBtns}>
-                <button className={styles.backBtn} onClick={() => router.push(`/dashboard/drop/${dropId}`)}>Back to This Drop</button>
+                <button className={styles.backBtn} onClick={() => router.push(`/drop/${dropId}`)}>Back to This Drop</button>
                 <button className={styles.backBtnAlt} onClick={() => router.push('/dashboard')}>Back to All Drops</button>
               </div>
             )}

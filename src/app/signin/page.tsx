@@ -46,7 +46,9 @@ export default function SignInPage() {
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error); return }
-      router.push('/dashboard')
+      const sp = new URLSearchParams(window.location.search)
+      const dest = sp.get('next') || sp.get('redirect')
+      router.push(dest && dest.startsWith('/') ? dest : '/dashboard')
       router.refresh()
     } catch {
       setError('Something went wrong. Please try again.')

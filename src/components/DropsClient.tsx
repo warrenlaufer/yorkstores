@@ -24,7 +24,7 @@ type Drop = {
 
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
-export default function DropsClient({ drops, user }: { drops: Drop[]; user: User }) {
+export default function DropsClient({ drops, user }: { drops: Drop[]; user: User | null }) {
   const router = useRouter()
   const [selectedCats, setSelectedCats] = useState<Set<string>>(new Set(CATEGORIES))
   const [selectedSubs, setSelectedSubs] = useState<Set<string>>(new Set(ALL_SUBCATEGORIES))
@@ -201,7 +201,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
               <div
                 key={d.id}
                 className={styles.card}
-                onClick={() => !soldOut && router.push(`/dashboard/drop/${d.id}`)}
+                onClick={() => !soldOut && router.push(`/drop/${d.id}`)}
                 style={{ cursor: soldOut ? 'default' : 'pointer' }}
               >
                 <div className={styles.badgeRows}>
@@ -234,7 +234,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                   <button
                     className={styles.openBtn}
                     disabled={soldOut}
-                    onClick={e => { e.stopPropagation(); !soldOut && router.push(`/dashboard/drop/${d.id}`) }}
+                    onClick={e => { e.stopPropagation(); !soldOut && router.push(`/drop/${d.id}`) }}
                   >
                     {soldOut ? 'Sold Out' : `Explore Drop — $${d.boxPrice}`}
                   </button>

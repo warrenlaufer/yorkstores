@@ -8,10 +8,11 @@ type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: 
 type Drop = { id: string; name: string; emoji: string; logoUrl?: string; owner: string; boxPrice: number; sellBackPct: number; pricingType: string; boxes: Box[] }
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
-export default function DropDetailClient({ drop, user, initialError = '' }: { drop: Drop; user: User; initialError?: string }) {
+export default function DropDetailClient({ drop, user, initialError = '' }: { drop: Drop; user: User | null; initialError?: string }) {
   const router = useRouter()
   const [buying, setBuying] = useState<string | null>(null)
   const [error, setError] = useState(initialError)
+  const [authPrompt, setAuthPrompt] = useState(false)
   useEffect(() => { setError(initialError) }, [initialError])
   const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
   const [confirmRandom, setConfirmRandom] = useState(false)
@@ -33,6 +34,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
 
   async function confirmPurchase() {
     if (!confirmBoxId) return
+    if (!user) { setConfirmBoxId(null); setConfirmRandom(false); setAuthPrompt(true); return }
     const boxToOpen = confirmBoxId
     setError('')
     setBuying(boxToOpen)
@@ -51,23 +53,25 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
       const res = await purchasePromise
       const data = await res.json()
       if (!res.ok) {
-        router.push(`/dashboard/drop/${drop.id}?error=${encodeURIComponent(data.error)}`)
+        router.push(`/drop/${drop.id}?error=${encodeURIComponent(data.error)}`)
         return
       }
       router.replace(`/dashboard/reveal?purchaseId=${data.data.purchaseId}&dropId=${drop.id}`)
     } catch {
-      router.push(`/dashboard/drop/${drop.id}?error=Something+went+wrong`)
+      router.push(`/drop/${drop.id}?error=Something+went+wrong`)
     }
   }
 
   function handleBoxClick(boxId: string) {
     if (buying) return
+    if (!user) { setAuthPrompt(true); return }
     setConfirmBoxId(boxId)
     setConfirmRandom(false)
   }
 
   function handleChooseForMe() {
     if (buying || available.length === 0) return
+    if (!user) { setAuthPrompt(true); return }
     const random = available[Math.floor(Math.random() * available.length)]
     setConfirmBoxId(random.id)
     setConfirmRandom(true)
@@ -80,7 +84,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
 
   return (
     <div className={styles.wrap}>
-      <Link href="/dashboard" className={styles.back}>← Back to Drops</Link>
+      <Link href="/" className={styles.back}>← Back to Drops</Link>
 
       {drop.logoUrl && (
         <div className={styles.logoBanner}>
@@ -197,7 +201,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
                 : `You're about to open a mystery box.`}
             </p>
             <div className={styles.confirmPrice}>${drop.boxPrice}</div>
-            <p className={styles.confirmBalance}>Your balance: ${user.walletBalance.toFixed(2)}</p>
+            <p className={styles.confirmBalance}>Your balance: ${user?.walletBalance.toFixed(2) ?? '0.00'}</p>
             <p className={styles.confirmSellBack}>Sell back value: {drop.sellBackPct}% of item value</p>
             <div className={styles.confirmActions}>
               <button className={styles.confirmBtn} onClick={confirmPurchase}>
@@ -207,6 +211,24 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {authPrompt && (
+        <div className={styles.confirmOverlay} onClick={() => setAuthPrompt(false)}>
+          <div className={styles.confirmBox} onClick={e => e.stopPropagation()}>
+            <div className={styles.confirmIcon}>🔑</div>
+            <h2 className={styles.confirmTitle}>Log in to buy</h2>
+            <p className={styles.confirmSub}>Create an account or log in to open mystery boxes.</p>
+            <div className={styles.confirmActions}>
+              <Link href={`/signup?next=/drop/${drop.id}`} className={styles.confirmBtn} style={{ textDecoration: 'none', textAlign: 'center' }}>
+                Sign up
+              </Link>
+              <Link href={`/signin?next=/drop/${drop.id}`} className={styles.cancelBtn} style={{ textDecoration: 'none', textAlign: 'center' }}>
+                Log in
+              </Link>
+            </div>
+            <button className={styles.cancelBtn} style={{ marginTop: 8 }} onClick={() => setAuthPrompt(false)}>Cancel</button>
           </div>
         </div>
       )}
