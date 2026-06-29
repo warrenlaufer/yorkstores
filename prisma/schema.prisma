@@ -90,6 +90,7 @@ model Drop {
   subcategory String?
   ownerId     String
   isActive    Boolean  @default(true)
+  isDraft     Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

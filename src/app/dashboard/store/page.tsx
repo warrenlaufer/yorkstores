@@ -55,6 +55,7 @@ export default async function StorePage() {
         name: d.name,
         logoUrl: d.logoUrl ?? undefined,
         isActive: d.isActive,
+        isDraft: d.isDraft,
         totalBoxes: d.boxes.length,
         soldBoxes: d.boxes.filter(b => b.sold).length,
         sellBackPct: d.sellBackPct,

@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
 import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { Role } from '@prisma/client'
-import { createDropSchema } from '@/lib/schemas'
+import { createDropSchema, draftDropSchema } from '@/lib/schemas'
 import { fetchUscCatalogMap } from '@/lib/usc'
 import { sendCatalogFailureAlert } from '@/lib/email'
 import { isValidCategory, normalizeSubcategory } from '@/lib/categories'
@@ -48,10 +48,15 @@ export async function POST(req: NextRequest) {
   if (user.role !== Role.STORE_OWNER && user.role !== Role.ADMIN) return err('Forbidden', 403)
 
   const body = await req.json().catch(() => null)
-  const parsed = createDropSchema.safeParse(body)
+  const isDraft = body?.draft === true
+
+  const parsed = isDraft ? draftDropSchema.safeParse(body) : createDropSchema.safeParse(body)
   if (!parsed.success) return err(parsed.error.errors[0].message)
 
-  const { name, emoji, boxes: boxDefs } = parsed.data
+  const name = (parsed.data.name && parsed.data.name.trim()) ? parsed.data.name.trim() : (isDraft ? 'Untitled draft' : '')
+  const emoji = parsed.data.emoji
+  const boxDefs = parsed.data.boxes ?? []
+  if (!isDraft && !name) return err('Give your drop a name.')
   const logoUrl = body?.logoUrl ?? null
   const sellBackPct = typeof body?.sellBackPct === 'number'
     ? Math.min(100, Math.max(1, Math.round(body.sellBackPct)))
@@ -99,6 +104,8 @@ export async function POST(req: NextRequest) {
     data: {
       name, emoji, logoUrl, sellBackPct, pricingType, category, subcategory,
       ownerId: user.id,
+      isActive: !isDraft,
+      isDraft,
       boxes: { create: boxRecords },
     },
     include: {

@@ -7,7 +7,7 @@ import { CATEGORIES, subcategoriesFor } from '@/lib/categories'
 
 type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string; useUscApi?: boolean; sku?: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
-type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string; subcategory?: string | null }
+type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; isDraft: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string; subcategory?: string | null }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
 type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; newImageUrl: string | null; addQty: number; useUscApi?: boolean; sku?: string }
 
@@ -464,6 +464,35 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   const totalBoxes = boxes.reduce((s, b) => s + b.qty, 0)
   const sellBackNum = Math.min(100, Math.max(1, parseInt(sellBackPct) || 90))
 
+  async function saveDraft() {
+    setPublishing(true); setError(''); setSuccess('')
+    try {
+      const res = await fetch('/api/drops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft: true, name, logoUrl: logoUrl || null, emoji: '🎁', sellBackPct: sellBackNum, pricingType, category, subcategory: subcategoriesFor(category).length ? subcategory : null, boxes }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Could not save draft.'); return }
+      setSuccess('Draft saved.')
+      setName(''); setLogoUrl(''); setLogoPreview(''); setSellBackPct('90'); setPricingType('fixed'); setCategory('Other Collectibles'); setSubcategory('')
+      setShippingMode('per_item'); setFlatShipping(''); setBoxes([])
+      setTimeout(() => { setSuccess(''); router.refresh() }, 1500)
+    } catch { setError('Something went wrong.') }
+    finally { setPublishing(false) }
+  }
+
+  async function publishDraft(d: DropSummary) {
+    if (d.totalBoxes < 2) { setError(`"${d.name}" needs at least 2 boxes before publishing. Edit it to add items.`); return }
+    const res = await fetch(`/api/drops/${d.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: true, isDraft: false }),
+    })
+    if (res.ok) router.refresh()
+    else { const data = await res.json().catch(() => ({})); setError(data.error || 'Could not publish draft.') }
+  }
+
   async function publish() {
     if (!name) { setError('Give your drop a name.'); return }
     if (!boxes.length) { setError('Add at least one item.'); return }
@@ -526,15 +555,19 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.dropRowInfo}>
                 <div className={styles.dropRowName}>{d.name}</div>
                 <div className={styles.dropRowMeta}>
-                  {d.soldBoxes} / {d.totalBoxes} sold · {d.isActive ? 'Active' : 'Inactive'} · {d.sellBackPct}% buyback · {d.pricingType} · {d.category}
+                  {d.soldBoxes} / {d.totalBoxes} sold · {d.isDraft ? '📝 Draft' : (d.isActive ? 'Active' : 'Inactive')} · {d.sellBackPct}% buyback · {d.pricingType} · {d.category}
                 </div>
               </div>
               <div className={styles.dropRowActions}>
                 <button className={styles.editBtn} onClick={() => openEdit(d)}>Edit</button>
                 <a href={`/drop/${d.id}`} target="_blank" rel="noopener noreferrer" className={styles.shareBtn}>🔗 Share</a>
-                <button className={d.isActive ? styles.deactivateBtn : styles.activateBtn} onClick={() => toggleActive(d)}>
-                  {d.isActive ? 'Deactivate' : 'Activate'}
-                </button>
+                {d.isDraft ? (
+                  <button className={styles.activateBtn} onClick={() => publishDraft(d)}>Publish</button>
+                ) : (
+                  <button className={d.isActive ? styles.deactivateBtn : styles.activateBtn} onClick={() => toggleActive(d)}>
+                    {d.isActive ? 'Deactivate' : 'Activate'}
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -738,6 +771,10 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             {success && <div className={styles.successBox}>{success}</div>}
             <button className={styles.publishBtn} onClick={publish} disabled={publishing}>
               {publishing ? <span className="spin" /> : 'Publish Drop'}
+            </button>
+            <button onClick={saveDraft} disabled={publishing}
+              style={{ width: '100%', marginTop: 8, background: 'transparent', color: 'var(--text)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 9, fontFamily: 'var(--font)', fontSize: '0.85rem', fontWeight: 700, padding: '0.6rem', cursor: publishing ? 'default' : 'pointer', opacity: publishing ? 0.6 : 1 }}>
+              Save as Draft
             </button>
           </div>
         </div>

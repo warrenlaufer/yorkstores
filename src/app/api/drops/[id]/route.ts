@@ -67,6 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(body.name !== undefined && { name: body.name }),
       ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl }),
       ...(body.isActive !== undefined && { isActive: body.isActive }),
+      ...(body.isDraft !== undefined && { isDraft: body.isDraft }),
       ...(body.sellBackPct !== undefined && { sellBackPct: Math.min(100, Math.max(1, body.sellBackPct)) }),
       ...(body.pricingType !== undefined && { pricingType: body.pricingType === 'dynamic' ? 'dynamic' : 'fixed' }),
       ...(body.category !== undefined && { category: body.category, subcategory: normalizeSubcategory(body.category, body.subcategory) }),
