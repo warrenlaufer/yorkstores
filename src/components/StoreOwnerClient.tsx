@@ -100,11 +100,51 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
   const effectiveShip = shippingMode === 'flat' ? flatShipping : iShip
 
+  // Shrink large photos in the browser before upload. Phone/camera JPEGs are often
+  // bigger than the server (and Vercel's ~4.5MB request) limit; this resizes to a max
+  // dimension and re-encodes as JPEG so uploads are small and fast.
+  async function compressImage(file: File): Promise<File> {
+    if (!file.type.startsWith('image/') || file.type === 'image/gif') return file
+    try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const r = new FileReader()
+        r.onload = () => resolve(r.result as string)
+        r.onerror = () => reject(new Error('read failed'))
+        r.readAsDataURL(file)
+      })
+      const img: HTMLImageElement = await new Promise((resolve, reject) => {
+        const im = document.createElement('img')
+        im.onload = () => resolve(im)
+        im.onerror = () => reject(new Error('decode failed'))
+        im.src = dataUrl
+      })
+      const MAX = 1600
+      let w = img.naturalWidth || img.width
+      let h = img.naturalHeight || img.height
+      if (!w || !h) return file
+      if (w > MAX || h > MAX) {
+        if (w >= h) { h = Math.round((h * MAX) / w); w = MAX }
+        else { w = Math.round((w * MAX) / h); h = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return file
+      ctx.drawImage(img, 0, 0, w, h)
+      const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.85))
+      if (!blob || blob.size >= file.size) return file
+      return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' })
+    } catch {
+      return file
+    }
+  }
+
   async function uploadImage(file: File): Promise<string> {
+    const toSend = await compressImage(file)
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', toSend)
     const res = await fetch('/api/users/upload-url', { method: 'POST', body: formData })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({ error: 'Upload failed (server returned an unexpected response).' }))
     if (!res.ok) throw new Error(data.error || 'Upload failed')
     return data.data.publicUrl
   }
@@ -112,7 +152,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
-    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
+    if (file.size > 40 * 1024 * 1024) { setError('Image must be under 40MB.'); return }
     setLogoUploading(true); setError('')
     try { const url = await uploadImage(file); setLogoUrl(url); setLogoPreview(url) }
     catch (e: any) { setError('Logo upload failed: ' + e.message) }
@@ -122,7 +162,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   async function handleItemImgUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setError('Please upload an image file.'); return }
-    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5MB.'); return }
+    if (file.size > 40 * 1024 * 1024) { setError('Image must be under 40MB.'); return }
     setIImgUploading(true); setError('')
     e.target.value = ''
     try { const url = await uploadImage(file); setIImg(url); setIImgPreview(url) }
@@ -133,7 +173,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   async function handleEditLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
-    if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
+    if (file.size > 40 * 1024 * 1024) { setEditError('Image must be under 40MB.'); return }
     setEditLogoUploading(true); setEditError('')
     e.target.value = ''
     try { const url = await uploadImage(file); setEditLogoUrl(url); setEditLogoPreview(url) }
@@ -144,7 +184,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   async function handleEditItemImgUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
-    if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
+    if (file.size > 40 * 1024 * 1024) { setEditError('Image must be under 40MB.'); return }
     setEImgUploading(true); setEditError('')
     try { const url = await uploadImage(file); setEImg(url); setEImgPreview(url) }
     catch (e: any) { setEditError('Image upload failed: ' + e.message) }
@@ -154,7 +194,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
   async function handleExistingItemImgUpload(k: string, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return
     if (!file.type.startsWith('image/')) { setEditError('Please upload an image file.'); return }
-    if (file.size > 5 * 1024 * 1024) { setEditError('Image must be under 5MB.'); return }
+    if (file.size > 40 * 1024 * 1024) { setEditError('Image must be under 40MB.'); return }
     setItemImgUploading(prev => ({ ...prev, [k]: true })); setEditError('')
     e.target.value = ''
     try {

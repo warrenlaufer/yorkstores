@@ -22,11 +22,17 @@ export default async function ActivityPage({ params }: { params: { id: string } 
 
   const box = purchase.box
   const drop = box.drop
+  const item = {
+    itemName: purchase.itemName ?? box.itemName,
+    itemPrice: Number(purchase.itemPrice ?? box.itemPrice),
+    itemShippingCost: Number(purchase.itemShippingCost ?? box.itemShippingCost),
+    itemImageUrl: purchase.itemImageUrl ?? box.itemImageUrl,
+  }
   const outcome = purchase.outcome
   const pricePaid = Number(purchase.pricePaid)
   const refundAmt = Number(purchase.refundAmt)
-  const itemPrice = Number(box.itemPrice)
-  const itemShipping = Number(box.itemShippingCost)
+  const itemPrice = item.itemPrice
+  const itemShipping = item.itemShippingCost
 
   const events: { type: string; label: string; date: Date; amount: number; note: string }[] = []
 
@@ -79,9 +85,9 @@ export default async function ActivityPage({ params }: { params: { id: string } 
       <Link href="/dashboard/history" className={styles.back}>← Back to History</Link>
 
       <div className={styles.card}>
-        {box.itemImageUrl ? (
+        {item.itemImageUrl ? (
           <div className={styles.imgWrap}>
-            <img src={box.itemImageUrl} alt={box.itemName} className={styles.img} />
+            <img src={item.itemImageUrl} alt={item.itemName} className={styles.img} />
           </div>
         ) : (
           <div className={styles.imgPlaceholder}>
@@ -91,7 +97,7 @@ export default async function ActivityPage({ params }: { params: { id: string } 
 
         <div className={styles.info}>
           <div className={styles.dropName}>{drop.name}</div>
-          <h1 className={styles.itemName}>{box.itemName}</h1>
+          <h1 className={styles.itemName}>{item.itemName}</h1>
           <div className={styles.itemPrice}>${itemPrice.toFixed(2)} value</div>
 
           {outcome && (

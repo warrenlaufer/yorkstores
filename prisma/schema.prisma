@@ -132,6 +132,11 @@ model Purchase {
   revealedAt  DateTime?
   resolvedAt  DateTime?
 
+  itemName         String?
+  itemPrice        Decimal? @db.Decimal(10, 2)
+  itemShippingCost Decimal? @db.Decimal(10, 2)
+  itemImageUrl     String?
+
   buyer       User        @relation(fields: [buyerId], references: [id])
   box         Box         @relation(fields: [boxId], references: [id])
   drop        Drop        @relation(fields: [dropId], references: [id])

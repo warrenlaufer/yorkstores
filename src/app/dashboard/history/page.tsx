@@ -34,10 +34,10 @@ export default async function HistoryPage() {
     const after = runningBalance
     return {
       id: p.id,
-      itemName: p.box.itemName,
-      itemPrice: Number(p.box.itemPrice),
-      itemShippingCost: Number(p.box.itemShippingCost),
-      itemImageUrl: p.box.itemImageUrl,
+      itemName: p.itemName ?? p.box.itemName,
+      itemPrice: Number(p.itemPrice ?? p.box.itemPrice),
+      itemShippingCost: Number(p.itemShippingCost ?? p.box.itemShippingCost),
+      itemImageUrl: p.itemImageUrl ?? p.box.itemImageUrl,
       dropName: p.box.drop.name,
       dropEmoji: p.box.drop.emoji,
       dropLogoUrl: p.box.drop.logoUrl,
