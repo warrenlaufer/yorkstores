@@ -16,25 +16,62 @@ type AddressForm = {
   city: string; state: string; postcode: string; country: string
 }
 
-const COUNTDOWN_SECONDS = 300
+type Rarity = { tier: string; label: string; color: string; particles: number; confetti: number; shake: boolean }
+type Particle = { id: number; dx: string; dy: string; size: number; color: string }
 
-function Confetti({ active }: { active: boolean }) {
+const COUNTDOWN_SECONDS = 300
+const COMMON: Rarity = { tier: 'common', label: '', color: '#FF6B85', particles: 16, confetti: 0, shake: false }
+
+function getRarity(itemPrice: number, pricePaid: number): Rarity {
+  const ratio = pricePaid > 0 ? itemPrice / pricePaid : 1
+  if (ratio >= 8) return { tier: 'legendary', label: 'Legendary pull', color: '#FFD66B', particles: 44, confetti: 170, shake: true }
+  if (ratio >= 3) return { tier: 'epic', label: 'Epic pull', color: '#C084FC', particles: 34, confetti: 120, shake: true }
+  if (ratio >= 1.5) return { tier: 'rare', label: 'Rare pull', color: '#FF6B85', particles: 26, confetti: 80, shake: false }
+  return COMMON
+}
+
+function genParticles(n: number, color: string): Particle[] {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (Math.PI * 2) * (i / n) + Math.random() * 0.5
+    const dist = 60 + Math.random() * 95
+    const size = 5 + Math.random() * 7
+    const c = i % 4 === 0 ? '#FFD66B' : i % 4 === 1 ? '#fff' : color
+    return { id: i, dx: `${Math.cos(a) * dist}px`, dy: `${Math.sin(a) * dist - 22}px`, size, color: c }
+  })
+}
+
+function confettiColors(tier: string): string[] {
+  if (tier === 'legendary' || tier === 'epic') return ['#FFD66B', '#C084FC', '#FF6B85', '#fff', '#3DD68C']
+  return ['#FF6B85', '#FFD66B', '#fff']
+}
+
+const DOG = (color: string) => (
+  <svg width="24" height="26" viewBox="0 0 42 44" aria-hidden="true">
+    <g fill={color}>
+      <ellipse cx="20" cy="30" rx="13" ry="9" /><ellipse cx="30" cy="16" rx="8" ry="7" /><ellipse cx="37" cy="19" rx="4" ry="3" />
+      <ellipse cx="24" cy="10" rx="4" ry="5" transform="rotate(-15 24 10)" /><ellipse cx="33" cy="9" rx="3.5" ry="5" transform="rotate(15 33 9)" />
+      <path d="M7 26 Q2 18 6 14 Q9 11 11 15 Q9 18 11 23" />
+      <rect x="26" y="36" width="4" height="8" rx="2" /><rect x="20" y="36" width="4" height="8" rx="2" /><rect x="13" y="36" width="4" height="8" rx="2" /><rect x="7" y="35" width="4" height="8" rx="2" />
+    </g>
+  </svg>
+)
+
+function Confetti({ active, count = 120, colors }: { active: boolean; count?: number; colors?: string[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
-
   useEffect(() => {
-    if (!active) return
+    if (!active || count <= 0) return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
-    const colors = ['#FF6B85','#F5C842','#3DD68C','#60A5FA','#C084FC','#FB923C','#fff']
-    const pieces = Array.from({ length: 120 }, () => ({
+    const palette = colors && colors.length ? colors : ['#FF6B85', '#F5C842', '#3DD68C', '#60A5FA', '#C084FC', '#fff']
+    const pieces = Array.from({ length: count }, () => ({
       x: Math.random() * canvas.width, y: -20 - Math.random() * 100,
       w: 6 + Math.random() * 10, h: 4 + Math.random() * 6,
-      color: colors[Math.floor(Math.random() * colors.length)],
+      color: palette[Math.floor(Math.random() * palette.length)],
       rot: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.15,
       vx: (Math.random() - 0.5) * 4, vy: 3 + Math.random() * 5, opacity: 1,
     }))
@@ -55,8 +92,7 @@ function Confetti({ active }: { active: boolean }) {
     }
     animRef.current = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(animRef.current)
-  }, [active])
-
+  }, [active, count, colors])
   return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999 }} />
 }
 
@@ -75,7 +111,10 @@ function RevealContent() {
 
   const [data, setData] = useState<PurchaseData | null>(null)
   const [phase, setPhase] = useState<'opening' | 'revealed' | 'done'>('opening')
-  const [lidOpen, setLidOpen] = useState(false)
+  const [anim, setAnim] = useState<'charge' | 'burst' | 'revealed'>('charge')
+  const [particles, setParticles] = useState<Particle[]>([])
+  const [shake, setShake] = useState(false)
+  const [skipAnim, setSkipAnim] = useState(false)
   const [cardVisible, setCardVisible] = useState(false)
   const [actionsVisible, setActionsVisible] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
@@ -94,6 +133,42 @@ function RevealContent() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const hasAutoSold = useRef(false)
+  const dataRef = useRef<PurchaseData | null>(null)
+  const firedRef = useRef(false)
+  const minChargeRef = useRef(false)
+  const skipRef = useRef(false)
+  const reducedRef = useRef(false)
+
+  const rarity = data ? getRarity(data.box.itemPrice, data.pricePaid) : COMMON
+
+  useEffect(() => { dataRef.current = data }, [data])
+
+  function revealNow() {
+    firedRef.current = true; skipRef.current = true
+    setSkipAnim(true); setAnim('revealed')
+    setParticles([]); setShowConfetti(false)
+    setCardVisible(true); setActionsVisible(true); setPhase('revealed')
+  }
+
+  function fireBurst() {
+    if (skipRef.current || reducedRef.current) { revealNow(); return }
+    const d = dataRef.current
+    const r = d ? getRarity(d.box.itemPrice, d.pricePaid) : COMMON
+    setAnim('burst')
+    setParticles(genParticles(r.particles, r.color))
+    if (r.confetti > 0) setShowConfetti(true)
+    if (r.shake) { setShake(true); setTimeout(() => setShake(false), 480) }
+    setTimeout(() => setCardVisible(true), 520)
+    setTimeout(() => { setActionsVisible(true); setPhase('revealed'); setAnim('revealed'); router.refresh() }, 1100)
+  }
+
+  function maybeBurst(force?: boolean) {
+    if (firedRef.current) return
+    if (!minChargeRef.current) return
+    if (!dataRef.current && !force) return
+    firedRef.current = true
+    fireBurst()
+  }
 
   function startTimer(revealedAt: string | null) {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -103,10 +178,7 @@ function RevealContent() {
     timerRef.current = setInterval(() => {
       const r = getSecondsRemaining(revealedAt)
       setCountdown(r)
-      if (r <= 0) {
-        clearInterval(timerRef.current!)
-        handleAutoSell()
-      }
+      if (r <= 0) { clearInterval(timerRef.current!); handleAutoSell() }
     }, 1000)
   }
 
@@ -150,17 +222,13 @@ function RevealContent() {
               revealedAt: p.revealedAt ?? null,
             })
             if (p.outcome === 'DELIVERY') {
-              setOutcome('delivery')
-              setOutcomeMsg(`📦 Delivery already confirmed.`)
-              setPhase('revealed')
-              setCardVisible(true)
-              setActionsVisible(false)
+              firedRef.current = true
+              setOutcome('delivery'); setOutcomeMsg('Delivery already confirmed.')
+              setPhase('revealed'); setAnim('revealed'); setCardVisible(true); setActionsVisible(false)
             } else if (p.outcome === 'SOLD_BACK' || p.outcome === 'AUTO_SOLD') {
-              setOutcome('soldback')
-              setOutcomeMsg(`💸 Already sold back — $${Number(p.refundAmt).toFixed(2)} was credited.`)
-              setPhase('revealed')
-              setCardVisible(true)
-              setActionsVisible(false)
+              firedRef.current = true
+              setOutcome('soldback'); setOutcomeMsg(`Already sold back — $${Number(p.refundAmt).toFixed(2)} was credited.`)
+              setPhase('revealed'); setAnim('revealed'); setCardVisible(true); setActionsVisible(false)
             }
           }
         }
@@ -168,16 +236,16 @@ function RevealContent() {
   }, [purchaseId])
 
   useEffect(() => {
-    if (!pending && !purchaseId) { router.push('/dashboard'); return }
-    setTimeout(() => setLidOpen(true), 600)
-    setTimeout(() => setShowConfetti(true), 1100)
-    setTimeout(() => setCardVisible(true), 2200)
-    setTimeout(() => {
-      setActionsVisible(true)
-      setPhase('revealed')
-      router.refresh()
-    }, 3250)
+    if (!pending && !purchaseId) { router.push('/'); return }
+    reducedRef.current = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    if (reducedRef.current) { skipRef.current = true; setSkipAnim(true) }
+    const minMs = reducedRef.current ? 0 : 1300
+    const t1 = setTimeout(() => { minChargeRef.current = true; maybeBurst() }, minMs)
+    const t2 = setTimeout(() => { minChargeRef.current = true; maybeBurst(true) }, 5000)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [])
+
+  useEffect(() => { maybeBurst() }, [data])
 
   useEffect(() => {
     if (phase !== 'revealed' || outcome) return
@@ -187,7 +255,6 @@ function RevealContent() {
   }, [phase, outcome, data])
 
   function stopTimer() { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
-
   const getPurchaseId = () => purchaseId || new URLSearchParams(window.location.search).get('purchaseId') || ''
 
   async function handleSellBack() {
@@ -200,7 +267,7 @@ function RevealContent() {
     setSubmitting(false)
     if (res.ok) {
       setOutcome('soldback')
-      setOutcomeMsg(`💸 $${d.data.refundAmount.toFixed(2)} has been credited to your account.`)
+      setOutcomeMsg(`$${d.data.refundAmount.toFixed(2)} has been credited to your account.`)
       router.refresh()
     } else setOutcomeMsg(d.error)
   }
@@ -215,16 +282,15 @@ function RevealContent() {
     const d = await res.json()
     if (res.ok) {
       setOutcome('soldback')
-      setOutcomeMsg(`⏰ Time expired — $${d.data.refundAmount.toFixed(2)} has been credited to your account.`)
+      setOutcomeMsg(`Time expired — $${d.data.refundAmount.toFixed(2)} has been credited to your account.`)
       router.refresh()
-    } else setOutcomeMsg('⏰ Time expired — sell-back failed.')
+    } else setOutcomeMsg('Time expired — sell-back failed.')
     setActionsVisible(false)
   }
 
   function openDelivery() { stopTimer(); setShowAddr(true) }
   function cancelDelivery() { setShowAddr(false) }
 
-  // Clear a stale tax estimate whenever the address changes.
   useEffect(() => { setTaxPreview(null) }, [addrForm.addressLine1, addrForm.city, addrForm.state, addrForm.postcode, addrForm.country])
 
   async function previewTax() {
@@ -256,7 +322,7 @@ function RevealContent() {
     if (res.ok) {
       setShowAddr(false)
       setOutcome('delivery')
-      setOutcomeMsg(`📦 Delivery confirmed! We'll ship to ${addrForm.recipientName}, ${addrForm.city}.`)
+      setOutcomeMsg(`Delivery confirmed — we'll ship to ${addrForm.recipientName}, ${addrForm.city}.`)
       router.refresh()
     } else setAddrError(d.error)
   }
@@ -270,38 +336,48 @@ function RevealContent() {
 
   return (
     <div className={styles.screen}>
-      <Confetti active={showConfetti} />
+      <Confetti active={showConfetti} count={rarity.confetti} colors={confettiColors(rarity.tier)} />
 
-      <div className={styles.boxArea}>
-        <div className={styles.boxWrap}>
-          <svg className={styles.boxSvg} viewBox="0 0 140 140" fill="none">
-            <rect x="16" y="68" width="108" height="64" rx="6" fill="#1a0810" stroke="#FF6B85" strokeWidth="1.5"/>
-            <polygon points="16,68 7,61 7,124 16,132" fill="#140610" opacity="0.8"/>
-            <polygon points="124,68 133,61 133,124 124,132" fill="#140610" opacity="0.5"/>
-            <rect x="16" y="94" width="108" height="8" fill="#FF6B85" opacity="0.4"/>
-            <rect x="64" y="68" width="12" height="64" fill="#FF6B85" opacity="0.4"/>
-            <g className={lidOpen ? styles.lidOpen : styles.lid}>
-              <rect x="11" y="53" width="118" height="19" rx="5" fill="#230c18" stroke="#FF8FA3" strokeWidth="1.5"/>
-              <rect x="64" y="53" width="12" height="19" fill="#FF8FA3" opacity="0.5"/>
-              <ellipse cx="59" cy="54" rx="11" ry="7.5" fill="#FFAABB" transform="rotate(-30 59 54)"/>
-              <ellipse cx="81" cy="54" rx="11" ry="7.5" fill="#FFAABB" transform="rotate(30 81 54)"/>
-              <ellipse cx="70" cy="54" rx="5.5" ry="5" fill="#FF6B85"/>
-              <ellipse cx="70" cy="53" rx="3" ry="2.8" fill="#CC3050"/>
-            </g>
-          </svg>
-        </div>
+      <div className={`${styles.stage} ${anim === 'charge' ? styles.charge : ''} ${anim === 'burst' ? styles.burst : ''} ${shake ? styles.stageShake : ''}`}>
+        <div className={`${styles.fx} ${styles.glow}`} style={{ background: `radial-gradient(circle, ${rarity.color}99 0%, transparent 68%)` }} />
+        <div className={`${styles.fx} ${styles.beam}`} style={{ background: `linear-gradient(to top, ${rarity.color}bf, transparent)` }} />
+        <div className={`${styles.fx} ${styles.ring}`} style={{ border: `3px solid ${rarity.color}` }} />
+        <div className={styles.flash} />
+
+        {anim !== 'revealed' && (
+          <div className={styles.cBoxWrap}>
+            <div className={`${styles.cBox} ${anim === 'charge' ? styles.charging : ''} ${anim === 'burst' ? styles.opened : ''}`}>
+              <div className={styles.cKnot} />
+              <div className={styles.cLid}>{DOG('#2A0C11')}</div>
+              <div className={styles.cBody}><span className={styles.cRibV} /><span className={styles.cRibH} /></div>
+            </div>
+          </div>
+        )}
+
+        {particles.map(p => (
+          <span key={p.id} className={styles.particle} style={{ ['--dx' as any]: p.dx, ['--dy' as any]: p.dy, width: p.size, height: p.size, background: p.color }} />
+        ))}
+
+        {anim !== 'revealed' && !skipAnim && (
+          <button className={styles.skipBtn} onClick={revealNow}>Skip ▸</button>
+        )}
       </div>
 
       {data && (
         <div className={`${styles.revealCard} ${cardVisible ? styles.revealCardVisible : ''}`}>
+          {rarity.tier !== 'common' && (
+            <div className={styles.rarityStamp} style={{ color: rarity.color, borderColor: rarity.color }}>{rarity.label}</div>
+          )}
+
           {data.box.itemImageUrl && (
-            <div className={styles.itemImageWrap}>
-              <img src={data.box.itemImageUrl} alt={data.box.itemName} className={styles.itemImage} />
+            <div className={styles.itemImageWrap} style={{ position: 'relative' }}>
+              <div className={`${styles.halo} ${cardVisible ? styles.haloShow : ''}`} style={{ background: `conic-gradient(from 0deg, transparent, ${rarity.color}66, transparent, ${rarity.color}66, transparent)` }} />
+              <img src={data.box.itemImageUrl} alt={data.box.itemName} className={`${styles.itemImage} ${skipAnim ? '' : styles.riseIn}`} />
             </div>
           )}
 
           <div className={styles.revealBody}>
-            <div className={styles.revealLabel}>✦ You revealed</div>
+            <div className={styles.revealLabel}>You revealed</div>
             <div className={styles.revealName}>{data.box.itemName}</div>
             <div className={styles.revealVal}>
               ${data.box.itemPrice.toFixed(2)} value
@@ -322,9 +398,9 @@ function RevealContent() {
 
             {actionsVisible && !outcome && (
               <div className={styles.actions}>
-                <button className={styles.deliveryBtn} onClick={openDelivery} disabled={submitting}>📦 Take Delivery</button>
+                <button className={styles.deliveryBtn} onClick={openDelivery} disabled={submitting}>Take delivery</button>
                 <button className={styles.sellBtn} onClick={handleSellBack} disabled={submitting}>
-                  {submitting ? <span className="spin" /> : `💸 Sell Back — Get $${(data.box.itemPrice * 0.9).toFixed(2)} Credit`}
+                  {submitting ? <span className="spin" /> : `Sell back — get $${(data.box.itemPrice * 0.9).toFixed(2)} credit`}
                 </button>
               </div>
             )}
@@ -337,8 +413,8 @@ function RevealContent() {
 
             {outcome && (
               <div className={styles.backBtns}>
-                <button className={styles.backBtn} onClick={() => router.push(`/drop/${dropId}`)}>Back to This Drop</button>
-                <button className={styles.backBtnAlt} onClick={() => router.push('/dashboard')}>Back to All Drops</button>
+                <button className={styles.backBtn} onClick={() => router.push(`/drop/${dropId}`)}>Back to this drop</button>
+                <button className={styles.backBtnAlt} onClick={() => router.push('/')}>Back to all drops</button>
               </div>
             )}
           </div>
@@ -348,7 +424,7 @@ function RevealContent() {
       {showAddr && (
         <div className={styles.addrOverlay} onClick={cancelDelivery}>
           <div className={styles.addrBox} onClick={e => e.stopPropagation()}>
-            <h2 className={styles.addrTitle}>📦 Shipping Address</h2>
+            <h2 className={styles.addrTitle}>Shipping address</h2>
             <div className={styles.addrSub}>
               {(() => {
                 const shipping = data?.box.itemShippingCost ?? 0
@@ -365,23 +441,23 @@ function RevealContent() {
               })()}
             </div>
             {addrError && <div className={styles.addrErr}>{addrError}</div>}
-            <div className="field"><label>Full Name</label><input value={addrForm.recipientName} onChange={e => setAddrForm(p => ({...p, recipientName: e.target.value}))} /></div>
-            <div className="field"><label>Email (for tracking)</label><input type="email" value={addrForm.recipientEmail} onChange={e => setAddrForm(p => ({...p, recipientEmail: e.target.value}))} /></div>
-            <div className="field"><label>Address Line 1</label><input value={addrForm.addressLine1} onChange={e => setAddrForm(p => ({...p, addressLine1: e.target.value}))} /></div>
-            <div className="field"><label>Address Line 2 (optional)</label><input value={addrForm.addressLine2} onChange={e => setAddrForm(p => ({...p, addressLine2: e.target.value}))} /></div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.6rem'}}>
-              <div className="field"><label>City</label><input value={addrForm.city} onChange={e => setAddrForm(p => ({...p, city: e.target.value}))} /></div>
-              <div className="field"><label>State / County</label><input value={addrForm.state} onChange={e => setAddrForm(p => ({...p, state: e.target.value}))} /></div>
+            <div className="field"><label>Full Name</label><input value={addrForm.recipientName} onChange={e => setAddrForm(p => ({ ...p, recipientName: e.target.value }))} /></div>
+            <div className="field"><label>Email (for tracking)</label><input type="email" value={addrForm.recipientEmail} onChange={e => setAddrForm(p => ({ ...p, recipientEmail: e.target.value }))} /></div>
+            <div className="field"><label>Address Line 1</label><input value={addrForm.addressLine1} onChange={e => setAddrForm(p => ({ ...p, addressLine1: e.target.value }))} /></div>
+            <div className="field"><label>Address Line 2 (optional)</label><input value={addrForm.addressLine2} onChange={e => setAddrForm(p => ({ ...p, addressLine2: e.target.value }))} /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <div className="field"><label>City</label><input value={addrForm.city} onChange={e => setAddrForm(p => ({ ...p, city: e.target.value }))} /></div>
+              <div className="field"><label>State / County</label><input value={addrForm.state} onChange={e => setAddrForm(p => ({ ...p, state: e.target.value }))} /></div>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0.6rem'}}>
-              <div className="field"><label>Postcode / ZIP</label><input value={addrForm.postcode} onChange={e => setAddrForm(p => ({...p, postcode: e.target.value}))} /></div>
-              <div className="field"><label>Country</label><input value={addrForm.country} onChange={e => setAddrForm(p => ({...p, country: e.target.value}))} /></div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+              <div className="field"><label>Postcode / ZIP</label><input value={addrForm.postcode} onChange={e => setAddrForm(p => ({ ...p, postcode: e.target.value }))} /></div>
+              <div className="field"><label>Country</label><input value={addrForm.country} onChange={e => setAddrForm(p => ({ ...p, country: e.target.value }))} /></div>
             </div>
             <button type="button" onClick={previewTax} disabled={taxLoading}
               style={{ marginTop: '0.7rem', width: '100%', background: 'transparent', color: '#7EE0FF', border: '1px solid rgba(126,224,255,0.4)', borderRadius: 7, fontFamily: 'var(--font)', fontSize: '0.74rem', fontWeight: 700, padding: '0.45rem 0.9rem', cursor: 'pointer' }}>
               {taxLoading ? 'Calculating…' : 'Calculate sales tax'}
             </button>
-            <div style={{display:'flex',gap:'0.6rem',marginTop:'0.75rem'}}>
+            <div style={{ display: 'flex', gap: '0.6rem', marginTop: '0.75rem' }}>
               <button className={styles.cancelBtn} onClick={cancelDelivery}>Cancel</button>
               <button className={styles.confirmBtn} onClick={submitDelivery} disabled={submitting}>
                 {submitting ? <span className="spin" /> : 'Confirm Delivery'}
