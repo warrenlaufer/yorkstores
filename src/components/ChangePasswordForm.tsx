@@ -1,9 +1,6 @@
 'use client'
 import { useState } from 'react'
 
-const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 6 }
-const fieldWrap: React.CSSProperties = { marginBottom: '1rem' }
-
 export default function ChangePasswordForm() {
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -36,25 +33,24 @@ export default function ChangePasswordForm() {
 
   return (
     <form onSubmit={submit}>
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="current">Current password</label>
+      <div className="field">
+        <label htmlFor="current">Current password</label>
         <input id="current" type="password" value={current} onChange={e => setCurrent(e.target.value)} autoComplete="current-password" required />
       </div>
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="next">New password</label>
+      <div className="field">
+        <label htmlFor="next">New password</label>
         <input id="next" type="password" value={next} onChange={e => setNext(e.target.value)} autoComplete="new-password" minLength={8} required />
       </div>
-      <div style={fieldWrap}>
-        <label style={labelStyle} htmlFor="confirm">Confirm new password</label>
+      <div className="field">
+        <label htmlFor="confirm">Confirm new password</label>
         <input id="confirm" type="password" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" minLength={8} required />
       </div>
 
       {msg && (
-        <p style={{ fontSize: '0.8rem', margin: '0 0 1rem', color: msg.ok ? '#7CE0A3' : '#FF8FA3' }}>{msg.text}</p>
+        <p style={{ fontSize: 'var(--fs-sm)', margin: '0 0 var(--sp-4)', color: msg.ok ? 'var(--green)' : '#FF8FA3' }}>{msg.text}</p>
       )}
 
-      <button type="submit" disabled={loading || !current || !next || !confirm}
-        style={{ background: '#FF6B85', color: '#fff', border: 'none', borderRadius: 9, fontFamily: 'var(--font)', fontSize: '0.85rem', fontWeight: 800, padding: '0.65rem 1.2rem', cursor: loading ? 'default' : 'pointer', opacity: loading || !current || !next || !confirm ? 0.6 : 1 }}>
+      <button type="submit" className="btn btn-primary" disabled={loading || !current || !next || !confirm}>
         {loading ? 'Saving…' : 'Update password'}
       </button>
     </form>
