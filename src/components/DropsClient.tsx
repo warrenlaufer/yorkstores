@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Gift, Flame, Check, PackageOpen } from 'lucide-react'
 import styles from './DropsClient.module.css'
 import { CATEGORIES, subcategoriesFor, ALL_SUBCATEGORIES } from '@/lib/categories'
 
@@ -68,6 +69,9 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
   function clearCats() { setSelectedCats(new Set()) }
   function clearStores() { setSelectedStores(new Set()) }
 
+  const filtersActive = selectedCats.size !== CATEGORIES.length || selectedStores.size > 0 || selectedSubs.size !== ALL_SUBCATEGORIES.length
+  function resetFilters() { setSelectedCats(new Set(CATEGORIES)); setSelectedSubs(new Set(ALL_SUBCATEGORIES)); setSelectedStores(new Set()) }
+
   const filtered = drops.filter(d => {
     const catMatch = selectedCats.has(d.category)
     const subMatch = !d.subcategory || selectedSubs.has(d.subcategory)
@@ -91,12 +95,12 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
   })
 
   function getBadges(d: Drop) {
-    const badges: { label: string; cls: string }[] = []
+    const badges: { label: string; cls: string; icon?: React.ReactNode }[] = []
     const now = Date.now()
     const created = new Date(d.createdAt).getTime()
     const dayMs = 24 * 60 * 60 * 1000
     if (now - created < 24 * dayMs) badges.push({ label: 'New', cls: styles.badgeNew })
-    if (d.recentPurchases >= 10) badges.push({ label: '🔥 Hot', cls: styles.badgeHot })
+    if (d.recentPurchases >= 10) badges.push({ label: 'Hot', cls: styles.badgeHot, icon: <Flame size={11} strokeWidth={2.5} /> })
     if (d.sellBackPct > 94) badges.push({ label: 'High Buyback %', cls: styles.badgeHighBuyback })
     if (d.availableBoxes === 0) badges.push({ label: 'Sold Out', cls: styles.badgeOff })
     return badges.slice(0, 3)
@@ -126,7 +130,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                     className={`${styles.sidebarItem} ${catSelected ? styles.sidebarItemActive : ''}`}
                     onClick={() => toggleCat(cat)}
                   >
-                    <span className={styles.sidebarCheck}>{catSelected ? '✓' : ''}</span>
+                    <span className={styles.sidebarCheck}>{catSelected ? <Check size={10} strokeWidth={3} /> : null}</span>
                     {cat}
                   </button>
                   {subs.length > 0 && catSelected && subs.map(sub => (
@@ -136,7 +140,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                       style={{ paddingLeft: 30, fontSize: '0.66rem' }}
                       onClick={() => toggleSub(sub)}
                     >
-                      <span className={styles.sidebarCheck}>{selectedSubs.has(sub) ? '✓' : ''}</span>
+                      <span className={styles.sidebarCheck}>{selectedSubs.has(sub) ? <Check size={10} strokeWidth={3} /> : null}</span>
                       {sub}
                     </button>
                   ))}
@@ -160,7 +164,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                     className={`${styles.sidebarItem} ${selectedStores.has(store) ? styles.sidebarItemActive : ''}`}
                     onClick={() => toggleStore(store)}
                   >
-                    <span className={styles.sidebarCheck}>{selectedStores.has(store) ? '✓' : ''}</span>
+                    <span className={styles.sidebarCheck}>{selectedStores.has(store) ? <Check size={10} strokeWidth={3} /> : null}</span>
                     {store}
                   </button>
                 ))}
@@ -190,8 +194,19 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
           <div className={styles.grid}>
             {sorted.length === 0 ? (
               <div className={styles.empty}>
-                <div className={styles.emptyIcon}>🎁</div>
-                <p>No drops match your filters.</p>
+                <PackageOpen size={40} strokeWidth={1.4} className={styles.emptyIcon} />
+                {filtersActive ? (
+                  <>
+                    <div className={styles.emptyTitle}>No drops match your filters</div>
+                    <p>Try widening your category or store selection.</p>
+                    <button className="btn btn-ghost btn-sm" onClick={resetFilters}>Clear filters</button>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.emptyTitle}>No drops yet</div>
+                    <p>New mystery drops show up here as sellers launch them. Check back soon.</p>
+                  </>
+                )}
               </div>
             ) : sorted.map(d => {
             const soldOut = d.availableBoxes === 0
@@ -210,15 +225,17 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                   </div>
                   <div className={styles.badgeRowBottom}>
                     {badges.map(b => (
-                      <span key={b.label} className={`${styles.badge} ${b.cls}`}>{b.label}</span>
+                      <span key={b.label} className={`${styles.badge} ${b.cls}`}>{b.icon}{b.label}</span>
                     ))}
                   </div>
                 </div>
                 <div className={styles.cardBanner}>
                   {d.logoUrl ? (
                     <img src={d.logoUrl} alt={d.name} className={styles.cardLogo} />
+                  ) : d.emoji ? (
+                    <span className={styles.cardEmoji}>{d.emoji}</span>
                   ) : (
-                    <span className={styles.cardEmoji}>{d.emoji || '🎁'}</span>
+                    <Gift size={56} strokeWidth={1.3} className={styles.cardEmojiIcon} />
                   )}
                 </div>
                 <div className={styles.cardBody}>
