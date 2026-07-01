@@ -10,3 +10,5 @@ node_modules/
 .DS_Store
 *.tsbuildinfo
 prisma/migrations/
+.vercel
+.env*
