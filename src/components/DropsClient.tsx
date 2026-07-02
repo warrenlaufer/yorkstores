@@ -244,10 +244,10 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
                   <div className={styles.stats}>
                     <div className={styles.stat}><div className={styles.statVal}>${d.boxPrice}</div><div className={styles.statLbl}>Price</div></div>
                     <div className={styles.stat}><div className={styles.statVal}>${d.minPrice}–${d.maxPrice}</div><div className={styles.statLbl}>Range</div></div>
-                    <div className={styles.stat}><div className={styles.statVal}>{d.totalBoxes}</div><div className={styles.statLbl}>Boxes</div></div>
+                    <div className={styles.stat}><div className={styles.statVal}>{d.sellBackPct}%</div><div className={styles.statLbl}>Buyback</div></div>
                   </div>
                   <div className={styles.progBar}><div className={styles.progFill} style={{ width: `${pct}%` }} /></div>
-                  <p className={styles.avail}><strong>{d.availableBoxes}</strong> of {d.totalBoxes} remaining</p>
+                  <p className={styles.avail}><strong>{d.availableBoxes}</strong> {d.availableBoxes === 1 ? 'box' : 'boxes'} available</p>
                   <button
                     className={styles.openBtn}
                     disabled={soldOut}

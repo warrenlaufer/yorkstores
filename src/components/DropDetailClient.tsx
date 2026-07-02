@@ -100,7 +100,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
           <div>
             <h1 className={styles.title}>{drop.name}</h1>
             <p className={styles.sub}>
-              {available.length} of {drop.boxes.length} available · by {drop.owner}
+              {available.length} {available.length === 1 ? 'box' : 'boxes'} available · by {drop.owner}
               {isDynamic && <span className={styles.dynamicBadge}>Dynamic Pricing</span>}
             </p>
           </div>
@@ -166,7 +166,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
       </div>
 
       <div className={styles.sectionRow} style={{marginTop:'1.5rem'}}>
-        <span className={styles.section}>{drop.boxes.length} boxes — click one to open</span>
+        <span className={styles.section}>Click a box to open</span>
       </div>
 
       <div className={styles.boxGrid}>
