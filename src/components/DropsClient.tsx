@@ -99,7 +99,7 @@ export default function DropsClient({ drops, user }: { drops: Drop[]; user: User
     const now = Date.now()
     const created = new Date(d.createdAt).getTime()
     const dayMs = 24 * 60 * 60 * 1000
-    if (now - created < 24 * dayMs) badges.push({ label: 'New', cls: styles.badgeNew })
+    if (now - created < dayMs) badges.push({ label: 'New', cls: styles.badgeNew })
     if (d.recentPurchases >= 10) badges.push({ label: 'Hot', cls: styles.badgeHot, icon: <Flame size={11} strokeWidth={2.5} /> })
     if (d.sellBackPct > 94) badges.push({ label: 'High Buyback %', cls: styles.badgeHighBuyback })
     if (d.availableBoxes === 0) badges.push({ label: 'Sold Out', cls: styles.badgeOff })
