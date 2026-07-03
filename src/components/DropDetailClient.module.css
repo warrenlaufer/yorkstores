@@ -47,18 +47,21 @@
 .prizeRail::-webkit-scrollbar { height: 6px; }
 .prizeRail::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
 .prizeRail::-webkit-scrollbar-track { background: transparent; }
-.prizeCard { flex: 0 0 148px; scroll-snap-align: start; background: var(--bg2); border: 1px solid var(--border); border-top: 2px solid var(--border); border-radius: 12px; padding: 0.6rem; transition: transform 0.16s, border-color 0.16s; }
+.prizeCard { flex: 0 0 148px; scroll-snap-align: start; background: var(--bg2); border: 1px solid var(--border); border-top: 2px solid var(--border); border-radius: 12px; padding: 0.6rem; cursor: pointer; transition: flex-basis 0.22s var(--ease), transform 0.16s, border-color 0.16s, box-shadow 0.22s; }
+.prizeCard:hover, .prizeCard.prizeOpen { flex-basis: 250px; border-color: var(--border-strong); box-shadow: 0 12px 36px rgba(0,0,0,0.45); z-index: 2; }
 .prizeCard:hover { transform: translateY(-3px); }
 .prizeCard.rar { border-top-color: var(--accent); }
 .prizeCard.epi { border-top-color: #C084FC; }
 .prizeCard.leg { border-top-color: var(--gold); }
-.prizeImg { height: 92px; border-radius: 8px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; overflow: hidden; }
+.prizeImg { height: 92px; border-radius: 8px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; overflow: hidden; transition: height 0.22s var(--ease); }
+.prizeCard:hover .prizeImg, .prizeCard.prizeOpen .prizeImg { height: 205px; }
 .prizeImgTag { width: 100%; height: 100%; object-fit: contain; }
 .prizeIcon { color: var(--text3); }
 .prizeCard.rar .prizeIcon { color: var(--accent); }
 .prizeCard.epi .prizeIcon { color: #C084FC; }
 .prizeCard.leg .prizeIcon { color: var(--gold); }
-.prizeName { font-size: 0.73rem; font-weight: 600; color: var(--text); line-height: 1.25; height: 2.5em; overflow: hidden; }
+.prizeName { font-size: 0.73rem; font-weight: 600; color: var(--text); line-height: 1.3; max-height: 2.6em; overflow: hidden; transition: max-height 0.22s var(--ease); }
+.prizeCard:hover .prizeName, .prizeCard.prizeOpen .prizeName { max-height: 8em; overflow: visible; }
 .prizeFoot { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
 .prizeVal { font-family: var(--mono); font-size: 0.78rem; font-weight: 800; color: var(--gold); }
 .prizeOdds { font-size: 0.62rem; color: var(--text2); background: var(--surface-2); padding: 2px 6px; border-radius: 6px; font-family: var(--mono); }

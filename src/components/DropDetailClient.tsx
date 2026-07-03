@@ -17,6 +17,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
   useEffect(() => { setError(initialError) }, [initialError])
   const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
   const [confirmRandom, setConfirmRandom] = useState(false)
+  const [openPrize, setOpenPrize] = useState<number | null>(null)
 
   const available = drop.boxes.filter(b => !b.sold)
   const scarPct = drop.boxes.length > 0 ? Math.round((available.length / drop.boxes.length) * 100) : 0
@@ -132,7 +133,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
           const ratio = drop.boxPrice > 0 ? it.price / drop.boxPrice : 1
           const tier = ratio >= 8 ? styles.leg : ratio >= 3 ? styles.epi : ratio >= 1.5 ? styles.rar : ''
           return (
-            <div key={i} className={`${styles.prizeCard} ${tier}`}>
+            <div key={i} className={`${styles.prizeCard} ${tier} ${openPrize === i ? styles.prizeOpen : ''}`} onClick={() => setOpenPrize(openPrize === i ? null : i)}>
               <div className={styles.prizeImg}>
                 {it.imageUrl ? <img src={it.imageUrl} alt={it.name} className={styles.prizeImgTag} /> : <Gift size={30} strokeWidth={1.3} className={styles.prizeIcon} />}
               </div>
