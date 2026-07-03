@@ -63,8 +63,8 @@ export default async function AdminPage() {
         <div className={styles.statCard}><div className={styles.statVal}>{userCount}</div><div className={styles.statLbl}>Total Users</div></div>
         <div className={styles.statCard}><div className={styles.statVal}>{dropCount}</div><div className={styles.statLbl}>Total Drops</div></div>
         <div className={styles.statCard}><div className={styles.statVal}>{purchaseCount}</div><div className={styles.statLbl}>Total Purchases</div></div>
-        <div className={styles.statCard}><div className={styles.statVal} style={{color:'#F5C842'}}>${totalRevenue.toFixed(2)}</div><div className={styles.statLbl}>Gross Revenue</div></div>
-        <div className={styles.statCard}><div className={styles.statVal} style={{color:'#3DD68C'}}>${totalPlatformRevenue.toFixed(2)}</div><div className={styles.statLbl}>Platform Revenue (5%)</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color:'var(--gold)'}}>${totalRevenue.toFixed(2)}</div><div className={styles.statLbl}>Gross Revenue</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color:'var(--green)'}}>${totalPlatformRevenue.toFixed(2)}</div><div className={styles.statLbl}>Platform Revenue (5%)</div></div>
       </div>
 
       <div className={styles.section}>Platform Revenue</div>
@@ -78,7 +78,7 @@ export default async function AdminPage() {
             <span>{t.description}</span>
             <span className={styles.cellMuted}>{t.drop?.name ?? '—'}</span>
             <span><span className={styles.roleBadge}>{t.type.replace(/_/g, ' ')}</span></span>
-            <span style={{fontFamily:'var(--mono)',color:'#3DD68C'}}>+${Number(t.amount).toFixed(2)}</span>
+            <span style={{fontFamily:'var(--mono)',color:'var(--green)'}}>+${Number(t.amount).toFixed(2)}</span>
           </div>
         ))}
         {recentPlatformTx.length === 0 && (

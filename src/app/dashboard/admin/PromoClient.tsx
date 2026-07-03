@@ -67,7 +67,7 @@ export default function PromoClient({ initial }: { initial: PromoCode[] }) {
   return (
     <div>
       {/* Create form */}
-      <div style={{ background:'#0F0F14', border:'1px solid rgba(255,255,255,0.09)', borderRadius:12, padding:'1rem', marginBottom:'1rem' }}>
+      <div style={{ background:'var(--bg2)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:12, padding:'1rem', marginBottom:'1rem' }}>
         <div style={{ fontSize:'0.62rem', fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'#FF8FA3', marginBottom:'0.85rem' }}>Create Promo Code</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 130px 120px', gap:'0.5rem', marginBottom:'0.5rem' }}>
           <div><label>Code</label><input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="WELCOME300" /></div>
@@ -90,7 +90,7 @@ export default function PromoClient({ initial }: { initial: PromoCode[] }) {
         <button
           onClick={create}
           disabled={creating}
-          style={{ background:'#FF6B85', color:'#fff', border:'none', borderRadius:8, fontFamily:'var(--font)', fontSize:'0.78rem', fontWeight:800, padding:'0.5rem 1.25rem', cursor:'pointer' }}
+          style={{ background:'var(--accent)', color:'#fff', border:'none', borderRadius:8, fontFamily:'var(--font)', fontSize:'0.78rem', fontWeight:800, padding:'0.5rem 1.25rem', cursor:'pointer' }}
         >
           {creating ? 'Creating…' : '+ Create Code'}
         </button>
@@ -106,12 +106,12 @@ export default function PromoClient({ initial }: { initial: PromoCode[] }) {
         )}
         {codes.map(c => (
           <div key={c.id} style={{ display:'grid', gridTemplateColumns:'140px 80px 1fr 80px 60px 80px', gap:8, padding:'0.65rem 1rem', borderBottom:'1px solid rgba(255,255,255,0.05)', alignItems:'center', fontSize:'0.78rem' }}>
-            <span style={{ fontFamily:'var(--mono)', fontWeight:700, color:'#F5C842' }}>{c.code}</span>
-            <span style={{ fontFamily:'var(--mono)', color:'#3DD68C', fontSize: c.type === 'match' ? '0.66rem' : '0.78rem' }}>{c.type === 'match' ? `match ${c.matchPct}% · max $${Number(c.amount).toFixed(2)}` : `$${Number(c.amount).toFixed(2)}`}</span>
+            <span style={{ fontFamily:'var(--mono)', fontWeight:700, color:'var(--gold)' }}>{c.code}</span>
+            <span style={{ fontFamily:'var(--mono)', color:'var(--green)', fontSize: c.type === 'match' ? '0.66rem' : '0.78rem' }}>{c.type === 'match' ? `match ${c.matchPct}% · max $${Number(c.amount).toFixed(2)}` : `$${Number(c.amount).toFixed(2)}`}</span>
             <span style={{ color:'var(--text2)', fontSize:'0.72rem' }}>{c.description || '—'}</span>
             <span style={{ color:'var(--text2)', fontSize:'0.72rem' }}>{c.usedCount}{c.maxUses ? ` / ${c.maxUses}` : ''}</span>
             <span>
-              <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'2px 7px', borderRadius:4, background: c.isActive ? 'rgba(61,214,140,0.15)' : 'rgba(255,255,255,0.06)', color: c.isActive ? '#3DD68C' : 'var(--text3)', border: `1px solid ${c.isActive ? 'rgba(61,214,140,0.3)' : 'rgba(255,255,255,0.1)'}` }}>
+              <span style={{ fontSize:'0.65rem', fontWeight:700, padding:'2px 7px', borderRadius:4, background: c.isActive ? 'rgba(61,214,140,0.15)' : 'rgba(255,255,255,0.06)', color: c.isActive ? 'var(--green)' : 'var(--text3)', border: `1px solid ${c.isActive ? 'rgba(61,214,140,0.3)' : 'rgba(255,255,255,0.1)'}` }}>
                 {c.isActive ? 'On' : 'Off'}
               </span>
             </span>

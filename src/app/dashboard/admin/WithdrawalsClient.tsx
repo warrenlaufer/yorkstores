@@ -33,7 +33,7 @@ export default function WithdrawalsClient({ initial }: { initial: W[] }) {
     }
   }
 
-  const color = (s: string) => (s === 'PAID' ? '#3DD68C' : s === 'REJECTED' ? '#FF8FA3' : '#F5C842')
+  const color = (s: string) => (s === 'PAID' ? 'var(--green)' : s === 'REJECTED' ? '#FF8FA3' : 'var(--gold)')
 
   return (
     <div className={styles.table}>
@@ -51,7 +51,7 @@ export default function WithdrawalsClient({ initial }: { initial: W[] }) {
             {w.status === 'PENDING' ? (
               <span style={{ display: 'flex', gap: 6 }}>
                 <button disabled={busy === w.id || !w.user.payoutsReady} title={w.user.payoutsReady ? 'Send the payout via Stripe' : 'User has not completed Stripe payout onboarding'} onClick={() => act(w.id, 'approve')}
-                  style={{ background: w.user.payoutsReady ? '#3DD68C' : '#2A2A33', color: w.user.payoutsReady ? '#0F0F14' : 'var(--text3)', border: 'none', borderRadius: 5, fontFamily: 'var(--font)', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', cursor: w.user.payoutsReady ? 'pointer' : 'not-allowed' }}>
+                  style={{ background: w.user.payoutsReady ? 'var(--green)' : '#2A2A33', color: w.user.payoutsReady ? 'var(--bg2)' : 'var(--text3)', border: 'none', borderRadius: 5, fontFamily: 'var(--font)', fontSize: '0.65rem', fontWeight: 700, padding: '3px 8px', cursor: w.user.payoutsReady ? 'pointer' : 'not-allowed' }}>
                   {w.user.payoutsReady ? 'Approve & Pay' : 'No payout setup'}
                 </button>
                 <button disabled={busy === w.id} onClick={() => act(w.id, 'reject')}
