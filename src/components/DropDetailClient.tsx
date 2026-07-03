@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Gift, Check } from 'lucide-react'
 import styles from './DropDetailClient.module.css'
 
 type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl?: string; sold: boolean }
@@ -16,9 +17,9 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
   useEffect(() => { setError(initialError) }, [initialError])
   const [confirmBoxId, setConfirmBoxId] = useState<string | null>(null)
   const [confirmRandom, setConfirmRandom] = useState(false)
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
 
   const available = drop.boxes.filter(b => !b.sold)
+  const scarPct = drop.boxes.length > 0 ? Math.round((available.length / drop.boxes.length) * 100) : 0
   const isDynamic = drop.pricingType === 'dynamic'
 
   // For odds: dynamic uses unsold boxes only, fixed uses all boxes
@@ -95,7 +96,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
       <div className={styles.header}>
         <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
           {!drop.logoUrl && (
-            <span style={{fontSize:'2rem'}}>{drop.emoji || '🎁'}</span>
+            drop.emoji ? <span style={{ fontSize: '2rem' }}>{drop.emoji}</span> : <Gift size={30} strokeWidth={1.3} />
           )}
           <div>
             <h1 className={styles.title}>{drop.name}</h1>
@@ -110,17 +111,7 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
             <div className={styles.priceVal}>${drop.boxPrice}</div>
             <div className={styles.priceLbl}>per box</div>
           </div>
-          <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 800, color: '#7CE0A3', margin: '0.1rem 0' }}>
-            {drop.sellBackPct}% buyback
-          </div>
-          <button
-            className={styles.chooseForMeBtn}
-            onClick={handleChooseForMe}
-            disabled={!!buying || available.length === 0}
-          >
-            {buying && !confirmBoxId ? <span className="spin" style={{width:14,height:14}} /> : 'Buy a Random Box'}
-          </button>
-          <p className={styles.scrollHint}>Scroll Down to Choose Your Box</p>
+          <div className={styles.buybackChip}>{drop.sellBackPct}% buyback</div>
         </div>
       </div>
 
@@ -128,70 +119,79 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
 
       <div className={styles.sectionRow}>
         <span className={styles.section}>
-          Possible items &amp; odds
-          {isDynamic && <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0,marginLeft:6,fontSize:'0.6rem'}}>(updates as boxes are opened)</span>}
+          What's inside
+          {isDynamic && <span style={{ color: 'var(--text3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6, fontSize: '0.6rem' }}>(odds update as boxes open)</span>}
         </span>
+        <span className={styles.railCount}>{sortedItems.length} possible {sortedItems.length === 1 ? 'prize' : 'prizes'} · best first</span>
       </div>
 
-      <div className={styles.itemGrid}>
+      <div className={styles.prizeRail}>
         {sortedItems.map((it, i) => {
           const raw = (it.count / oddsBoxes.length) * 100
           const pct = raw < 1 ? Math.round(raw * 100) / 100 : Math.round(raw)
-          const key = `${it.name}|${it.price}`
-          const isHovered = hoveredItem === key
+          const ratio = drop.boxPrice > 0 ? it.price / drop.boxPrice : 1
+          const tier = ratio >= 8 ? styles.leg : ratio >= 3 ? styles.epi : ratio >= 1.5 ? styles.rar : ''
           return (
-            <div
-              key={i}
-              className={`${styles.itemCard} ${isHovered ? styles.itemCardExpanded : ''}`}
-              onMouseEnter={() => setHoveredItem(key)}
-              onMouseLeave={() => setHoveredItem(null)}
-            >
-              <div className={`${styles.itemImageWrap} ${isHovered ? styles.itemImageWrapExpanded : ''}`}>
-                {it.imageUrl ? (
-                  <img src={it.imageUrl} alt={it.name} className={styles.itemImage} />
-                ) : (
-                  <span className={styles.itemEmoji}>🎁</span>
-                )}
+            <div key={i} className={`${styles.prizeCard} ${tier}`}>
+              <div className={styles.prizeImg}>
+                {it.imageUrl ? <img src={it.imageUrl} alt={it.name} className={styles.prizeImgTag} /> : <Gift size={30} strokeWidth={1.3} className={styles.prizeIcon} />}
               </div>
-              <div className={styles.itemInfo}>
-                <div className={styles.itemName}>{it.name}</div>
-                <div className={styles.itemMeta}>
-                  <span className={styles.itemPrice}>${it.price}</span>
-                  <span className={styles.itemPct}>{raw < 1 ? pct.toFixed(2) : pct}%</span>
-                </div>
+              <div className={styles.prizeName}>{it.name}</div>
+              <div className={styles.prizeFoot}>
+                <span className={styles.prizeVal}>${it.price}</span>
+                <span className={styles.prizeOdds}>{raw < 1 ? pct.toFixed(2) : pct}%</span>
               </div>
             </div>
           )
         })}
       </div>
 
-      <div className={styles.sectionRow} style={{marginTop:'1.5rem'}}>
-        <span className={styles.section}>Click a box to open</span>
+      <div className={styles.hero}>
+        <button className={styles.heroBox} onClick={handleChooseForMe} disabled={!!buying || available.length === 0} aria-label="Open a random box">
+          <span className={styles.hbKnot} />
+          <span className={styles.hbLid}>
+            <svg width="20" height="22" viewBox="0 0 42 44" aria-hidden="true"><g fill="#2A0C11"><ellipse cx="20" cy="30" rx="13" ry="9"/><ellipse cx="30" cy="16" rx="8" ry="7"/><ellipse cx="37" cy="19" rx="4" ry="3"/><ellipse cx="24" cy="10" rx="4" ry="5" transform="rotate(-15 24 10)"/><ellipse cx="33" cy="9" rx="3.5" ry="5" transform="rotate(15 33 9)"/><path d="M7 26 Q2 18 6 14 Q9 11 11 15 Q9 18 11 23"/><rect x="26" y="36" width="4" height="8" rx="2"/><rect x="20" y="36" width="4" height="8" rx="2"/><rect x="13" y="36" width="4" height="8" rx="2"/><rect x="7" y="35" width="4" height="8" rx="2"/></g></svg>
+          </span>
+          <span className={styles.hbBody} />
+          <span className={styles.hbRibV} /><span className={styles.hbRibH} />
+        </button>
+        <button className={styles.openHeroBtn} onClick={handleChooseForMe} disabled={!!buying || available.length === 0}>
+          {buying && !confirmBoxId ? <span className="spin" style={{ width: 16, height: 16 }} /> : (available.length === 0 ? 'Sold out' : `Open a Box — $${drop.boxPrice}`)}
+        </button>
+        <div className={styles.scar}>
+          <div className={styles.scarRow}><span>{available.length} {available.length === 1 ? 'box' : 'boxes'} available</span><span>random &amp; fair</span></div>
+          <div className={styles.scarBar}><div className={styles.scarFill} style={{ width: `${scarPct}%` }} /></div>
+        </div>
       </div>
 
-      <div className={styles.boxGrid}>
-        {drop.boxes.map((b, i) => (
-          <button
-            key={b.id}
-            className={`${styles.boxTile} ${b.sold ? styles.boxSold : ''}`}
-            disabled={b.sold || !!buying}
-            onClick={() => !b.sold && handleBoxClick(b.id)}
-          >
-            {buying === b.id ? <span className="spin" style={{ width: 20, height: 20 }} /> : (
-              <>
-                <span className={styles.boxEmoji}>{drop.emoji || '🎁'}</span>
-                <span className={styles.boxNum}>#{String(i + 1).padStart(2, '0')}</span>
-                {!b.sold && <div className={styles.shimmer} />}
-              </>
-            )}
-          </button>
-        ))}
-      </div>
+      {available.length > 0 && (
+        <>
+          <div className={styles.pickHd}>— or pick your own box —</div>
+          <div className={styles.boxStrip}>
+            {drop.boxes.map((b, i) => (
+              <button
+                key={b.id}
+                className={`${styles.stripBox} ${b.sold ? styles.stripBoxSold : ''}`}
+                disabled={b.sold || !!buying}
+                onClick={() => !b.sold && handleBoxClick(b.id)}
+                aria-label={b.sold ? 'Opened box' : `Open box ${i + 1}`}
+              >
+                {buying === b.id ? <span className="spin" style={{ width: 16, height: 16 }} /> : (
+                  <>
+                    <span className={styles.stripIcon}>{b.sold ? <Check size={16} /> : <Gift size={16} />}</span>
+                    <span className={styles.stripNum}>#{String(i + 1).padStart(2, '0')}</span>
+                  </>
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {confirmBoxId && (
         <div className={styles.confirmOverlay} onClick={cancelConfirm}>
           <div className={styles.confirmBox} onClick={e => e.stopPropagation()}>
-            <div className={styles.confirmIcon}>🎁</div>
+            <div className={styles.confirmIcon}><Gift size={40} strokeWidth={1.4} /></div>
             <h2 className={styles.confirmTitle}>
               {confirmRandom ? 'Random Box Selected' : 'Confirm Purchase'}
             </h2>
