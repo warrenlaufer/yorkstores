@@ -1,12 +1,12 @@
 .wrap { max-width: 600px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
 
-.back { display: inline-flex; align-items: center; gap: 5px; background: #1D1D26; color: #fff; border: 2px solid rgba(255,255,255,0.28); border-radius: 7px; font-size: 0.73rem; font-weight: 700; padding: 0.35rem 0.85rem; cursor: pointer; margin-bottom: 1.5rem; transition: all 0.15s; text-decoration: none; }
+.back { display: inline-flex; align-items: center; gap: 5px; background: var(--surface-2); color: var(--text); border: 2px solid rgba(255,255,255,0.28); border-radius: 7px; font-size: 0.73rem; font-weight: 700; padding: 0.35rem 0.85rem; cursor: pointer; margin-bottom: 1.5rem; transition: all 0.15s; text-decoration: none; }
 .back:hover { border-color: rgba(255,255,255,0.55); background: #23232E; }
 
 .card {
-  background: #0F0F14;
+  background: var(--bg2);
   border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 16px;
+  border-radius: var(--r-lg);
   overflow: hidden;
   margin-bottom: 1.5rem;
 }
@@ -25,7 +25,7 @@
 .imgPlaceholder {
   width: 100%;
   height: 280px;
-  background: #1D1D26;
+  background: var(--surface-2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -34,7 +34,7 @@
 
 .info { padding: 1.25rem 1.5rem 1.5rem; }
 .dropName { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 0.35rem; }
-.itemName { font-size: 1.3rem; font-weight: 900; color: #fff; letter-spacing: -0.02em; margin-bottom: 0.3rem; }
+.itemName { font-size: 1.3rem; font-weight: 900; color: var(--text); letter-spacing: -0.02em; margin-bottom: 0.3rem; }
 .itemPrice { font-family: var(--mono); font-size: 0.9rem; color: var(--gold); margin-bottom: 0.75rem; }
 
 .badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 4px 12px; border-radius: 6px; }
@@ -42,15 +42,15 @@
 .badgeSold { background: rgba(61,214,140,0.15); color: #5FFFA8; border: 1px solid rgba(61,214,140,0.3); }
 .badgePending { background: rgba(255,255,255,0.08); color: var(--text2); border: 1px solid rgba(255,255,255,0.12); }
 
-.timeline { background: #0F0F14; border: 1px solid rgba(255,255,255,0.09); border-radius: 16px; padding: 1.25rem 1.5rem; }
+.timeline { background: var(--bg2); border: 1px solid rgba(255,255,255,0.09); border-radius: var(--r-lg); padding: 1.25rem 1.5rem; }
 .timelineTitle { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #FF8FA3; margin-bottom: 1.25rem; }
 
 .event { display: flex; align-items: flex-start; gap: 1rem; position: relative; padding-bottom: 1.25rem; }
 .event:last-child { padding-bottom: 0; }
 
 .eventDot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
-.dotPurchase { background: #FF6B85; box-shadow: 0 0 8px rgba(255,107,133,0.5); }
-.dotSold { background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,0.5); }
+.dotPurchase { background: var(--accent); box-shadow: 0 0 8px rgba(255,107,133,0.5); }
+.dotSold { background: var(--green); box-shadow: 0 0 8px rgba(61,214,140,0.5); }
 .dotDelivery { background: #7EC8FF; box-shadow: 0 0 8px rgba(126,200,255,0.5); }
 .dotShipped { background: #C084FC; box-shadow: 0 0 8px rgba(192,132,252,0.5); }
 
@@ -64,7 +64,7 @@
 }
 
 .eventContent { flex: 1; }
-.eventLabel { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 0.2rem; }
+.eventLabel { font-size: 0.85rem; font-weight: 700; color: var(--text); margin-bottom: 0.2rem; }
 .eventNote { font-size: 0.75rem; color: var(--text2); margin-bottom: 0.2rem; }
 .eventDate { font-size: 0.68rem; color: var(--text3); }
 

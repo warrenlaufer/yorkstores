@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './history.module.css'
+import { Package, Gift, CreditCard } from 'lucide-react'
 
 type Purchase = {
   id: string
@@ -153,7 +154,7 @@ export default function HistoryClient({
           </div>
 
           {filtered.length === 0 ? (
-            <div className={styles.empty}><div className={styles.emptyIcon}>📦</div><p>No activity yet.</p></div>
+            <div className={styles.empty}><div className={styles.emptyIcon}><Package size={30} strokeWidth={1.4} /></div><p>No activity yet.</p></div>
           ) : (
             <div className={styles.tableWrap}>
               <div className={styles.tableHead}>
@@ -173,7 +174,7 @@ export default function HistoryClient({
                   <span className={styles.cellThumb}>
                     {row.itemImageUrl
                       ? <img src={row.itemImageUrl} alt={row.itemName} className={styles.thumbImg} />
-                      : <span className={styles.thumbEmoji}>🎁</span>}
+                      : <span className={styles.thumbEmoji}><Gift size={18} /></span>}
                   </span>
                   <span className={styles.cellMuted}>{row.date}</span>
                   <span>
@@ -196,7 +197,7 @@ export default function HistoryClient({
       {tab === 'wallet' && (
         <>
           {walletRows.length === 0 ? (
-            <div className={styles.empty}><div className={styles.emptyIcon}>💳</div><p>No wallet transactions yet.</p></div>
+            <div className={styles.empty}><div className={styles.emptyIcon}><CreditCard size={30} strokeWidth={1.4} /></div><p>No wallet transactions yet.</p></div>
           ) : (
             <div className={styles.tableWrap}>
               <div className={styles.tableHead} style={{gridTemplateColumns:'110px 1fr 100px 90px'}}>

@@ -1,3 +1,4 @@
+import { Gift, Truck, Banknote, Clock, Hourglass } from 'lucide-react'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect, notFound } from 'next/navigation'
@@ -91,7 +92,7 @@ export default async function ActivityPage({ params }: { params: { id: string } 
           </div>
         ) : (
           <div className={styles.imgPlaceholder}>
-            <span style={{fontSize:'4rem'}}>{drop.emoji || '🎁'}</span>
+            {drop.emoji ? <span style={{ fontSize: '4rem' }}>{drop.emoji}</span> : <Gift size={56} strokeWidth={1.2} />}
           </div>
         )}
 
@@ -106,9 +107,9 @@ export default async function ActivityPage({ params }: { params: { id: string } 
               outcome === 'SOLD_BACK' || outcome === 'AUTO_SOLD' ? styles.badgeSold :
               styles.badgePending
             }`}>
-              {outcome === 'DELIVERY' ? '📦 Delivery' :
-               outcome === 'SOLD_BACK' ? '💸 Sold Back' :
-               outcome === 'AUTO_SOLD' ? '⏰ Auto Sold Back' : '⏳ Pending'}
+              {outcome === 'DELIVERY' ? <><Truck size={12} style={{verticalAlign:'-2px',marginRight:4}} />Delivery</> :
+               outcome === 'SOLD_BACK' ? <><Banknote size={12} style={{verticalAlign:'-2px',marginRight:4}} />Sold Back</> :
+               outcome === 'AUTO_SOLD' ? <><Clock size={12} style={{verticalAlign:'-2px',marginRight:4}} />Auto Sold Back</> : <><Hourglass size={12} style={{verticalAlign:'-2px',marginRight:4}} />Pending</>}
             </span>
           )}
         </div>

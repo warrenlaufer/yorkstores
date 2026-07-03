@@ -1,3 +1,4 @@
+import { BarChart3, Wallet } from 'lucide-react'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
@@ -109,7 +110,7 @@ export default async function StoreHistoryPage() {
       <div className={styles.sectionLabel}>Sales & Buybacks</div>
       {transactions.length === 0 ? (
         <div className={styles.empty}>
-          <div className={styles.emptyIcon}>📊</div>
+          <div className={styles.emptyIcon}><BarChart3 size={30} strokeWidth={1.4} /></div>
           <p>No store transactions yet.</p>
         </div>
       ) : (
@@ -153,7 +154,7 @@ export default async function StoreHistoryPage() {
       <div className={styles.sectionLabel}>Store Wallet History</div>
       {walletTxs.length === 0 ? (
         <div className={styles.empty}>
-          <div className={styles.emptyIcon}>💰</div>
+          <div className={styles.emptyIcon}><Wallet size={30} strokeWidth={1.4} /></div>
           <p>No wallet activity yet.</p>
         </div>
       ) : (
