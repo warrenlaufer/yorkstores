@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Lock } from 'lucide-react'
 import styles from '../auth.module.css'
 
 function YorkieLogo() {
@@ -126,9 +127,9 @@ export default function SignUpPage() {
         {step === 'invite' && (
           <div>
             <div style={{background:'rgba(255,107,133,0.06)',border:'1px solid rgba(255,107,133,0.2)',borderRadius:12,padding:'1rem',marginBottom:'1.25rem',textAlign:'center'}}>
-              <div style={{fontSize:'1.4rem',marginBottom:'0.4rem'}}>🔒</div>
-              <div style={{fontSize:'0.88rem',fontWeight:800,color:'#fff',marginBottom:'0.3rem'}}>Seller invite required</div>
-              <div style={{fontSize:'0.72rem',color:'#9898B0',lineHeight:1.5}}>Seller accounts are by invitation only.</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.4rem', color: 'var(--accent)' }}><Lock size={26} strokeWidth={1.6} /></div>
+              <div style={{fontSize:'0.88rem',fontWeight:800,color:'var(--text)',marginBottom:'0.3rem'}}>Seller invite required</div>
+              <div style={{fontSize:'0.72rem',color:'var(--text2)',lineHeight:1.5}}>Seller accounts are by invitation only.</div>
             </div>
             {error && <div className={styles.errorBox}>{error}</div>}
             <div className="field">

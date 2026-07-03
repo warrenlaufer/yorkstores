@@ -7,7 +7,7 @@
 }
 
 .card {
-  background: #0F0F14;
+  background: var(--bg2);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 20px;
   width: min(440px, 100%);
@@ -20,20 +20,20 @@
   font-size: 1.4rem;
   font-weight: 900;
   letter-spacing: -0.03em;
-  color: #fff;
+  color: var(--text);
 }
-.logoMark em { color: #FF6B85; font-style: normal; }
+.logoMark em { color: var(--accent); font-style: normal; }
 
 .title {
   font-size: 1.15rem;
   font-weight: 800;
-  color: #fff;
+  color: var(--text);
   margin-bottom: 0.3rem;
 }
 
 .sub {
   font-size: 0.82rem;
-  color: #9898B0;
+  color: var(--text2);
   margin-bottom: 1.5rem;
   line-height: 1.6;
 }
@@ -44,7 +44,7 @@
   color: #FF8FA3;
   font-size: 0.8rem;
   padding: 0.6rem 0.875rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   margin-bottom: 1rem;
 }
 
@@ -59,12 +59,12 @@
   color: #FF8FA3;
   text-decoration: underline;
 }
-.forgotLink:hover { color: #FF6B85; }
+.forgotLink:hover { color: var(--accent); }
 
 .submitBtn {
   width: 100%;
-  background: #FF6B85;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text);
   border: none;
   border-radius: 10px;
   padding: 0.75rem;
@@ -79,13 +79,13 @@
   gap: 8px;
   margin-top: 0.25rem;
 }
-.submitBtn:hover:not(:disabled) { background: #ff4d6d; transform: translateY(-1px); }
+.submitBtn:hover:not(:disabled) { background: var(--accent-dark); transform: translateY(-1px); }
 .submitBtn:disabled { background: #2a2a35; color: rgba(255,255,255,0.35); cursor: not-allowed; transform: none; }
 
 .footer {
   text-align: center;
   font-size: 0.8rem;
-  color: #9898B0;
+  color: var(--text2);
   margin-top: 1.25rem;
 }
 
@@ -94,7 +94,7 @@
   font-weight: 700;
   text-decoration: underline;
 }
-.footerLink:hover { color: #FF6B85; }
+.footerLink:hover { color: var(--accent); }
 
 .rolePicker {
   display: grid;
@@ -104,9 +104,9 @@
 }
 
 .roleCard {
-  background: #1D1D26;
+  background: var(--surface-2);
   border: 2px solid rgba(255,255,255,0.1);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   padding: 1rem 0.75rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -117,11 +117,11 @@
   gap: 4px;
 }
 .roleCard:hover { border-color: rgba(255,255,255,0.25); }
-.roleCardActive { border-color: #FF6B85 !important; background: rgba(255,107,133,0.08); }
+.roleCardActive { border-color: var(--accent) !important; background: rgba(255,107,133,0.08); }
 
 .roleIcon { font-size: 1.6rem; }
-.roleName { font-size: 0.85rem; font-weight: 700; color: #fff; }
-.roleDesc { font-size: 0.65rem; color: #9898B0; line-height: 1.4; }
+.roleName { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.roleDesc { font-size: 0.65rem; color: var(--text2); line-height: 1.4; }
 
 .successBox {
   background: rgba(61,214,140,0.12);
@@ -129,7 +129,7 @@
   color: #5FFFA8;
   font-size: 0.8rem;
   padding: 0.6rem 0.875rem;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   margin-bottom: 1rem;
 }
 .logoWrap {
@@ -139,9 +139,9 @@
   margin-bottom: 1.75rem;
 }
 .logoDog { width: 72px; height: auto; margin-bottom: 0.6rem; }
-.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
-.logoWordmark em { color: #FF6B85; font-style: normal; }
-.logoTagline { font-size: 0.72rem; color: #9898B0; }
+.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: var(--text); margin-bottom: 0.2rem; }
+.logoWordmark em { color: var(--accent); font-style: normal; }
+.logoTagline { font-size: 0.72rem; color: var(--text2); }
 .logoWrap {
   display: flex;
   flex-direction: column;
@@ -149,9 +149,9 @@
   margin-bottom: 1.75rem;
 }
 .logoDog { width: 72px; height: auto; margin-bottom: 0.6rem; }
-.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
-.logoWordmark em { color: #FF6B85; font-style: normal; }
-.logoTagline { font-size: 0.72rem; color: #9898B0; }
+.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: var(--text); margin-bottom: 0.2rem; }
+.logoWordmark em { color: var(--accent); font-style: normal; }
+.logoTagline { font-size: 0.72rem; color: var(--text2); }
 
 .logoWrap {
   display: flex;
@@ -160,6 +160,6 @@
   margin-bottom: 1.75rem;
 }
 .logoDog { width: 72px; height: auto; margin-bottom: 0.6rem; }
-.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: #fff; margin-bottom: 0.2rem; }
-.logoWordmark em { color: #FF6B85; font-style: normal; }
-.logoTagline { font-size: 0.72rem; color: #9898B0; }
+.logoWordmark { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.03em; color: var(--text); margin-bottom: 0.2rem; }
+.logoWordmark em { color: var(--accent); font-style: normal; }
+.logoTagline { font-size: 0.72rem; color: var(--text2); }
