@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { Palette, Package, Share2, FileText, Image as ImageIcon, Trash2 } from 'lucide-react'
 import styles from './StoreOwnerClient.module.css'
 import StoreWalletActions from './StoreWalletActions'
 import { CATEGORIES, subcategoriesFor } from '@/lib/categories'
@@ -530,8 +531,8 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
           <p className={styles.sub}>Box price = average item value +5%, rounded to nearest dollar.</p>
         </div>
         <div style={{display:'flex',gap:'0.5rem'}}>
-          <a href="/dashboard/store/theme" className={styles.historyBtn}>🎨 Theme</a>
-          <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}>📦 Fulfilment</a>
+          <a href="/dashboard/store/theme" className={styles.historyBtn}><Palette size={13} style={{verticalAlign:'-2px',marginRight:4}} />Theme</a>
+          <a href="/dashboard/fulfilment" className={styles.fulfilmentBtn}><Package size={13} style={{verticalAlign:'-2px',marginRight:4}} />Fulfilment</a>
         </div>
       </div>
       <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
@@ -555,12 +556,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.dropRowInfo}>
                 <div className={styles.dropRowName}>{d.name}</div>
                 <div className={styles.dropRowMeta}>
-                  {d.soldBoxes} / {d.totalBoxes} sold · {d.isDraft ? '📝 Draft' : (d.isActive ? 'Active' : 'Inactive')} · {d.sellBackPct}% buyback · {d.pricingType} · {d.category}
+                  {d.soldBoxes} / {d.totalBoxes} sold · {d.isDraft ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><FileText size={11} /> Draft</span> : (d.isActive ? 'Active' : 'Inactive')} · {d.sellBackPct}% buyback · {d.pricingType} · {d.category}
                 </div>
               </div>
               <div className={styles.dropRowActions}>
                 <button className={styles.editBtn} onClick={() => openEdit(d)}>Edit</button>
-                <a href={`/drop/${d.id}`} target="_blank" rel="noopener noreferrer" className={styles.shareBtn}>🔗 Share</a>
+                <a href={`/drop/${d.id}`} target="_blank" rel="noopener noreferrer" className={styles.shareBtn}><Share2 size={13} style={{verticalAlign:'-2px',marginRight:4}} />Share</a>
                 {d.isDraft ? (
                   <button className={styles.activateBtn} onClick={() => publishDraft(d)}>Publish</button>
                 ) : (
@@ -584,7 +585,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.logoUploadArea} onClick={() => logoInputRef.current?.click()}>
                 {logoPreview ? <img src={logoPreview} alt="Logo preview" className={styles.logoPreview} /> : (
                   <div className={styles.logoPlaceholder}>
-                    {logoUploading ? <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></> : <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span><span className={styles.logoHint}>PNG, JPG or WebP · Max 5MB</span></>}
+                    {logoUploading ? <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></> : <><ImageIcon size={22} strokeWidth={1.5} /><span>Click to upload logo</span><span className={styles.logoHint}>PNG, JPG or WebP · Max 5MB</span></>}
                   </div>
                 )}
               </div>
@@ -772,8 +773,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
             <button className={styles.publishBtn} onClick={publish} disabled={publishing}>
               {publishing ? <span className="spin" /> : 'Publish Drop'}
             </button>
-            <button onClick={saveDraft} disabled={publishing}
-              style={{ width: '100%', marginTop: 8, background: 'transparent', color: 'var(--text)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 9, fontFamily: 'var(--font)', fontSize: '0.85rem', fontWeight: 700, padding: '0.6rem', cursor: publishing ? 'default' : 'pointer', opacity: publishing ? 0.6 : 1 }}>
+            <button onClick={saveDraft} disabled={publishing} className="btn btn-ghost btn-block" style={{ marginTop: 8 }}>
               Save as Draft
             </button>
           </div>
@@ -793,7 +793,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
               <div className={styles.logoUploadArea} onClick={() => editLogoInputRef.current?.click()}>
                 {editLogoPreview ? <img src={editLogoPreview} alt="Logo" className={styles.logoPreview} /> : (
                   <div className={styles.logoPlaceholder}>
-                    {editLogoUploading ? <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></> : <><span style={{fontSize:'1.5rem'}}>🖼️</span><span>Click to upload logo</span></>}
+                    {editLogoUploading ? <><span className="spin" style={{width:20,height:20}} /><span>Uploading…</span></> : <><ImageIcon size={22} strokeWidth={1.5} /><span>Click to upload logo</span></>}
                   </div>
                 )}
               </div>
@@ -897,7 +897,7 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
                               setRemoveBoxIds(prev => [...prev, ...it.unsoldIds.filter(id => !prev.includes(id))])
                               setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: 0 } }))
                             }}
-                          >🗑</button>
+                          ><Trash2 size={14} /></button>
                         </div>
                       </div>
                       <div className={styles.editItemMeta}>
