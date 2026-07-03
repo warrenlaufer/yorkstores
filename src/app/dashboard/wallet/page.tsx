@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { Banknote, Gift } from 'lucide-react'
 import { Suspense } from 'react'
 
 const AMOUNTS = [25, 50, 100, 250, 500, 1000]
@@ -131,24 +132,24 @@ function WalletContent() {
       <p style={{ fontSize: '0.78rem', color: 'var(--text2)', marginBottom: '1.5rem' }}>Add funds to open drops.</p>
 
       {/* Balance breakdown */}
-      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1.25rem', marginBottom: '1rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
           <div style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text2)', marginBottom: '0.4rem' }}>Total Balance</div>
-          <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#3DD68C' }}>
+          <div style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--green)' }}>
             {cashBalance !== null ? `$${totalBalance.toFixed(2)}` : '—'}
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '1rem' }}>
-          <div style={{ background: '#1D1D26', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#3DD68C', marginBottom: '0.3rem' }}>💵 Cash</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#3DD68C' }}>
+          <div style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--green)', marginBottom: '0.3rem' }}><Banknote size={11} style={{verticalAlign:'-2px',marginRight:3}} />Cash</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--green)' }}>
               {cashBalance !== null ? `$${cashBalance.toFixed(2)}` : '—'}
             </div>
             <div style={{ fontSize: '0.6rem', color: 'var(--text3)', marginTop: '0.3rem' }}>Withdrawable</div>
           </div>
-          <div style={{ background: '#1D1D26', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#F5C842', marginBottom: '0.3rem' }}>🎁 Promo</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--mono)', color: '#F5C842' }}>
+          <div style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '0.75rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '0.3rem' }}><Gift size={11} style={{verticalAlign:'-2px',marginRight:3}} />Promo</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--gold)' }}>
               {promoBalance !== null ? `$${promoBalance.toFixed(2)}` : '—'}
             </div>
             <div style={{ fontSize: '0.6rem', color: 'var(--text3)', marginTop: '0.3rem' }}>Non-withdrawable</div>
@@ -163,7 +164,7 @@ function WalletContent() {
       )}
 
       {/* Top-up */}
-      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
         <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.85rem' }}>Top Up Cash Balance</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
@@ -172,8 +173,8 @@ function WalletContent() {
               key={a}
               onClick={() => { setSelected(a); setCustom('') }}
               style={{
-                background: selected === a && !custom ? 'rgba(255,107,133,0.15)' : '#1D1D26',
-                border: `1px solid ${selected === a && !custom ? '#FF6B85' : 'rgba(255,255,255,0.1)'}`,
+                background: selected === a && !custom ? 'rgba(255,107,133,0.15)' : 'var(--surface-2)',
+                border: `1px solid ${selected === a && !custom ? 'var(--accent)' : 'rgba(255,255,255,0.1)'}`,
                 color: selected === a && !custom ? '#FF8FA3' : '#fff',
                 borderRadius: 8, padding: '0.6rem', fontFamily: 'var(--font)',
                 fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s',
@@ -222,7 +223,7 @@ function WalletContent() {
           onClick={handleCheckout}
           disabled={checkoutLoading || !effectiveAmount}
           style={{
-            width: '100%', background: effectiveAmount ? '#FF6B85' : '#2a2a35',
+            width: '100%', background: effectiveAmount ? 'var(--accent)' : '#2a2a35',
             color: effectiveAmount ? '#fff' : 'rgba(255,255,255,0.3)',
             border: 'none', borderRadius: 10, fontFamily: 'var(--font)',
             fontWeight: 800, fontSize: '0.9rem', padding: '0.7rem',
@@ -243,8 +244,8 @@ function WalletContent() {
       </div>
 
       {/* Withdraw */}
-      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
-        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#3DD68C', marginBottom: '0.5rem' }}>Withdraw Cash</div>
+      <div style={{ background: 'var(--bg2)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem', marginBottom: '1rem' }}>
+        <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--green)', marginBottom: '0.5rem' }}>Withdraw Cash</div>
         <p style={{ fontSize: '0.65rem', color: 'var(--text3)', marginBottom: '0.75rem' }}>Withdraw from your cash balance (promo credit can't be withdrawn). Minimum $10. Paid to your bank via Stripe after admin review.</p>
         {payoutsEnabled === false ? (
           <div>
@@ -273,7 +274,7 @@ function WalletContent() {
             onClick={handleWithdraw}
             disabled={wdLoading || !wdAmount}
             style={{
-              background: '#3DD68C', color: '#0F0F14', border: 'none', borderRadius: 8,
+              background: 'var(--green)', color: 'var(--bg2)', border: 'none', borderRadius: 8,
               fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 800,
               padding: '0 1rem', cursor: 'pointer', whiteSpace: 'nowrap',
               opacity: wdLoading || !wdAmount ? 0.5 : 1,
@@ -288,7 +289,7 @@ function WalletContent() {
             <p style={{ fontSize: '0.66rem', color: 'var(--text2)', margin: '0 0 0.6rem' }}>This can't be undone — your promo balance will drop to $0.</p>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button onClick={() => { const a = parseFloat(wdAmount); if (a) doWithdraw(a) }} disabled={wdLoading}
-                style={{ background: '#FF6B85', color: '#fff', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: '0.72rem', fontWeight: 800, padding: '0.4rem 0.9rem', cursor: 'pointer' }}>
+                style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 7, fontFamily: 'var(--font)', fontSize: '0.72rem', fontWeight: 800, padding: '0.4rem 0.9rem', cursor: 'pointer' }}>
                 {wdLoading ? 'Submitting…' : 'Forfeit promo & withdraw'}
               </button>
               <button onClick={() => setWdConfirm(false)} disabled={wdLoading}
@@ -305,7 +306,7 @@ function WalletContent() {
       </div>
 
       {/* Promo code */}
-      <div style={{ background: '#0F0F14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem' }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 12, padding: '1rem' }}>
         <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#FF8FA3', marginBottom: '0.5rem' }}>Promo Code</div>
         <p style={{ fontSize: '0.65rem', color: 'var(--text3)', marginBottom: '0.75rem' }}>Promo credits are added to your promo balance and cannot be withdrawn.</p>
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -320,7 +321,7 @@ function WalletContent() {
             onClick={redeemPromo}
             disabled={promoLoading || !promoCode.trim()}
             style={{
-              background: '#FF6B85', color: '#fff', border: 'none', borderRadius: 8,
+              background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 8,
               fontFamily: 'var(--font)', fontSize: '0.78rem', fontWeight: 800,
               padding: '0 1rem', cursor: 'pointer', whiteSpace: 'nowrap',
               opacity: promoLoading || !promoCode.trim() ? 0.5 : 1,
