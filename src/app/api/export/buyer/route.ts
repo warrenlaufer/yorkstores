@@ -26,7 +26,7 @@ export async function GET() {
         d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         p.box.drop.name,
         p.itemName ?? p.box.itemName,
-        Number(p.box.itemPrice).toFixed(2),
+        Number(p.itemPrice ?? p.box.itemPrice).toFixed(2),
         Number(p.pricePaid).toFixed(2),
         p.outcome ?? 'Pending',
         Number(p.refundAmt).toFixed(2),
