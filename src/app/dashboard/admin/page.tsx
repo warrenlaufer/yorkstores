@@ -63,8 +63,8 @@ export default async function AdminPage() {
         <div className={styles.statCard}><div className={styles.statVal}>{userCount}</div><div className={styles.statLbl}>Total Users</div></div>
         <div className={styles.statCard}><div className={styles.statVal}>{dropCount}</div><div className={styles.statLbl}>Total Drops</div></div>
         <div className={styles.statCard}><div className={styles.statVal}>{purchaseCount}</div><div className={styles.statLbl}>Total Purchases</div></div>
-        <div className={styles.statCard}><div className={styles.statVal} style={{color:'var(--gold)'}}>${totalRevenue.toFixed(2)}</div><div className={styles.statLbl}>Gross Revenue</div></div>
-        <div className={styles.statCard}><div className={styles.statVal} style={{color:'var(--green)'}}>${totalPlatformRevenue.toFixed(2)}</div><div className={styles.statLbl}>Platform Revenue (5%)</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color:'#F5C842'}}>${totalRevenue.toFixed(2)}</div><div className={styles.statLbl}>Gross Revenue</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color:'#3DD68C'}}>${totalPlatformRevenue.toFixed(2)}</div><div className={styles.statLbl}>Platform Revenue (5%)</div></div>
       </div>
 
       <div className={styles.section}>Platform Revenue</div>
@@ -78,7 +78,7 @@ export default async function AdminPage() {
             <span>{t.description}</span>
             <span className={styles.cellMuted}>{t.drop?.name ?? '—'}</span>
             <span><span className={styles.roleBadge}>{t.type.replace(/_/g, ' ')}</span></span>
-            <span style={{fontFamily:'var(--mono)',color:'var(--green)'}}>+${Number(t.amount).toFixed(2)}</span>
+            <span style={{fontFamily:'var(--mono)',color:'#3DD68C'}}>+${Number(t.amount).toFixed(2)}</span>
           </div>
         ))}
         {recentPlatformTx.length === 0 && (
@@ -105,15 +105,18 @@ export default async function AdminPage() {
 
       <div className={styles.section} style={{marginTop:'2rem'}}>Users</div>
       <div className={styles.table}>
-        <div className={styles.tableHead}>
-          <span>Name</span><span>Email</span><span>Role</span><span>Wallet</span><span>Purchases</span><span>Joined</span>
+        <div className={styles.tableHead} style={{ gridTemplateColumns: '1.2fr 1.4fr 90px 80px 90px 70px 80px' }}>
+          <span>Name</span><span>Email</span><span>Role</span><span>Wallet</span><span>Store Bal.</span><span>Purchases</span><span>Joined</span>
         </div>
         {users.map(u => (
-          <div key={u.id} className={styles.tableRow}>
+          <div key={u.id} className={styles.tableRow} style={{ gridTemplateColumns: '1.2fr 1.4fr 90px 80px 90px 70px 80px' }}>
             <span>{u.name}{u.company ? <span className={styles.cellMuted}> · {u.company}</span> : ''}</span>
             <span className={styles.cellMuted}>{u.email}</span>
             <span><span className={`${styles.roleBadge} ${styles['role_' + u.role]}`}>{u.role.toLowerCase().replace('_', ' ')}</span></span>
             <span style={{fontFamily:'var(--mono)'}}>${Number(u.walletBalance).toFixed(2)}</span>
+            <span style={{ fontFamily: 'var(--mono)', color: u.role === Role.STORE_OWNER ? 'var(--gold)' : 'var(--text3)' }}>
+              {u.role === Role.STORE_OWNER ? `$${Number(u.storeBalance).toFixed(2)}` : '—'}
+            </span>
             <span className={styles.cellMuted}>{u._count.purchases}</span>
             <span className={styles.cellMuted}>{new Date(u.createdAt).toLocaleDateString()}</span>
           </div>
