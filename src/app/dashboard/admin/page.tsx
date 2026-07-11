@@ -12,12 +12,13 @@ export default async function AdminPage() {
   const user = await getSession()
   if (!user || user.role !== Role.ADMIN) redirect('/dashboard')
 
-  const [userCount, dropCount, purchaseCount, revenue, platformRevenue, recentPurchases, users, recentPlatformTx, promoCodes, withdrawals] = await Promise.all([
+  const [userCount, dropCount, purchaseCount, revenue, platformByType, storeDebt, recentPurchases, users, recentPlatformTx, promoCodes, withdrawals] = await Promise.all([
     prisma.user.count(),
     prisma.drop.count(),
     prisma.purchase.count(),
     prisma.purchase.aggregate({ _sum: { pricePaid: true } }),
-    prisma.platformTransaction.aggregate({ _sum: { amount: true } }),
+    prisma.platformTransaction.groupBy({ by: ['type'], _sum: { amount: true } }),
+    prisma.user.aggregate({ where: { storeBalance: { lt: 0 } }, _sum: { storeBalance: true } }),
     prisma.purchase.findMany({
       take: 15,
       orderBy: { createdAt: 'desc' },
@@ -47,7 +48,10 @@ export default async function AdminPage() {
   ])
 
   const totalRevenue = Number(revenue._sum.pricePaid ?? 0)
-  const totalPlatformRevenue = Number(platformRevenue._sum.amount ?? 0)
+  const sumByType = (t: string) => Number(platformByType.find(r => r.type === t)?._sum.amount ?? 0)
+  const feeRevenue = sumByType('platform_fee') + sumByType('platform_fee_shipping')
+  const salesTaxCollected = sumByType('sales_tax')
+  const advancesOutstanding = -Number(storeDebt._sum.storeBalance ?? 0)
 
   return (
     <div className={styles.wrap}>
@@ -64,7 +68,9 @@ export default async function AdminPage() {
         <div className={styles.statCard}><div className={styles.statVal}>{dropCount}</div><div className={styles.statLbl}>Total Drops</div></div>
         <div className={styles.statCard}><div className={styles.statVal}>{purchaseCount}</div><div className={styles.statLbl}>Total Purchases</div></div>
         <div className={styles.statCard}><div className={styles.statVal} style={{color:'#F5C842'}}>${totalRevenue.toFixed(2)}</div><div className={styles.statLbl}>Gross Revenue</div></div>
-        <div className={styles.statCard}><div className={styles.statVal} style={{color:'#3DD68C'}}>${totalPlatformRevenue.toFixed(2)}</div><div className={styles.statLbl}>Platform Revenue (5%)</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color:'var(--green)'}}>${feeRevenue.toFixed(2)}</div><div className={styles.statLbl}>Fee Revenue</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color: advancesOutstanding > 0 ? '#FF8FA3' : 'var(--text)'}}>${advancesOutstanding.toFixed(2)}</div><div className={styles.statLbl}>Advances Outstanding</div></div>
+        <div className={styles.statCard}><div className={styles.statVal} style={{color:'var(--text2)'}}>${salesTaxCollected.toFixed(2)}</div><div className={styles.statLbl}>Sales Tax (to remit)</div></div>
       </div>
 
       <div className={styles.section}>Platform Revenue</div>
@@ -78,7 +84,7 @@ export default async function AdminPage() {
             <span>{t.description}</span>
             <span className={styles.cellMuted}>{t.drop?.name ?? '—'}</span>
             <span><span className={styles.roleBadge}>{t.type.replace(/_/g, ' ')}</span></span>
-            <span style={{fontFamily:'var(--mono)',color:'#3DD68C'}}>+${Number(t.amount).toFixed(2)}</span>
+            <span style={{fontFamily:'var(--mono)',color: Number(t.amount) < 0 ? '#FF8FA3' : 'var(--green)'}}>{Number(t.amount) < 0 ? '-' : '+'}${Math.abs(Number(t.amount)).toFixed(2)}</span>
           </div>
         ))}
         {recentPlatformTx.length === 0 && (
