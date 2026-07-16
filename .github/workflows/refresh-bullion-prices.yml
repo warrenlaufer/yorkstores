@@ -1,0 +1,28 @@
+name: Refresh bullion prices
+
+# Triggers the Yorkstores price-refresh endpoint on a schedule, independent of Vercel's cron
+# plan limits. Requires a repository secret named CRON_SECRET whose value matches the
+# CRON_SECRET environment variable set in Vercel.
+
+on:
+  schedule:
+    - cron: '0 * * * *'      # top of every hour (UTC); GitHub may delay under load
+  workflow_dispatch: {}       # lets you run it on demand from the Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call price-refresh endpoint
+        run: |
+          code=$(curl -s -o /tmp/resp.txt -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://www.yorkstores.com/api/cron/refresh-prices)
+          echo "HTTP status: $code"
+          echo "Response:"
+          cat /tmp/resp.txt
+          echo
+          if [ "$code" != "200" ]; then
+            echo "Refresh failed (expected 200)."
+            exit 1
+          fi
