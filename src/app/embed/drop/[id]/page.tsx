@@ -25,6 +25,7 @@ export default async function EmbedDropPage({ params }: { params: { id: string }
     include: {
       owner: { select: { id: true, name: true, company: true } },
       boxes: {
+        where: { removed: false },
         select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sold: true },
       },
     },

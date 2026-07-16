@@ -112,6 +112,7 @@ model Box {
   useUscApi        Boolean   @default(false)
   sku              String?
   sold             Boolean   @default(false)
+  removed          Boolean   @default(false)
   createdAt        DateTime  @default(now())
 
   drop      Drop      @relation(fields: [dropId], references: [id], onDelete: Cascade)

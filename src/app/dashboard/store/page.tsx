@@ -14,7 +14,7 @@ export default async function StorePage() {
   const [drops, transactions, reservedAgg] = await Promise.all([
     prisma.drop.findMany({
       where: user.role === Role.ADMIN ? {} : { ownerId: user.id },
-      include: { boxes: { select: { sold: true } }, owner: { select: { name: true, company: true } } },
+      include: { boxes: { where: { removed: false }, select: { sold: true } }, owner: { select: { name: true, company: true } } },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.transaction.findMany({

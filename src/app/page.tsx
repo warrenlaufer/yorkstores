@@ -16,7 +16,7 @@ export default async function HomePage() {
     where: { isActive: true },
     include: {
       owner: { select: { name: true, company: true } },
-      boxes: { select: { id: true, itemPrice: true, sold: true } },
+      boxes: { where: { removed: false }, select: { id: true, itemPrice: true, sold: true } },
       purchases: { where: { createdAt: { gte: since24h } }, select: { id: true } },
     },
     orderBy: { createdAt: 'desc' },

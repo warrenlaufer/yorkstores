@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   const boxes = await prisma.box.findMany({
-    where: { useUscApi: true, sold: false, sku: { not: null }, drop: { isActive: true } },
+    where: { useUscApi: true, sold: false, removed: false, sku: { not: null }, drop: { isActive: true } },
     select: { id: true, sku: true, itemPrice: true },
   })
 

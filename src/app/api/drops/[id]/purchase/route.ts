@@ -14,7 +14,7 @@ const schema = z.object({
 async function shuffleUnsoldBoxes(dropId: string) {
   try {
     const unsoldBoxes = await prisma.box.findMany({
-      where: { dropId, sold: false },
+      where: { dropId, sold: false, removed: false },
       select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sku: true, useUscApi: true },
     })
     if (unsoldBoxes.length <= 1) return
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }>>(
         `SELECT id, "itemName", "itemPrice"::float, "itemShippingCost"::float, "itemImageUrl"
          FROM "Box"
-         WHERE "dropId" = $1 AND sold = false
+         WHERE "dropId" = $1 AND sold = false AND "removed" = false
          FOR UPDATE SKIP LOCKED`,
         dropId
       )
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       if (!box) throw new Error('NO_BOXES')
 
       const allBoxes = await tx.box.findMany({
-        where: { dropId },
+        where: { dropId, removed: false },
         select: { itemPrice: true, sold: true },
       })
 

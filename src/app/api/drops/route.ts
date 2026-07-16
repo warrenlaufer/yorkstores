@@ -14,7 +14,7 @@ export async function GET() {
     where: { isActive: true },
     include: {
       owner: { select: { name: true, company: true } },
-      boxes: { select: { id: true, itemPrice: true, sold: true, itemName: true } },
+      boxes: { where: { removed: false }, select: { id: true, itemPrice: true, sold: true, itemName: true } },
     },
     orderBy: { createdAt: 'desc' },
   })

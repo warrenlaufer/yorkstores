@@ -13,6 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: {
       owner: { select: { name: true, company: true } },
       boxes: {
+        where: { removed: false },
         select: {
           id: true, itemName: true, itemPrice: true,
           itemShippingCost: true, itemImageUrl: true, sold: true,
@@ -107,17 +108,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   if (body.removeBoxIds && Array.isArray(body.removeBoxIds) && body.removeBoxIds.length > 0) {
-    // Only hard-delete boxes that were never purchased. A box with purchase history — e.g. one
-    // that was sold, then sold back into the pool and is unsold again — can't be deleted without
-    // violating the Purchase foreign key, and its sales records must be preserved. Such boxes are
-    // left in place rather than crashing the whole edit.
+    const ids: string[] = body.removeBoxIds
+    // Boxes that were never purchased can be hard-deleted outright.
     await prisma.box.deleteMany({
-      where: {
-        id: { in: body.removeBoxIds },
-        dropId: params.id,
-        sold: false,
-        purchases: { none: {} },
-      },
+      where: { id: { in: ids }, dropId: params.id, purchases: { none: {} } },
+    })
+    // Boxes with purchase history (sold, or sold-back into the pool) can't be deleted without
+    // violating the Purchase foreign key and losing sales records — so they're soft-removed:
+    // flagged `removed` to drop out of the pool and every customer-facing view while their
+    // purchase records stay intact.
+    await prisma.box.updateMany({
+      where: { id: { in: ids }, dropId: params.id, purchases: { some: {} } },
+      data: { removed: true },
     })
   }
 

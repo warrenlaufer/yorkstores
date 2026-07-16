@@ -33,7 +33,7 @@ export default async function PublicDropPage({ params, searchParams }: { params:
     where: { id: params.id },
     include: {
       owner: { select: { name: true, company: true } },
-      boxes: { select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sold: true } },
+      boxes: { where: { removed: false }, select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sold: true } },
     },
   })
 

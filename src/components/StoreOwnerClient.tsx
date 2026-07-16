@@ -516,11 +516,11 @@ export default function StoreOwnerClient({ user, transactions, drops, isAdmin = 
     finally { setPublishing(false) }
   }
 
-  const existingItemMap: Record<string, { name: string; price: number; shipping: number; imageUrl: string | null; unsoldIds: string[]; soldCount: number }> = {}
+  const existingItemMap: Record<string, { name: string; price: number; shipping: number; imageUrl: string | null; unsoldIds: string[]; soldCount: number; soldIds: string[] }> = {}
   existingBoxes.forEach(b => {
     const k = `${b.itemName}|||${b.itemPrice}`
-    if (!existingItemMap[k]) existingItemMap[k] = { name: b.itemName, price: b.itemPrice, shipping: b.itemShippingCost, imageUrl: b.itemImageUrl, unsoldIds: [], soldCount: 0 }
-    if (b.sold) existingItemMap[k].soldCount++
+    if (!existingItemMap[k]) existingItemMap[k] = { name: b.itemName, price: b.itemPrice, shipping: b.itemShippingCost, imageUrl: b.itemImageUrl, unsoldIds: [], soldCount: 0, soldIds: [] }
+    if (b.sold) { existingItemMap[k].soldCount++; existingItemMap[k].soldIds.push(b.id) }
     else existingItemMap[k].unsoldIds.push(b.id)
   })
 
@@ -892,17 +892,33 @@ export default function StoreOwnerClient({ user, transactions, drops, isAdmin = 
                           }}>+</button>
                           <button
                             className={styles.qtyBtn}
-                            title="Delete all of this item type"
+                            title="Delete all of this item type (including sold)"
                             style={{background:'rgba(255,107,133,0.15)',borderColor:'rgba(255,107,133,0.4)',color:'#FF8FA3',marginLeft:4}}
                             onClick={() => {
-                              setRemoveBoxIds(prev => [...prev, ...it.unsoldIds.filter(id => !prev.includes(id))])
+                              setRemoveBoxIds(prev => [...prev, ...[...it.unsoldIds, ...it.soldIds].filter(id => !prev.includes(id))])
                               setItemEdits(prev => ({ ...prev, [k]: { ...prev[k], addQty: 0 } }))
                             }}
                           ><Trash2 size={14} /></button>
                         </div>
                       </div>
                       <div className={styles.editItemMeta}>
-                        {it.soldCount} sold · {it.unsoldIds.length - it.unsoldIds.filter(id => removeBoxIds.includes(id)).length} current
+                        {it.soldCount > 0 ? (() => {
+                          const soldMarked = it.soldIds.filter(id => removeBoxIds.includes(id)).length
+                          return (
+                            <>
+                              <span>{it.soldCount} sold{soldMarked > 0 ? ` (${soldMarked} removing)` : ''}</span>
+                              <button
+                                title={soldMarked > 0 ? 'Keep the sold boxes (sales records are always preserved)' : 'Remove sold boxes from this drop — their sales records are kept'}
+                                onClick={() => {
+                                  if (soldMarked > 0) setRemoveBoxIds(prev => prev.filter(x => !it.soldIds.includes(x)))
+                                  else setRemoveBoxIds(prev => [...prev, ...it.soldIds.filter(id => !prev.includes(id))])
+                                }}
+                                style={{ marginLeft: 6, fontSize: '0.6rem', fontWeight: 700, color: soldMarked > 0 ? 'var(--text2)' : '#FF8FA3', background: soldMarked > 0 ? '#2A2A33' : 'rgba(255,107,133,0.15)', border: '1px solid ' + (soldMarked > 0 ? 'transparent' : 'rgba(255,107,133,0.4)'), borderRadius: 4, padding: '1px 6px', cursor: 'pointer' }}
+                              >{soldMarked > 0 ? 'Keep sold' : 'Remove sold'}</button>
+                            </>
+                          )
+                        })() : <span>0 sold</span>}
+                        {' · '}{it.unsoldIds.length - it.unsoldIds.filter(id => removeBoxIds.includes(id)).length} current
                         {(edit.addQty ?? 0) > 0 && <span style={{color:'#5FFFA8'}}> +{edit.addQty} adding</span>}
                         {isDeleted && <span style={{color:'#FF8FA3'}}> · will be removed</span>}
                       </div>
