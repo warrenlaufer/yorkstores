@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
 import { sendSellBackConfirmationEmail, sendStoreSellBackNotificationEmail } from '@/lib/email'
 import { OutcomeType } from '@prisma/client'
+import { shuffleUnsoldBoxes } from '@/lib/shuffle'
 import { z } from 'zod'
 
 const schema = z.object({ purchaseId: z.string().min(1) })
@@ -89,12 +90,15 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      return { status: 'ok' as const, buyerRefund, toCash, toPromo, itemName, dropName: purchase.box.drop.name, ownerEmail: ownerRow?.email ?? null, ownerName: ownerRow?.name ?? 'there', storeAfter, adminFronted }
+      return { status: 'ok' as const, buyerRefund, toCash, toPromo, itemName, dropName: purchase.box.drop.name, ownerEmail: ownerRow?.email ?? null, ownerName: ownerRow?.name ?? 'there', storeAfter, adminFronted, dropId }
     }, { isolationLevel: 'Serializable', timeout: 10000 })
 
     if (result.status === 'limit') {
       return err('This store has reached its buyback credit limit and is temporarily suspended. You can choose delivery instead, or try again later.', 409)
     }
+
+    // The box just returned to the pool — re-randomize so it can't be replayed for the same item.
+    await shuffleUnsoldBoxes(result.dropId)
 
     try {
       await sendSellBackConfirmationEmail(user.email, user.name, {

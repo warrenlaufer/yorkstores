@@ -5,59 +5,12 @@ import { ok, err } from '@/lib/api'
 import { calcBoxPriceForDrop } from '@/lib/stripe'
 import { z } from 'zod'
 import { sendStoreSaleNotificationEmail } from '@/lib/email'
+import { shuffleUnsoldBoxes } from '@/lib/shuffle'
 
 const schema = z.object({
   dropId: z.string().min(1),
   boxId: z.string().optional(),
 })
-
-async function shuffleUnsoldBoxes(dropId: string) {
-  try {
-    const unsoldBoxes = await prisma.box.findMany({
-      where: { dropId, sold: false, removed: false },
-      select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sku: true, useUscApi: true },
-    })
-    if (unsoldBoxes.length <= 1) return
-
-    // The FULL item identity travels together — crucially including the pricing identity
-    // (sku, useUscApi). USC bullion boxes ARE shuffled (buyers can pick a box, so the coin↔box
-    // mapping must stay randomized), but because the SKU moves with the coin, each box's SKU still
-    // matches its displayed coin and the hourly cron re-prices it correctly.
-    const identities = unsoldBoxes.map(b => ({
-      itemName: b.itemName,
-      itemPrice: b.itemPrice,
-      itemShippingCost: b.itemShippingCost,
-      itemImageUrl: b.itemImageUrl ?? null,
-      sku: b.sku ?? null,
-      useUscApi: b.useUscApi,
-    }))
-
-    for (let i = identities.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[identities[i], identities[j]] = [identities[j], identities[i]]
-    }
-
-    const esc = (s: string) => s.replace(/'/g, "''")
-    const values = unsoldBoxes.map((b, idx) => {
-      const it = identities[idx]
-      return `('${b.id}', '${esc(it.itemName)}', ${Number(it.itemPrice)}, ${Number(it.itemShippingCost)}, ${it.itemImageUrl ? `'${esc(it.itemImageUrl)}'` : 'NULL'}, ${it.sku ? `'${esc(it.sku)}'` : 'NULL'}, ${it.useUscApi ? 'true' : 'false'})`
-    }).join(',')
-
-    await prisma.$executeRawUnsafe(`
-      UPDATE "Box" AS b SET
-        "itemName" = v."itemName"::text,
-        "itemPrice" = v."itemPrice"::numeric,
-        "itemShippingCost" = v."itemShippingCost"::numeric,
-        "itemImageUrl" = v."itemImageUrl"::text,
-        "sku" = v."sku"::text,
-        "useUscApi" = v."useUscApi"::boolean
-      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl", "sku", "useUscApi")
-      WHERE b.id = v.id
-    `)
-  } catch (e) {
-    console.error('Shuffle failed:', e)
-  }
-}
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getSession()
@@ -166,7 +119,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       timeout: 10000,
     })
 
-    shuffleUnsoldBoxes(dropId)
+    await shuffleUnsoldBoxes(dropId)
 
     try {
       const storeCredit = Math.round(result.boxPrice * 0.95 * 100) / 100
