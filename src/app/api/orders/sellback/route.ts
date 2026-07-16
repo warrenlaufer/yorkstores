@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
-import { sendSellBackConfirmationEmail } from '@/lib/email'
+import { sendSellBackConfirmationEmail, sendStoreSellBackNotificationEmail } from '@/lib/email'
 import { OutcomeType } from '@prisma/client'
 import { z } from 'zod'
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       const toCash = round2(buyerRefund - toPromo)
 
       // Read the store balance fresh inside the transaction (serializable) for a safe limit check.
-      const ownerRow = await tx.user.findUnique({ where: { id: ownerId }, select: { storeBalance: true } })
+      const ownerRow = await tx.user.findUnique({ where: { id: ownerId }, select: { storeBalance: true, email: true, name: true } })
       const storeBefore = Number(ownerRow?.storeBalance ?? 0)
       const storeAfter = round2(storeBefore - buyerRefund)
 
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      return { status: 'ok' as const, buyerRefund, toCash, toPromo, itemName }
+      return { status: 'ok' as const, buyerRefund, toCash, toPromo, itemName, dropName: purchase.box.drop.name, ownerEmail: ownerRow?.email ?? null, ownerName: ownerRow?.name ?? 'there', storeAfter, adminFronted }
     }, { isolationLevel: 'Serializable', timeout: 10000 })
 
     if (result.status === 'limit') {
@@ -103,6 +103,20 @@ export async function POST(req: NextRequest) {
       })
     } catch (e) {
       console.error('Sell-back email failed:', e)
+    }
+
+    if (result.ownerEmail) {
+      try {
+        await sendStoreSellBackNotificationEmail(result.ownerEmail, result.ownerName, {
+          dropName: result.dropName,
+          itemName: result.itemName,
+          refundAmount: result.buyerRefund,
+          newStoreBalance: result.storeAfter,
+          platformCovered: result.adminFronted,
+        })
+      } catch (e) {
+        console.error('Store sell-back email failed:', e)
+      }
     }
 
     return ok({

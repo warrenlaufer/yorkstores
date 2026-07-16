@@ -187,3 +187,73 @@ export async function sendNewOrderNotificationEmail(to: string, ownerName: strin
     `),
   })
 }
+
+export async function sendStoreSaleNotificationEmail(to: string, ownerName: string, details: {
+  dropName: string
+  itemName: string
+  salePrice: number
+  earned: number
+}) {
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `You made a sale — ${details.itemName}`,
+    html: baseTemplate(`
+      <h1 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 8px">You made a sale 🎉</h1>
+      <p style="color:#9898B0;font-size:15px;line-height:1.6;margin:0 0 20px">
+        Hi ${ownerName}, a buyer just opened a box in <strong style="color:#fff">${details.dropName}</strong>.
+      </p>
+      <div style="background:#1D1D26;border-radius:10px;padding:20px;margin-bottom:24px">
+        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Item pulled</p>
+        <p style="color:#fff;font-weight:700;font-size:16px;margin:0 0 16px">${details.itemName}</p>
+        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Box price</p>
+        <p style="color:#9898B0;font-size:14px;margin:0 0 16px">$${details.salePrice.toFixed(2)}</p>
+        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Credited to your store balance</p>
+        <p style="color:#3DD68C;font-weight:800;font-size:18px;margin:0">$${details.earned.toFixed(2)}</p>
+      </div>
+      <p style="color:#52526A;font-size:13px;line-height:1.6;margin:0 0 20px">
+        Heads up: the buyer has a short window to sell this box back. If they do, the buyback is drawn from your store balance — you'll get a separate email if that happens.
+      </p>
+      <a href="${APP_URL}/dashboard/store" style="display:inline-block;background:#FF6B85;color:#2A0C11;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;font-size:15px">
+        View your store →
+      </a>
+    `),
+  })
+}
+
+export async function sendStoreSellBackNotificationEmail(to: string, ownerName: string, details: {
+  dropName: string
+  itemName: string
+  refundAmount: number
+  newStoreBalance: number
+  platformCovered: number
+}) {
+  const coveredNote = details.platformCovered > 0
+    ? `<p style="color:#FF8FA3;font-size:13px;line-height:1.6;margin:0 0 20px">
+         The platform fronted <strong>$${details.platformCovered.toFixed(2)}</strong> of this buyback because it exceeded your store balance. That advance is repaid automatically from your future sales.
+       </p>`
+    : ''
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `A buyer sold back — ${details.itemName}`,
+    html: baseTemplate(`
+      <h1 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 8px">A box was sold back</h1>
+      <p style="color:#9898B0;font-size:15px;line-height:1.6;margin:0 0 20px">
+        Hi ${ownerName}, a buyer sold a box back in <strong style="color:#fff">${details.dropName}</strong>. The buyback was drawn from your store balance.
+      </p>
+      <div style="background:#1D1D26;border-radius:10px;padding:20px;margin-bottom:24px">
+        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Item</p>
+        <p style="color:#fff;font-weight:700;font-size:16px;margin:0 0 16px">${details.itemName}</p>
+        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Buyback paid to buyer</p>
+        <p style="color:#FF8FA3;font-weight:800;font-size:18px;margin:0 0 16px">-$${details.refundAmount.toFixed(2)}</p>
+        <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">New store balance</p>
+        <p style="color:${details.newStoreBalance < 0 ? '#FF8FA3' : '#fff'};font-weight:700;font-size:16px;margin:0">$${details.newStoreBalance.toFixed(2)}</p>
+      </div>
+      ${coveredNote}
+      <a href="${APP_URL}/dashboard/store" style="display:inline-block;background:#FF6B85;color:#2A0C11;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;font-size:15px">
+        View your store →
+      </a>
+    `),
+  })
+}
