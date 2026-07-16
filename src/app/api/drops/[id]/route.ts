@@ -107,11 +107,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   if (body.removeBoxIds && Array.isArray(body.removeBoxIds) && body.removeBoxIds.length > 0) {
+    // Only hard-delete boxes that were never purchased. A box with purchase history — e.g. one
+    // that was sold, then sold back into the pool and is unsold again — can't be deleted without
+    // violating the Purchase foreign key, and its sales records must be preserved. Such boxes are
+    // left in place rather than crashing the whole edit.
     await prisma.box.deleteMany({
       where: {
         id: { in: body.removeBoxIds },
         dropId: params.id,
         sold: false,
+        purchases: { none: {} },
       },
     })
   }
