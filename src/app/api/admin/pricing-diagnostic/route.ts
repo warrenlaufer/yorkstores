@@ -41,12 +41,12 @@ export async function GET(req: Request) {
   // Boxes that live in bullion drops but AREN'T flagged for USC pricing (common silent failure:
   // the box was created without useUscApi/sku, so the cron never touches it).
   const unflaggedInBullionDrops = await prisma.box.count({
-    where: { drop: { category: 'Bullion' }, OR: [{ useUscApi: false }, { sku: null }] },
+    where: { drop: { category: 'Bullion' }, removed: false, OR: [{ useUscApi: false }, { sku: null }] },
   })
 
   // The actual unflagged boxes (which coins, in which drop, and why they're excluded).
   const unflaggedBoxes = await prisma.box.findMany({
-    where: { drop: { category: 'Bullion' }, OR: [{ useUscApi: false }, { sku: null }] },
+    where: { drop: { category: 'Bullion' }, removed: false, OR: [{ useUscApi: false }, { sku: null }] },
     select: { id: true, itemName: true, itemPrice: true, useUscApi: true, sku: true, sold: true, removed: true, drop: { select: { name: true } } },
     take: 50,
   })
