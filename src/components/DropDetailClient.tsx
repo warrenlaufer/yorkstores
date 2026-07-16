@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Gift, Check } from 'lucide-react'
 import styles from './DropDetailClient.module.css'
 
-type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl?: string; sold: boolean }
+type Box = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl?: string; sold: boolean; sku?: string | null }
 type Drop = { id: string; name: string; emoji: string; logoUrl?: string; owner: string; boxPrice: number; sellBackPct: number; pricingType: string; boxes: Box[] }
 type User = { id: string; name: string; email: string; role: string; walletBalance: number }
 
@@ -26,11 +26,14 @@ export default function DropDetailClient({ drop, user, initialError = '' }: { dr
   // For odds: dynamic uses unsold boxes only, fixed uses all boxes
   const oddsBoxes = isDynamic ? available : drop.boxes
 
+  // Group by SKU for live-priced (USC) coins so a sold box's frozen price and an unsold box's
+  // refreshed price don't split one coin into several prize entries; other items group by name+price.
   const itemMap: Record<string, { name: string; price: number; count: number; imageUrl?: string }> = {}
   oddsBoxes.forEach(b => {
-    const k = `${b.itemName}|${b.itemPrice}`
+    const k = b.sku ? `sku:${b.sku}` : `${b.itemName}|${b.itemPrice}`
     if (!itemMap[k]) itemMap[k] = { name: b.itemName, price: b.itemPrice, count: 0, imageUrl: b.itemImageUrl }
     itemMap[k].count++
+    if (!b.sold) itemMap[k].price = b.itemPrice // show the current (unsold) value for the coin
   })
   const sortedItems = Object.values(itemMap).sort((a, b) => b.price - a.price)
 

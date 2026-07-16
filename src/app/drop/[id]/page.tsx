@@ -33,7 +33,7 @@ export default async function PublicDropPage({ params, searchParams }: { params:
     where: { id: params.id },
     include: {
       owner: { select: { name: true, company: true } },
-      boxes: { where: { removed: false }, select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sold: true } },
+      boxes: { where: { removed: false }, select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sold: true, sku: true } },
     },
   })
 
@@ -76,6 +76,7 @@ export default async function PublicDropPage({ params, searchParams }: { params:
               itemShippingCost: Number(b.itemShippingCost),
               itemImageUrl: b.itemImageUrl ?? undefined,
               sold: b.sold,
+              sku: b.sku ?? null,
             })),
           }}
           user={user ? { id: user.id, name: user.name, email: user.email, role: user.role, walletBalance: Number(user.walletBalance) } : null}

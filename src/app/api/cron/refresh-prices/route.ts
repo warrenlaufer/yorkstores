@@ -22,24 +22,18 @@ export async function GET(req: NextRequest) {
 
   const boxes = await prisma.box.findMany({
     where: { useUscApi: true, sold: false, removed: false, sku: { not: null }, drop: { isActive: true } },
-    select: { id: true, sku: true, itemPrice: true, itemName: true, itemImageUrl: true },
+    select: { id: true, sku: true, itemPrice: true },
   })
 
   let updated = 0
   for (const b of boxes) {
     const item = b.sku ? map.get(b.sku) : null
     if (!item || item.sellPrice <= 0) continue
-    // The SKU is authoritative for USC boxes: keep name, image and price in sync with the catalog.
-    // This also self-heals any box whose displayed coin drifted from its SKU (e.g. scrambled by an
-    // older shuffle) — the coin, its picture and its price are all re-derived from the SKU.
-    const priceChanged = Math.abs(Number(b.itemPrice) - item.sellPrice) >= 0.01
-    const nameChanged = b.itemName !== item.description
-    const imageChanged = (b.itemImageUrl ?? null) !== (item.imageUrl ?? null)
-    if (priceChanged || nameChanged || imageChanged) {
-      await prisma.box.update({
-        where: { id: b.id },
-        data: { itemPrice: item.sellPrice, itemName: item.description, itemImageUrl: item.imageUrl ?? null },
-      })
+    // PRICE ONLY. Do not touch itemName/itemImageUrl: rewriting the name to the catalog
+    // description made boxes of one coin diverge (unsold vs sold, catalog vs seller name) and the
+    // prize display — which groups by name+price — split a single item into several.
+    if (Math.abs(Number(b.itemPrice) - item.sellPrice) >= 0.01) {
+      await prisma.box.update({ where: { id: b.id }, data: { itemPrice: item.sellPrice } })
       updated++
     }
   }

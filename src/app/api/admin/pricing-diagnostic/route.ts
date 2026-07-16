@@ -9,9 +9,11 @@ import { fetchUscCatalogMap } from '@/lib/usc'
 // It reports whether the catalog loads, whether box SKUs match the catalog, and where each
 // USC box's stored price sits versus the live catalog price — so we can see exactly why prices
 // aren't refreshing, without guessing.
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getSession()
   if (!user || user.role !== Role.ADMIN) return err('Forbidden', 403)
+
+  const apply = new URL(req.url).searchParams.get('apply') === '1'
 
   // 1) Can we load the catalog at all?
   let map
@@ -69,8 +71,25 @@ export async function GET() {
 
   const eligible = rows.filter(r => !r.sold && !r.removed && r.dropActive)
 
+  // If ?apply=1, actually run the re-price now (admin-triggered, independent of the hourly cron).
+  // PRICE ONLY — mirrors the cron; never rewrites name/image (that subdivided items in the display).
+  let applied = 0
+  if (apply) {
+    for (const b of uscBoxes) {
+      if (b.sold || b.removed || !b.drop.isActive) continue
+      const item = b.sku ? map!.get(b.sku) : null
+      if (!item || item.sellPrice <= 0) continue
+      if (Math.abs(Number(b.itemPrice) - item.sellPrice) >= 0.01) {
+        await prisma.box.update({ where: { id: b.id }, data: { itemPrice: item.sellPrice } })
+        applied++
+      }
+    }
+  }
+
   return ok({
     ok: true,
+    applied: apply ? applied : undefined,
+    appliedNote: apply ? `Re-priced ${applied} box(es) now.` : 'Add ?apply=1 to this URL to re-price now.',
     catalogSize: map.size,
     totals: {
       uscBoxes: rows.length,
