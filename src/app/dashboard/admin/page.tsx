@@ -12,7 +12,7 @@ export default async function AdminPage() {
   const user = await getSession()
   if (!user || user.role !== Role.ADMIN) redirect('/dashboard')
 
-  const [userCount, dropCount, purchaseCount, revenue, platformByType, storeDebt, recentPurchases, users, recentPlatformTx, promoCodes, withdrawals] = await Promise.all([
+  const [userCount, dropCount, purchaseCount, revenue, platformByType, storeDebt, recentPurchases, users, recentPlatformTx, promoCodes, withdrawals, storeOwners] = await Promise.all([
     prisma.user.count(),
     prisma.drop.count(),
     prisma.purchase.count(),
@@ -44,6 +44,11 @@ export default async function AdminPage() {
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: { user: { select: { name: true, email: true, role: true, company: true, payoutsEnabled: true, stripeAccountId: true } } },
+    }),
+    prisma.user.findMany({
+      where: { role: Role.STORE_OWNER },
+      orderBy: { storeBalance: 'desc' },
+      select: { id: true, name: true, email: true, company: true, storeBalance: true, cashBalance: true, promoBalance: true, _count: { select: { drops: true } } },
     }),
   ])
 
@@ -107,6 +112,26 @@ export default async function AdminPage() {
             <span className={styles.cellMuted}>{new Date(p.createdAt).toLocaleDateString()}</span>
           </div>
         ))}
+      </div>
+
+      <div className={styles.section} style={{marginTop:'2rem'}}>Store Owners ({storeOwners.length})</div>
+      <div className={styles.table}>
+        <div className={styles.tableHead} style={{ gridTemplateColumns: '1.6fr 1.4fr 100px 90px 90px 60px' }}>
+          <span>Store / Owner</span><span>Email</span><span>Store Bal.</span><span>Cash</span><span>Promo</span><span>Drops</span>
+        </div>
+        {storeOwners.map(o => (
+          <div key={o.id} className={styles.tableRow} style={{ gridTemplateColumns: '1.6fr 1.4fr 100px 90px 90px 60px' }}>
+            <span>{o.company || o.name}{o.company ? <span className={styles.cellMuted}> · {o.name}</span> : ''}</span>
+            <span className={styles.cellMuted}>{o.email}</span>
+            <span style={{ fontFamily: 'var(--mono)', color: Number(o.storeBalance) < 0 ? '#FF8FA3' : 'var(--gold)' }}>${Number(o.storeBalance).toFixed(2)}</span>
+            <span style={{ fontFamily: 'var(--mono)' }}>${Number(o.cashBalance).toFixed(2)}</span>
+            <span style={{ fontFamily: 'var(--mono)', color: 'var(--text3)' }}>${Number(o.promoBalance).toFixed(2)}</span>
+            <span className={styles.cellMuted}>{o._count.drops}</span>
+          </div>
+        ))}
+        {storeOwners.length === 0 && (
+          <div className={styles.tableRow}><span className={styles.cellMuted}>No store owners yet.</span></div>
+        )}
       </div>
 
       <div className={styles.section} style={{marginTop:'2rem'}}>Users</div>
