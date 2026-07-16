@@ -61,6 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json().catch(() => null)
   if (!body) return err('Invalid request')
 
+  try {
   const updated = await prisma.drop.update({
     where: { id: params.id },
     data: {
@@ -134,4 +135,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   return ok(updated)
+  } catch (e: any) {
+    console.error('Drop PATCH failed for drop', params.id, '-', e?.message, e)
+    return err('Could not save changes: ' + (e?.message ?? 'unknown error'))
+  }
 }
