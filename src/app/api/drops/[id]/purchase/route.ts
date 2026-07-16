@@ -15,20 +15,20 @@ async function shuffleUnsoldBoxes(dropId: string) {
   try {
     const unsoldBoxes = await prisma.box.findMany({
       where: { dropId, sold: false },
-      select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true },
+      select: { id: true, itemName: true, itemPrice: true, itemShippingCost: true, itemImageUrl: true, sku: true, useUscApi: true },
     })
     if (unsoldBoxes.length <= 1) return
 
-    const imageMap: Record<string, string | null> = {}
-    unsoldBoxes.forEach(b => {
-      const k = `${b.itemName}|${Number(b.itemPrice)}`
-      if (!imageMap[k]) imageMap[k] = b.itemImageUrl ?? null
-    })
-
+    // The FULL item identity travels together — crucially including the pricing identity
+    // (sku, useUscApi). Otherwise a USC-priced bullion item keeps a different box's SKU after a
+    // reshuffle, and the hourly re-pricing cron then prices it as the wrong coin.
     const identities = unsoldBoxes.map(b => ({
       itemName: b.itemName,
       itemPrice: b.itemPrice,
       itemShippingCost: b.itemShippingCost,
+      itemImageUrl: b.itemImageUrl ?? null,
+      sku: b.sku ?? null,
+      useUscApi: b.useUscApi,
     }))
 
     for (let i = identities.length - 1; i > 0; i--) {
@@ -36,20 +36,21 @@ async function shuffleUnsoldBoxes(dropId: string) {
       ;[identities[i], identities[j]] = [identities[j], identities[i]]
     }
 
+    const esc = (s: string) => s.replace(/'/g, "''")
     const values = unsoldBoxes.map((b, idx) => {
-      const identity = identities[idx]
-      const k = `${identity.itemName}|${Number(identity.itemPrice)}`
-      const img = imageMap[k]
-      return `('${b.id}', '${identity.itemName.replace(/'/g, "''")}', ${Number(identity.itemPrice)}, ${Number(identity.itemShippingCost)}, ${img ? `'${img.replace(/'/g, "''")}'` : 'NULL'})`
+      const it = identities[idx]
+      return `('${b.id}', '${esc(it.itemName)}', ${Number(it.itemPrice)}, ${Number(it.itemShippingCost)}, ${it.itemImageUrl ? `'${esc(it.itemImageUrl)}'` : 'NULL'}, ${it.sku ? `'${esc(it.sku)}'` : 'NULL'}, ${it.useUscApi ? 'true' : 'false'})`
     }).join(',')
 
     await prisma.$executeRawUnsafe(`
       UPDATE "Box" AS b SET
-        "itemName" = v."itemName",
+        "itemName" = v."itemName"::text,
         "itemPrice" = v."itemPrice"::numeric,
         "itemShippingCost" = v."itemShippingCost"::numeric,
-        "itemImageUrl" = v."itemImageUrl"
-      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl")
+        "itemImageUrl" = v."itemImageUrl"::text,
+        "sku" = v."sku"::text,
+        "useUscApi" = v."useUscApi"::boolean
+      FROM (VALUES ${values}) AS v(id, "itemName", "itemPrice", "itemShippingCost", "itemImageUrl", "sku", "useUscApi")
       WHERE b.id = v.id
     `)
   } catch (e) {
