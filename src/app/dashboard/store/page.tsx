@@ -13,8 +13,8 @@ export default async function StorePage() {
 
   const [drops, transactions, reservedAgg] = await Promise.all([
     prisma.drop.findMany({
-      where: { ownerId: user.id },
-      include: { boxes: { select: { sold: true } } },
+      where: user.role === Role.ADMIN ? {} : { ownerId: user.id },
+      include: { boxes: { select: { sold: true } }, owner: { select: { name: true, company: true } } },
       orderBy: { createdAt: 'desc' },
     }),
     prisma.transaction.findMany({
@@ -33,6 +33,7 @@ export default async function StorePage() {
 
   return (
     <StoreOwnerClient
+      isAdmin={user.role === Role.ADMIN}
       user={{
         id: user.id,
         name: user.name,
@@ -62,6 +63,7 @@ export default async function StorePage() {
         pricingType: d.pricingType,
         category: d.category,
         subcategory: d.subcategory,
+        ownerName: d.owner.company || d.owner.name,
       }))}
     />
   )

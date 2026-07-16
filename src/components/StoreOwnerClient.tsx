@@ -8,14 +8,15 @@ import { CATEGORIES, subcategoriesFor } from '@/lib/categories'
 
 type BoxDef = { itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string; qty: number; _id: string; useUscApi?: boolean; sku?: string }
 type Tx = { id: string; type: string; description: string; amount: number; createdAt: string }
-type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; isDraft: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string; subcategory?: string | null }
+type DropSummary = { id: string; name: string; logoUrl?: string; isActive: boolean; isDraft: boolean; totalBoxes: number; soldBoxes: number; sellBackPct: number; pricingType: string; category: string; subcategory?: string | null; ownerName?: string | null }
 type ExistingBox = { id: string; itemName: string; itemPrice: number; itemShippingCost: number; itemImageUrl: string | null; sold: boolean }
 type ItemEdit = { oldName: string; oldPrice: number; oldShipping: number; newName: string; newPrice: string; newShipping: string; newImageUrl: string | null; addQty: number; useUscApi?: boolean; sku?: string }
 
-export default function StoreOwnerClient({ user, transactions, drops }: {
+export default function StoreOwnerClient({ user, transactions, drops, isAdmin = false }: {
   user: { id: string; name: string; email: string; company: string; storeBalance: number; reservedBalance: number; availableBalance: number; payoutsEnabled: boolean }
   transactions: Tx[]
   drops: DropSummary[]
+  isAdmin?: boolean
 }) {
   const router = useRouter()
 
@@ -549,12 +550,12 @@ export default function StoreOwnerClient({ user, transactions, drops }: {
 
       {drops.length > 0 && (
         <div className={styles.panel} style={{marginBottom:'0.75rem'}}>
-          <div className={styles.panelTitle}>Your Drops</div>
+          <div className={styles.panelTitle}>{isAdmin ? 'All Drops (admin)' : 'Your Drops'}</div>
           {drops.map(d => (
             <div key={d.id} className={styles.dropRow}>
               {d.logoUrl && <img src={d.logoUrl} alt={d.name} className={styles.dropRowLogo} />}
               <div className={styles.dropRowInfo}>
-                <div className={styles.dropRowName}>{d.name}</div>
+                <div className={styles.dropRowName}>{d.name}{isAdmin && d.ownerName && <span style={{ marginLeft: 8, fontSize: '0.68rem', fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-weak)', padding: '2px 8px', borderRadius: 999, verticalAlign: '2px' }}>{d.ownerName}</span>}</div>
                 <div className={styles.dropRowMeta}>
                   {d.soldBoxes} / {d.totalBoxes} sold · {d.isDraft ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><FileText size={11} /> Draft</span> : (d.isActive ? 'Active' : 'Inactive')} · {d.sellBackPct}% buyback · {d.pricingType} · {d.category}
                 </div>
