@@ -44,6 +44,13 @@ export async function GET(req: Request) {
     where: { drop: { category: 'Bullion' }, OR: [{ useUscApi: false }, { sku: null }] },
   })
 
+  // The actual unflagged boxes (which coins, in which drop, and why they're excluded).
+  const unflaggedBoxes = await prisma.box.findMany({
+    where: { drop: { category: 'Bullion' }, OR: [{ useUscApi: false }, { sku: null }] },
+    select: { id: true, itemName: true, itemPrice: true, useUscApi: true, sku: true, sold: true, removed: true, drop: { select: { name: true } } },
+    take: 50,
+  })
+
   const rows = uscBoxes.map(b => {
     const item = b.sku ? map!.get(b.sku) : null
     const stored = Number(b.itemPrice)
@@ -110,6 +117,16 @@ export async function GET(req: Request) {
       skuNotInCatalog: rows.filter(r => !r.catalogFound).slice(0, 8).map(r => ({ sku: r.sku, itemName: r.itemName, dropName: r.dropName })),
       priceMismatch: eligible.filter(r => r.wouldUpdate).slice(0, 8).map(r => ({ sku: r.sku, itemName: r.itemName, storedPrice: r.storedPrice, catalogPrice: r.catalogPrice })),
       firstFewEligible: eligible.slice(0, 8).map(r => ({ sku: r.sku, itemName: r.itemName, storedPrice: r.storedPrice, catalogPrice: r.catalogPrice, wouldUpdate: r.wouldUpdate })),
+      unflaggedBoxes: unflaggedBoxes.map(b => ({
+        boxId: b.id,
+        dropName: b.drop.name,
+        itemName: b.itemName,
+        price: Number(b.itemPrice),
+        sku: b.sku,
+        sold: b.sold,
+        removed: b.removed,
+        reason: !b.useUscApi ? 'not flagged for USC pricing (useUscApi is false)' : 'no SKU set',
+      })),
     },
   })
 }
