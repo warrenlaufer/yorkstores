@@ -77,6 +77,7 @@ export default function DashboardNav({ user }: { user: User }) {
   const tabs = [
     { href: '/dashboard', label: 'Drops' },
     { href: '/dashboard/history', label: 'History' },
+    { href: '/how-it-works', label: 'How it works' },
     ...(isStore ? [
       { href: '/dashboard/store', label: 'Store Owner' },
     ] : []),

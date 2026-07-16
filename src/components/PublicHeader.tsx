@@ -7,6 +7,7 @@ export default function PublicHeader() {
         <span style={{ color: 'var(--text)' }}>york</span><span style={{ color: 'var(--accent)' }}>stores</span>
       </Link>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+        <Link href="/how-it-works" className="btn btn-ghost btn-sm">How it works</Link>
         <Link href="/signin" className="btn btn-ghost btn-sm">Log in</Link>
         <Link href="/signup" className="btn btn-primary btn-sm">Sign up</Link>
       </div>
