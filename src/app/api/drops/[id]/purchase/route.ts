@@ -20,8 +20,9 @@ async function shuffleUnsoldBoxes(dropId: string) {
     if (unsoldBoxes.length <= 1) return
 
     // The FULL item identity travels together — crucially including the pricing identity
-    // (sku, useUscApi). Otherwise a USC-priced bullion item keeps a different box's SKU after a
-    // reshuffle, and the hourly re-pricing cron then prices it as the wrong coin.
+    // (sku, useUscApi). USC bullion boxes ARE shuffled (buyers can pick a box, so the coin↔box
+    // mapping must stay randomized), but because the SKU moves with the coin, each box's SKU still
+    // matches its displayed coin and the hourly cron re-prices it correctly.
     const identities = unsoldBoxes.map(b => ({
       itemName: b.itemName,
       itemPrice: b.itemPrice,
