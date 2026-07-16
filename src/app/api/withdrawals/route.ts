@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { ok, err } from '@/lib/api'
 import { Role } from '@prisma/client'
+import { sendAdminWithdrawalRequestEmail } from '@/lib/email'
 import { z } from 'zod'
 
 const MIN_WITHDRAWAL = 10
@@ -87,6 +88,19 @@ export async function POST(req: NextRequest) {
 
       return withdrawal
     })
+
+    // Notify admin of the payout request (fire-and-forget; never blocks the response).
+    try {
+      await sendAdminWithdrawalRequestEmail({
+        requesterName: user.name,
+        requesterEmail: user.email,
+        amount,
+        source,
+        withdrawalId: result.id,
+      })
+    } catch (e) {
+      console.error('Admin withdrawal email failed:', e)
+    }
 
     return ok({ id: result.id, amount, status: result.status }, 201)
   } catch (e: any) {

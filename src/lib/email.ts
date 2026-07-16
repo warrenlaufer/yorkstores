@@ -25,6 +25,42 @@ function baseTemplate(content: string) {
 </html>`
 }
 
+// Notifies admin whenever a payout (withdrawal) is requested. Never throws.
+export async function sendAdminWithdrawalRequestEmail(details: {
+  requesterName: string
+  requesterEmail: string
+  amount: number
+  source: string
+  withdrawalId: string
+}) {
+  try {
+    await resend.emails.send({
+      from: FROM,
+      to: 'admin@yorkstores.com',
+      subject: `Payout requested — $${details.amount.toFixed(2)} (${details.source})`,
+      html: baseTemplate(`
+        <h1 style="color:#fff;font-size:20px;font-weight:800;margin:0 0 8px">New payout request</h1>
+        <p style="color:#9898B0;font-size:15px;line-height:1.6;margin:0 0 20px">
+          <strong style="color:#fff">${details.requesterName}</strong> (${details.requesterEmail}) requested a withdrawal.
+        </p>
+        <div style="background:#1D1D26;border-radius:10px;padding:20px;margin-bottom:24px">
+          <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Amount</p>
+          <p style="color:#fff;font-weight:800;font-size:18px;margin:0 0 16px">$${details.amount.toFixed(2)}</p>
+          <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Source</p>
+          <p style="color:#9898B0;font-size:14px;margin:0 0 16px">${details.source === 'store' ? 'Store balance' : 'Buyer cash balance'}</p>
+          <p style="color:#52526A;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Request ID</p>
+          <p style="color:#9898B0;font-size:13px;margin:0">${details.withdrawalId}</p>
+        </div>
+        <a href="${APP_URL}/dashboard/admin" style="display:inline-block;background:#FF6B85;color:#2A0C11;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:700;font-size:15px">
+          Review in admin →
+        </a>
+      `),
+    })
+  } catch (e) {
+    console.error('Failed to send admin withdrawal-request email:', e)
+  }
+}
+
 // Alerts admin when a US Coins pricing API call fails. Never throws.
 export async function sendCatalogFailureAlert(context: string, message: string) {
   try {
