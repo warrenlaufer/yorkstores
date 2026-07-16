@@ -272,3 +272,16 @@ model AgreementAcceptance {
 
   @@index([userId])
 }
+
+model CronRun {
+  id         String   @id @default(cuid())
+  job        String
+  status     String   // "ok" | "catalog_unavailable" | "error"
+  scanned    Int      @default(0)
+  updated    Int      @default(0)
+  durationMs Int      @default(0)
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([job, createdAt])
+}

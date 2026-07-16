@@ -75,6 +75,7 @@ export async function GET(req: Request) {
   // PRICE ONLY — mirrors the cron; never rewrites name/image (that subdivided items in the display).
   let applied = 0
   if (apply) {
+    const startedAt = Date.now()
     for (const b of uscBoxes) {
       if (b.sold || b.removed || !b.drop.isActive) continue
       const item = b.sku ? map!.get(b.sku) : null
@@ -84,6 +85,11 @@ export async function GET(req: Request) {
         applied++
       }
     }
+    try {
+      await prisma.cronRun.create({
+        data: { job: 'manual-apply', status: 'ok', scanned: uscBoxes.length, updated: applied, durationMs: Date.now() - startedAt, detail: `by admin ${user.id}` },
+      })
+    } catch {}
   }
 
   return ok({
