@@ -66,6 +66,7 @@ export default async function AdminPage() {
           <p className={styles.sub}>Platform overview and user management.</p>
         </div>
         <a href="/api/export/admin" className={styles.exportBtn}>⬇ Download CSV</a>
+        <a href="/dashboard/admin/boxes" className={styles.exportBtn}>🔍 Box Inspector</a>
       </div>
 
       <div className={styles.statsGrid}>
