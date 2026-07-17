@@ -125,7 +125,7 @@ export default async function AdminBoxesPage({ searchParams }: { searchParams: {
                     <td style={{ ...td, color: 'var(--text3)' }}>{b.sku || '—'}</td>
                     <td style={{ ...td, color: b.sold ? 'var(--text3)' : 'var(--accent)', fontWeight: 600 }}>{b.sold ? 'Opened' : 'In pool'}</td>
                     <td style={{ ...td, color: 'var(--text3)' }}>{b.purchases[0]?.buyer?.email || '—'}</td>
-                    <td style={{ ...td, color: 'var(--text3)', fontFamily: 'monospace', fontSize: 11 }}>{b.id.slice(0, 8)}</td>
+                    <td style={{ ...td, color: 'var(--text3)', fontFamily: 'monospace', fontSize: 11 }}>…{b.id.slice(-8)}</td>
                   </tr>
                 ))}
               </tbody>
