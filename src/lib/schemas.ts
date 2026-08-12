@@ -45,7 +45,7 @@ export const draftDropSchema = z.object({
     itemImageUrl: z.string().url().optional().or(z.literal('')),
     useUscApi: z.boolean().optional().default(false),
     sku: z.string().max(64).optional(),
-    qty: z.number().int().min(1).max(300, "Max 300 per item").default(1),
+    qty: z.number().int().min(1).max(500, "Max 500 per item").default(1),
   })).max(200).optional().default([]),
 })
 
@@ -59,7 +59,7 @@ export const createDropSchema = z.object({
     itemImageUrl: z.string().url().optional().or(z.literal('')),
     useUscApi: z.boolean().optional().default(false),
     sku: z.string().max(64).optional(),
-    qty: z.number().int().min(1).max(300, "Max 300 per item").default(1),
+    qty: z.number().int().min(1).max(500, "Max 500 per item").default(1),
   })).min(1).max(200),
 })
 
