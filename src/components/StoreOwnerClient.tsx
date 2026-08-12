@@ -1037,7 +1037,7 @@ export default function StoreOwnerClient({ user, transactions, drops, isAdmin = 
               <div><label>Name</label><textarea value={eName} onChange={e => setEName(e.target.value)} rows={2} readOnly={eUseUsc} title={eUseUsc ? 'Set from the US Coins catalog' : undefined} style={{resize:'vertical',minHeight:38, ...(eUseUsc ? { opacity: 0.7 } : {})}} /></div>
               <div><label>Value $</label><input type="number" value={ePrice} onChange={e => setEPrice(e.target.value)} min="0.01" readOnly={eUseUsc} title={eUseUsc ? 'Set from the US Coins catalog' : undefined} style={eUseUsc ? { opacity: 0.7 } : undefined} /></div>
               <div><label>Ship $</label><input type="number" value={eShip} onChange={e => setEShip(e.target.value)} min="0" /></div>
-              <div><label>Qty</label><input type="number" value={eQty} onChange={e => setEQty(e.target.value)} min="1" max="200" /></div>
+              <div><label>Qty</label><input type="number" value={eQty} onChange={e => setEQty(e.target.value)} min="1" max="300" /></div>
             </div>
             <div className="field">
               <label>Item Image <span style={{color:'var(--text3)',fontWeight:400,textTransform:'none',letterSpacing:0}}>(optional)</span></label>

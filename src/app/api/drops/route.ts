@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       ownerId: user.id,
       isActive: !isDraft,
       isDraft,
-      boxes: { create: boxRecords },
+      boxes: { createMany: { data: boxRecords } },
     },
     include: {
       boxes: true,
